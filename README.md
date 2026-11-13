@@ -17,8 +17,11 @@ from **any browser** (Firefox, Safari/iOS, Chrome…).
 
 ## Status
 
-Phase 1 (MVP): sign-in with optional "keep me signed in", Cast discovery,
-play an album on a device, server-side auto-advance, live state in a minimal UI.
+- Phase 1 (MVP): sign-in with optional "keep me signed in", Cast discovery,
+  play an album on a device, server-side auto-advance, live state.
+- Phase 2: browse albums (recent, most played, random, A–Z), artists, genres;
+  search; play now / play next / add to queue for tracks, albums and artists;
+  reorder the queue by drag and drop, remove items.
 
 ## How it works
 

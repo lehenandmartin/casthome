@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from casthome.subsonic.models import Album, PlayQueue, Song
+from casthome.subsonic.models import Album, Artist, Genre, PlayQueue, SearchResult, Song
 from casthome.subsonic.tokens import auth_params
 
 log = logging.getLogger(__name__)
@@ -115,9 +115,43 @@ class SubsonicClient:
                 self._extensions = set()
         return self._extensions
 
-    async def get_album_list(self, list_type: str, size: int = 50, offset: int = 0) -> list[Album]:
-        data = await self.call("getAlbumList2", {"type": list_type, "size": size, "offset": offset})
+    async def get_album_list(
+        self, list_type: str, size: int = 50, offset: int = 0, genre: str | None = None
+    ) -> list[Album]:
+        params: dict[str, Any] = {"type": list_type, "size": size, "offset": offset}
+        if genre is not None:
+            params["genre"] = genre
+        data = await self.call("getAlbumList2", params)
         return [Album.from_api(a) for a in (data.get("albumList2") or {}).get("album", [])]
+
+    async def get_artists(self) -> list[Artist]:
+        data = await self.call("getArtists")
+        indexes = (data.get("artists") or {}).get("index", [])
+        return [Artist.from_api(a) for index in indexes for a in index.get("artist", [])]
+
+    async def get_artist(self, artist_id: str) -> tuple[Artist, list[Album]]:
+        data = await self.call("getArtist", {"id": artist_id})
+        raw = data["artist"]
+        return Artist.from_api(raw), [Album.from_api(a) for a in raw.get("album", [])]
+
+    async def get_genres(self) -> list[Genre]:
+        data = await self.call("getGenres")
+        return [Genre.from_api(g) for g in (data.get("genres") or {}).get("genre", [])]
+
+    async def get_songs_by_genre(self, genre: str, count: int = 100, offset: int = 0) -> list[Song]:
+        data = await self.call("getSongsByGenre", {"genre": genre, "count": count, "offset": offset})
+        return [Song.from_api(s) for s in (data.get("songsByGenre") or {}).get("song", [])]
+
+    async def search(self, query: str, limit: int = 20) -> SearchResult:
+        data = await self.call(
+            "search3", {"query": query, "artistCount": limit, "albumCount": limit, "songCount": limit * 2}
+        )
+        result = data.get("searchResult3") or {}
+        return SearchResult(
+            artists=[Artist.from_api(a) for a in result.get("artist", [])],
+            albums=[Album.from_api(a) for a in result.get("album", [])],
+            songs=[Song.from_api(s) for s in result.get("song", [])],
+        )
 
     async def get_album(self, album_id: str) -> Album:
         data = await self.call("getAlbum", {"id": album_id})

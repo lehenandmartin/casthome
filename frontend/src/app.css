@@ -73,7 +73,8 @@ button.primary {
 }
 
 input[type='password'],
-input[type='text'] {
+input[type='text'],
+input[type='search'] {
   font: inherit;
   color: inherit;
   background: var(--surface);

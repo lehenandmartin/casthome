@@ -331,3 +331,52 @@ async def test_restore_ignores_foreign_media():
     assert harness.c.status == Status.STOPPED
     for task in harness.c._tasks:
         task.cancel()
+
+
+def uid_of(h: Harness, song_id: str) -> int:
+    return next(e.uid for e in h.c.queue.entries if e.item.id == song_id)
+
+
+async def test_remove_current_while_playing_loads_following(h):
+    await h.c.play_songs(songs(3), 0)
+    h.target.media("PLAYING")
+    await h.settle()
+    await h.c.remove_entry(uid_of(h, "s0"))
+    assert playing_id(h) == "s1" and "id=s1" in h.target.last_url
+
+
+async def test_remove_last_current_while_playing_stops(h):
+    await h.c.play_songs(songs(2), 1)
+    h.target.media("PLAYING")
+    await h.settle()
+    await h.c.remove_entry(uid_of(h, "s1"))
+    assert h.c.status == Status.STOPPED and "stop" in h.target.calls
+
+
+async def test_remove_other_entry_does_not_reload(h):
+    await h.c.play_songs(songs(3), 0)
+    await h.c.remove_entry(uid_of(h, "s2"))
+    assert len(h.target.loads) == 1 and [e.item.id for e in h.c.queue.entries] == ["s0", "s1"]
+
+
+async def test_move_keeps_playing_entry(h):
+    await h.c.play_songs(songs(3), 0)
+    version = h.c.queue_version
+    await h.c.move_entry(uid_of(h, "s2"), 0)
+    assert [e.item.id for e in h.c.queue.entries] == ["s2", "s0", "s1"]
+    assert playing_id(h) == "s0" and len(h.target.loads) == 1 and h.c.queue_version > version
+
+
+async def test_unknown_uid_is_reported(h):
+    await h.c.play_songs(songs(2), 0)
+    with pytest.raises(PlaybackError) as err:
+        await h.c.remove_entry(9999)
+    assert err.value.code == "invalid_queue_index"
+    with pytest.raises(PlaybackError):
+        await h.c.move_entry(uid_of(h, "s0"), 5)
+
+
+async def test_jump_by_uid(h):
+    await h.c.play_songs(songs(3), 0)
+    await h.c.jump_uid(uid_of(h, "s2"))
+    assert playing_id(h) == "s2" and "id=s2" in h.target.last_url

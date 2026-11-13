@@ -33,11 +33,18 @@ class VolumeBody(BaseModel):
 
 
 class JumpBody(BaseModel):
-    index: int = Field(ge=0)
+    index: int | None = Field(default=None, ge=0)
+    uid: int | None = None  # preferred: stable even if the queue changed meanwhile
+
+
+class MoveBody(BaseModel):
+    uid: int
+    to_index: int = Field(ge=0)
 
 
 class QueueAddBody(BaseModel):
     album_id: str | None = None
+    artist_id: str | None = None
     song_ids: list[str] | None = Field(default=None, max_length=2000)
     mode: AddMode = AddMode.NOW
     start_index: int = Field(default=0, ge=0)
@@ -45,8 +52,9 @@ class QueueAddBody(BaseModel):
 
     @model_validator(mode="after")
     def _one_source(self) -> QueueAddBody:
-        if (self.album_id is None) == (self.song_ids is None):
-            raise ValueError("exactly one of album_id or song_ids is required")
+        sources = [self.album_id, self.artist_id, self.song_ids]
+        if sum(source is not None for source in sources) != 1:
+            raise ValueError("exactly one of album_id, artist_id or song_ids is required")
         return self
 
 
@@ -75,7 +83,13 @@ async def seek(body: SeekBody, request: Request) -> None:
 
 @router.post("/player/jump", status_code=204)
 async def jump(body: JumpBody, request: Request) -> None:
-    await get_ctx(request).coordinator.jump(body.index)
+    c = get_ctx(request).coordinator
+    if body.uid is not None:
+        await c.jump_uid(body.uid)
+    elif body.index is not None:
+        await c.jump(body.index)
+    else:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "invalid_queue_index"})
 
 
 @router.put("/player/mode", status_code=204)
@@ -98,6 +112,10 @@ async def add_to_queue(body: QueueAddBody, request: Request) -> None:
     if body.album_id is not None:
         album = await ctx.subsonic.get_album(body.album_id)
         songs = album.songs or []
+    elif body.artist_id is not None:
+        _artist, artist_albums = await ctx.subsonic.get_artist(body.artist_id)
+        full = await asyncio.gather(*(ctx.subsonic.get_album(a.id) for a in artist_albums))
+        songs = [song for a in full for song in (a.songs or [])]
     else:
         songs = list(await asyncio.gather(*(ctx.subsonic.get_song(i) for i in body.song_ids or [])))
     if not songs:
@@ -106,6 +124,16 @@ async def add_to_queue(body: QueueAddBody, request: Request) -> None:
         await ctx.coordinator.play_songs(songs, body.start_index)
     else:
         await ctx.coordinator.add_songs(songs, body.mode)
+
+
+@router.delete("/queue/items/{uid}", status_code=204)
+async def remove_queue_item(uid: int, request: Request) -> None:
+    await get_ctx(request).coordinator.remove_entry(uid)
+
+
+@router.post("/queue/move", status_code=204)
+async def move_queue_item(body: MoveBody, request: Request) -> None:
+    await get_ctx(request).coordinator.move_entry(body.uid, body.to_index)
 
 
 @router.delete("/queue", status_code=204)

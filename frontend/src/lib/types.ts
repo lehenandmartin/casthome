@@ -2,6 +2,7 @@ export interface Song {
   id: string;
   title: string;
   artist: string;
+  artist_id: string | null;
   album: string;
   album_id: string | null;
   cover_art: string | null;
@@ -18,6 +19,7 @@ export interface Album {
   id: string;
   name: string;
   artist: string;
+  artist_id: string | null;
   cover_art: string | null;
   year: number | null;
   song_count: number;
@@ -65,3 +67,29 @@ export interface Notification {
   code: string;
   params: Record<string, unknown>;
 }
+
+export interface Artist {
+  id: string;
+  name: string;
+  album_count: number;
+  cover_art: string | null;
+}
+
+export interface ArtistDetail extends Artist {
+  albums: Album[];
+}
+
+export interface Genre {
+  name: string;
+  song_count: number;
+  album_count: number;
+}
+
+export interface SearchResult {
+  artists: Artist[];
+  albums: Album[];
+  songs: Song[];
+}
+
+export type AlbumListType = 'newest' | 'recent' | 'random' | 'frequent' | 'alphabeticalByName' | 'byGenre';
+export type AddMode = 'now' | 'next' | 'end';

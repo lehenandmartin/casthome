@@ -299,6 +299,38 @@ class PlaybackCoordinator:
                 raise PlaybackError("invalid_queue_index") from exc
             await self._load_current(0)
 
+    def _position_of(self, uid: int) -> int:
+        for position, entry in enumerate(self.queue.entries):
+            if entry.uid == uid:
+                return position
+        raise PlaybackError("invalid_queue_index")
+
+    async def jump_uid(self, uid: int) -> None:
+        async with self._lock:
+            self.queue.jump(self._position_of(uid))
+            await self._load_current(0)
+
+    async def remove_entry(self, uid: int) -> None:
+        async with self._lock:
+            current_removed = self.queue.remove(self._position_of(uid))
+            self._queue_mutated()
+            if not current_removed:
+                return
+            if self.status == Status.STOPPED or self.queue.current is None:
+                await self._stop_device()
+                self._set_position(0)
+                self.duration = self.queue.current.item.duration if self.queue.current else None
+                self.notifier.player_changed()
+            else:
+                await self._load_current(0)
+
+    async def move_entry(self, uid: int, to_index: int) -> None:
+        async with self._lock:
+            if not 0 <= to_index < len(self.queue):
+                raise PlaybackError("invalid_queue_index")
+            self.queue.move(self._position_of(uid), to_index)
+            self._queue_mutated()
+
     async def seek(self, position: float) -> None:
         async with self._lock:
             await self._seek(position)

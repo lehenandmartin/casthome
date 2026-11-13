@@ -72,6 +72,42 @@ class Album(BaseModel):
         )
 
 
+class Artist(BaseModel):
+    id: str
+    name: str
+    album_count: int = 0
+    cover_art: str | None = None
+
+    @classmethod
+    def from_api(cls, d: dict[str, Any]) -> Artist:
+        return cls(
+            id=str(d["id"]),
+            name=d.get("name", ""),
+            album_count=int(d.get("albumCount") or 0),
+            cover_art=d.get("coverArt"),
+        )
+
+
+class Genre(BaseModel):
+    name: str
+    song_count: int = 0
+    album_count: int = 0
+
+    @classmethod
+    def from_api(cls, d: dict[str, Any]) -> Genre:
+        return cls(
+            name=d.get("value") or d.get("name") or "",
+            song_count=int(d.get("songCount") or 0),
+            album_count=int(d.get("albumCount") or 0),
+        )
+
+
+class SearchResult(BaseModel):
+    artists: list[Artist]
+    albums: list[Album]
+    songs: list[Song]
+
+
 class PlayQueue(BaseModel):
     songs: list[Song]
     current_id: str | None = None

@@ -10,7 +10,7 @@ from casthome.api.deps import get_ctx, require_session
 
 router = APIRouter(prefix="/api", tags=["library"], dependencies=[Depends(require_session)])
 
-AlbumListType = Literal["newest", "recent", "random", "frequent", "alphabeticalByName", "starred"]
+AlbumListType = Literal["newest", "recent", "random", "frequent", "alphabeticalByName", "starred", "byGenre"]
 
 
 @router.get("/library/albums")
@@ -19,14 +19,55 @@ async def albums(
     type: AlbumListType = "newest",  # noqa: A002 - mirrors the Subsonic parameter
     size: int = Query(40, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    genre: str | None = Query(None, max_length=200),
 ) -> list[dict]:
-    items = await get_ctx(request).subsonic.get_album_list(type, size, offset)
+    if type == "byGenre" and not genre:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "genre_required"})
+    items = await get_ctx(request).subsonic.get_album_list(type, size, offset, genre if type == "byGenre" else None)
     return [a.model_dump(exclude={"songs"}) for a in items]
 
 
 @router.get("/library/albums/{album_id}")
 async def album(album_id: str, request: Request) -> dict:
     return (await get_ctx(request).subsonic.get_album(album_id)).model_dump()
+
+
+@router.get("/library/artists")
+async def artists(request: Request) -> list[dict]:
+    items = await get_ctx(request).subsonic.get_artists()
+    return [a.model_dump() for a in items]
+
+
+@router.get("/library/artists/{artist_id}")
+async def artist(artist_id: str, request: Request) -> dict:
+    info, albums_ = await get_ctx(request).subsonic.get_artist(artist_id)
+    return {**info.model_dump(), "albums": [a.model_dump(exclude={"songs"}) for a in albums_]}
+
+
+@router.get("/library/genres")
+async def genres(request: Request) -> list[dict]:
+    items = await get_ctx(request).subsonic.get_genres()
+    return [g.model_dump() for g in sorted(items, key=lambda g: g.name.lower())]
+
+
+@router.get("/library/genres/{genre}/songs")
+async def genre_songs(
+    genre: str,
+    request: Request,
+    count: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> list[dict]:
+    items = await get_ctx(request).subsonic.get_songs_by_genre(genre, count, offset)
+    return [s.model_dump() for s in items]
+
+
+@router.get("/library/search")
+async def search(
+    request: Request,
+    q: str = Query(min_length=1, max_length=200),
+    limit: int = Query(20, ge=1, le=100),
+) -> dict:
+    return (await get_ctx(request).subsonic.search(q, limit)).model_dump()
 
 
 @router.get("/cover/{cover_id}")

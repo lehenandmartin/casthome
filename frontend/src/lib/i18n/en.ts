@@ -11,10 +11,19 @@ export const en = {
   'login.submitting': 'Signing in…',
 
   'nav.albums': 'Albums',
+  'nav.artists': 'Artists',
+  'nav.genres': 'Genres',
+  'nav.search': 'Search',
   'nav.queue': 'Queue',
   'nav.signOut': 'Sign out',
 
+  'albums.title': 'Albums',
   'albums.newest': 'Recently added',
+  'albums.recent': 'Recently played',
+  'albums.frequent': 'Most played',
+  'albums.random': 'Random',
+  'albums.alphabeticalByName': 'A–Z',
+  'albums.reshuffle': 'Shuffle again',
   'albums.empty': 'No albums found.',
   'albums.loadMore': 'Load more',
 
@@ -22,6 +31,31 @@ export const en = {
   'album.playNext': 'Play next',
   'album.addToQueue': 'Add to queue',
   'album.tracks': '{count} tracks',
+  'album.count': '{count} albums',
+
+  'artists.title': 'Artists',
+  'artists.filter': 'Filter artists',
+  'artists.empty': 'No artists found.',
+  'artist.playAll': 'Play all',
+  'artist.albums': 'Albums',
+
+  'genres.title': 'Genres',
+  'genres.empty': 'No genres found.',
+  'genre.playSongs': 'Play songs',
+  'genre.summary': '{albums} albums · {songs} tracks',
+
+  'search.title': 'Search',
+  'search.placeholder': 'Artists, albums, tracks…',
+  'search.artists': 'Artists',
+  'search.albums': 'Albums',
+  'search.songs': 'Tracks',
+  'search.noResults': 'No results for “{query}”.',
+
+  'song.more': 'More actions',
+  'song.playNow': 'Play now',
+  'song.playNext': 'Play next',
+  'song.addToQueue': 'Add to queue',
+  'song.added': 'Added to the queue.',
 
   'devices.title': 'Play on',
   'devices.none': 'No Cast device found yet. Discovery is running…',
@@ -45,6 +79,8 @@ export const en = {
   'queue.empty': 'The queue is empty. Pick an album to start.',
   'queue.clear': 'Clear queue',
   'queue.count': '{count} tracks',
+  'queue.remove': 'Remove from queue',
+  'queue.drag': 'Drag to reorder',
 
   'connection.offline': 'Reconnecting to CastHome…',
 
@@ -66,6 +102,8 @@ export const en = {
   'error.invalid_queue_index': 'This track is no longer in the queue.',
   'error.forbidden_origin': 'Request blocked (cross-site).',
   'error.navidrome_password_changed': 'Your Navidrome password changed. Please sign in again.',
+  'error.genre_required': 'A genre is required.',
+  'error.added_to_queue': 'Added to the queue.',
   'error.unknown': 'Something went wrong.',
 } as const;
 
