@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
-from casthome.subsonic.models import Album, Artist, Genre, PlayQueue, SearchResult, Song
+from casthome.subsonic.models import Album, Artist, Genre, Playlist, PlayQueue, SearchResult, Song
 from casthome.subsonic.tokens import auth_params
 
 log = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ class NavidromeUnavailableError(Exception):
 
 
 PasswordProvider = Callable[[], Awaitable[str | None]]
+StarKind = Literal["song", "album", "artist"]
 
 
 class SubsonicClient:
@@ -146,12 +147,68 @@ class SubsonicClient:
         data = await self.call(
             "search3", {"query": query, "artistCount": limit, "albumCount": limit, "songCount": limit * 2}
         )
-        result = data.get("searchResult3") or {}
-        return SearchResult(
-            artists=[Artist.from_api(a) for a in result.get("artist", [])],
-            albums=[Album.from_api(a) for a in result.get("album", [])],
-            songs=[Song.from_api(s) for s in result.get("song", [])],
-        )
+        return SearchResult.from_api(data.get("searchResult3"))
+
+    # --- favorites & ratings -------------------------------------------------
+
+    async def get_starred(self) -> SearchResult:
+        data = await self.call("getStarred2")
+        return SearchResult.from_api(data.get("starred2"))
+
+    async def set_starred(self, kind: StarKind, item_id: str, starred: bool) -> None:
+        param = {"song": "id", "album": "albumId", "artist": "artistId"}[kind]
+        await self.call("star" if starred else "unstar", {param: item_id})
+
+    async def set_rating(self, item_id: str, rating: int) -> None:
+        await self.call("setRating", {"id": item_id, "rating": max(0, min(5, rating))})
+
+    async def scrobble(self, song_id: str, submission: bool, time_ms: int | None = None) -> None:
+        params: dict[str, Any] = {"id": song_id, "submission": "true" if submission else "false"}
+        if time_ms is not None:
+            params["time"] = time_ms
+        await self.call("scrobble", params)
+
+    # --- playlists -----------------------------------------------------------
+
+    async def get_playlists(self) -> list[Playlist]:
+        data = await self.call("getPlaylists")
+        return [Playlist.from_api(p) for p in (data.get("playlists") or {}).get("playlist", [])]
+
+    async def get_playlist(self, playlist_id: str) -> Playlist:
+        data = await self.call("getPlaylist", {"id": playlist_id})
+        return Playlist.from_api(data["playlist"])
+
+    async def create_playlist(self, name: str, song_ids: list[str]) -> Playlist:
+        data = await self.call("createPlaylist", {"name": name, "songId": song_ids}, post=await self._can_post())
+        if "playlist" in data:
+            return Playlist.from_api(data["playlist"])
+        # Plain Subsonic servers return nothing: find the newest playlist with that name.
+        matches = [p for p in await self.get_playlists() if p.name == name]
+        if not matches:
+            raise SubsonicError(0, "Playlist was not created")
+        return max(matches, key=lambda p: p.changed or "")
+
+    async def update_playlist(
+        self,
+        playlist_id: str,
+        name: str | None = None,
+        add_song_ids: list[str] | None = None,
+        remove_indexes: list[int] | None = None,
+    ) -> None:
+        params: dict[str, Any] = {"playlistId": playlist_id}
+        if name is not None:
+            params["name"] = name
+        if add_song_ids:
+            params["songIdToAdd"] = add_song_ids
+        if remove_indexes:
+            params["songIndexToRemove"] = remove_indexes
+        await self.call("updatePlaylist", params, post=await self._can_post())
+
+    async def delete_playlist(self, playlist_id: str) -> None:
+        await self.call("deletePlaylist", {"id": playlist_id})
+
+    async def _can_post(self) -> bool:
+        return "formPost" in await self.extensions()
 
     async def get_album(self, album_id: str) -> Album:
         data = await self.call("getAlbum", {"id": album_id})
@@ -171,8 +228,7 @@ class SubsonicClient:
             params["current"] = current_id
             params["position"] = max(0, position_ms)
         # Long queues do not fit in a URL: use a form POST when the server supports it.
-        use_post = "formPost" in await self.extensions()
-        await self.call("savePlayQueue", params, post=use_post)
+        await self.call("savePlayQueue", params, post=await self._can_post())
 
     async def get_cover_art(self, cover_id: str, size: int | None) -> httpx.Response:
         query: dict[str, Any] = {**auth_params(self.username, await self._password()), "id": cover_id}

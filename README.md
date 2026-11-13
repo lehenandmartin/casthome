@@ -22,6 +22,11 @@ from **any browser** (Firefox, Safari/iOS, Chrome…).
 - Phase 2: browse albums (recent, most played, random, A–Z), artists, genres;
   search; play now / play next / add to queue for tracks, albums and artists;
   reorder the queue by drag and drop, remove items.
+- Phase 3: playlists (play, create, rename, add/remove tracks, delete, save
+  the queue as a playlist); favorites (☆ on tracks, albums, artists, plus a
+  Favorites page); 5-star ratings; scrobbling to Navidrome ("now playing" when
+  a track starts, a scrobble after half the track or 4 minutes of actual
+  listening; seeking forward does not count).
 
 ## How it works
 

@@ -11,7 +11,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from casthome.api import auth, library, player, ws
+from casthome.api import auth, library, player, playlists, ws
 from casthome.api.deps import origin_allowed
 from casthome.config import Settings, get_settings
 from casthome.context import AppContext
@@ -80,7 +80,7 @@ def create_app(settings: Settings | None = None, ctx: AppContext | None = None, 
     async def health() -> dict:
         return {"status": "ok", "devices": len(context.cast.devices), "clients": context.hub.client_count}
 
-    for module in (auth, player, library, ws):
+    for module in (auth, player, library, playlists, ws):
         app.include_router(module.router)
 
     dist = settings.frontend_dist

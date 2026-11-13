@@ -28,6 +28,15 @@
     rows = e.detail.items;
   }
 
+  async function saveAsPlaylist() {
+    const name = prompt(t('playlists.namePlaceholder'))?.trim();
+    if (!name) return;
+    await store.run(async () => {
+      await api.createPlaylist(name, [], true);
+      store.notify('playlist_saved', {}, 'info');
+    });
+  }
+
   async function finalize(e: CustomEvent<DndEvent<Row>>) {
     rows = e.detail.items;
     dragging = false;
@@ -44,6 +53,7 @@
     <h2>{t('queue.title')}</h2>
     {#if rows.length > 0}
       <span class="muted">{t('queue.count', { count: rows.length })}</span>
+      <button onclick={saveAsPlaylist}>{t('queue.saveAsPlaylist')}</button>
       <button onclick={() => store.run(api.clearQueue)}>{t('queue.clear')}</button>
     {/if}
   </header>
@@ -88,7 +98,7 @@
     gap: 12px;
     flex-wrap: wrap;
   }
-  header button {
+  header button:first-of-type {
     margin-left: auto;
   }
   ol {

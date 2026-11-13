@@ -4,21 +4,28 @@
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { AddMode, Song } from '../lib/types';
+  import PlaylistPicker from './PlaylistPicker.svelte';
+  import RatingStars from './RatingStars.svelte';
+  import StarButton from './StarButton.svelte';
 
   let {
     songs,
     onplay,
+    onremove,
     numbered = false,
     showAlbum = true,
   }: {
     songs: Song[];
     /** Clicking a row: usually "play this list from here". */
     onplay: (index: number) => void;
+    /** When set, the menu offers "Remove from playlist". */
+    onremove?: (index: number) => void;
     numbered?: boolean;
     showAlbum?: boolean;
   } = $props();
 
   let menuFor = $state<number | null>(null);
+  let pickerFor = $state<string | null>(null);
   const currentId = $derived(store.player?.current?.id);
 
   async function add(song: Song, mode: AddMode) {
@@ -43,6 +50,7 @@
         </span>
         <span class="muted">{formatTime(song.duration)}</span>
       </button>
+      <StarButton kind="song" id={song.id} bind:starred={song.starred} />
       <div class="menu-wrap">
         <button
           class="more"
@@ -54,16 +62,40 @@
           }}>⋯</button
         >
         {#if menuFor === i}
-          <div class="menu" role="menu">
+          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+          <div class="menu" role="menu" tabindex="-1" onclick={(e) => e.stopPropagation()}>
             <button role="menuitem" onclick={() => add(song, 'now')}>{t('song.playNow')}</button>
             <button role="menuitem" onclick={() => add(song, 'next')}>{t('song.playNext')}</button>
             <button role="menuitem" onclick={() => add(song, 'end')}>{t('song.addToQueue')}</button>
+            <button
+              role="menuitem"
+              onclick={() => {
+                menuFor = null;
+                pickerFor = song.id;
+              }}>{t('song.addToPlaylist')}</button
+            >
+            {#if onremove}
+              <button
+                role="menuitem"
+                onclick={() => {
+                  menuFor = null;
+                  onremove(i);
+                }}>{t('playlist.removeTrack')}</button
+              >
+            {/if}
+            <div class="rating-row">
+              <RatingStars id={song.id} bind:rating={song.user_rating} />
+            </div>
           </div>
         {/if}
       </div>
     </li>
   {/each}
 </ol>
+
+{#if pickerFor}
+  <PlaylistPicker songIds={[pickerFor]} onclose={() => (pickerFor = null)} />
+{/if}
 
 <style>
   .songs {
@@ -124,20 +156,25 @@
     top: 100%;
     z-index: 15;
     display: grid;
-    min-width: 170px;
+    min-width: 190px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
     padding: 4px;
   }
-  .menu button {
+  .menu > button {
     background: none;
     border: 0;
     text-align: left;
     padding: 8px 10px;
   }
-  .menu button:hover {
+  .menu > button:hover {
     background: var(--surface-2);
+  }
+  .rating-row {
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    padding: 4px 6px 0;
   }
 </style>

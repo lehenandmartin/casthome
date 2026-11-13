@@ -9,6 +9,8 @@ export interface Song {
   duration: number;
   track: number | null;
   disc: number | null;
+  starred: boolean;
+  user_rating: number;
 }
 
 export interface QueueItem extends Song {
@@ -24,6 +26,8 @@ export interface Album {
   year: number | null;
   song_count: number;
   duration: number;
+  starred: boolean;
+  user_rating: number;
   songs?: Song[] | null;
 }
 
@@ -73,6 +77,7 @@ export interface Artist {
   name: string;
   album_count: number;
   cover_art: string | null;
+  starred: boolean;
 }
 
 export interface ArtistDetail extends Artist {
@@ -93,3 +98,18 @@ export interface SearchResult {
 
 export type AlbumListType = 'newest' | 'recent' | 'random' | 'frequent' | 'alphabeticalByName' | 'byGenre';
 export type AddMode = 'now' | 'next' | 'end';
+
+export interface Playlist {
+  id: string;
+  name: string;
+  comment: string;
+  owner: string;
+  public: boolean;
+  song_count: number;
+  duration: number;
+  cover_art: string | null;
+  changed: string | null;
+  songs?: Song[] | null;
+}
+
+export type StarKind = 'song' | 'album' | 'artist';

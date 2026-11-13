@@ -1,4 +1,16 @@
-import type { AddMode, Album, AlbumListType, ArtistDetail, Artist, Genre, RepeatMode, SearchResult, Song } from './types';
+import type {
+  AddMode,
+  Album,
+  AlbumListType,
+  Artist,
+  ArtistDetail,
+  Genre,
+  Playlist,
+  RepeatMode,
+  SearchResult,
+  Song,
+  StarKind,
+} from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -54,6 +66,22 @@ export const api = {
   search: (q: string, limit = 20) =>
     request<SearchResult>('GET', `/library/search?q=${encodeURIComponent(q)}&limit=${limit}`),
   album: (id: string) => request<Album>('GET', `/library/albums/${encodeURIComponent(id)}`),
+  starred: () => request<SearchResult>('GET', '/library/starred'),
+  setStarred: (kind: StarKind, id: string, starred: boolean) =>
+    request<void>('PUT', '/library/star', { kind, id, starred }),
+  setRating: (id: string, rating: number) => request<void>('PUT', '/library/rating', { id, rating }),
+
+  playlists: () => request<Playlist[]>('GET', '/playlists'),
+  playlist: (id: string) => request<Playlist>('GET', `/playlists/${encodeURIComponent(id)}`),
+  createPlaylist: (name: string, songIds: string[] = [], fromQueue = false) =>
+    request<Playlist>('POST', '/playlists', { name, song_ids: songIds, from_queue: fromQueue }),
+  updatePlaylist: (id: string, changes: { name?: string; add_song_ids?: string[]; remove_indexes?: number[] }) =>
+    request<void>('PATCH', `/playlists/${encodeURIComponent(id)}`, changes),
+  deletePlaylist: (id: string) => request<void>('DELETE', `/playlists/${encodeURIComponent(id)}`),
+  playPlaylist: (id: string, startIndex = 0) =>
+    request<void>('POST', '/queue', { playlist_id: id, mode: 'now', start_index: startIndex }),
+  queuePlaylist: (id: string, mode: 'next' | 'end') =>
+    request<void>('POST', '/queue', { playlist_id: id, mode, replace: false }),
 
   selectDevice: (uuid: string) => request<void>('PUT', '/player/device', { uuid }),
   action: (name: 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'stop') =>

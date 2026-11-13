@@ -138,3 +138,56 @@ async def test_client_unavailable():
     with pytest.raises(NavidromeUnavailableError):
         await client.ping()
     await client.aclose()
+
+
+def _ok(**extra):
+    return httpx.Response(200, json={"subsonic-response": {"status": "ok", **extra}})
+
+
+@respx.mock
+async def test_star_uses_the_right_parameter_per_kind():
+    star = respx.get(url__startswith="http://nd/rest/star").mock(return_value=_ok())
+    unstar = respx.get(url__startswith="http://nd/rest/unstar").mock(return_value=_ok())
+    client = SubsonicClient("http://nd", "me", _pw)
+    await client.set_starred("album", "al1", True)
+    assert parse_qs(urlparse(str(star.calls.last.request.url)).query)["albumId"] == ["al1"]
+    await client.set_starred("song", "s1", False)
+    assert parse_qs(urlparse(str(unstar.calls.last.request.url)).query)["id"] == ["s1"]
+    await client.aclose()
+
+
+@respx.mock
+async def test_scrobble_and_rating_params():
+    scrobble = respx.get(url__startswith="http://nd/rest/scrobble").mock(return_value=_ok())
+    rating = respx.get(url__startswith="http://nd/rest/setRating").mock(return_value=_ok())
+    client = SubsonicClient("http://nd", "me", _pw)
+    await client.scrobble("s1", True, 1234)
+    q = parse_qs(urlparse(str(scrobble.calls.last.request.url)).query)
+    assert q["id"] == ["s1"] and q["submission"] == ["true"] and q["time"] == ["1234"]
+    await client.set_rating("s1", 9)
+    assert parse_qs(urlparse(str(rating.calls.last.request.url)).query)["rating"] == ["5"]
+    await client.aclose()
+
+
+@respx.mock
+async def test_update_playlist_sends_repeated_params():
+    respx.get(url__startswith="http://nd/rest/getOpenSubsonicExtensions").mock(return_value=_ok(openSubsonicExtensions=[]))
+    route = respx.get(url__startswith="http://nd/rest/updatePlaylist").mock(return_value=_ok())
+    client = SubsonicClient("http://nd", "me", _pw)
+    await client.update_playlist("p1", name="New", add_song_ids=["a", "b"], remove_indexes=[0, 3])
+    q = parse_qs(urlparse(str(route.calls.last.request.url)).query)
+    assert q["playlistId"] == ["p1"] and q["name"] == ["New"]
+    assert q["songIdToAdd"] == ["a", "b"] and q["songIndexToRemove"] == ["0", "3"]
+    await client.aclose()
+
+
+@respx.mock
+async def test_create_playlist_returns_created_playlist():
+    respx.get(url__startswith="http://nd/rest/getOpenSubsonicExtensions").mock(return_value=_ok(openSubsonicExtensions=[]))
+    respx.get(url__startswith="http://nd/rest/createPlaylist").mock(
+        return_value=_ok(playlist={"id": "p9", "name": "Mix", "songCount": 2})
+    )
+    client = SubsonicClient("http://nd", "me", _pw)
+    playlist = await client.create_playlist("Mix", ["a", "b"])
+    assert playlist.id == "p9" and playlist.song_count == 2
+    await client.aclose()

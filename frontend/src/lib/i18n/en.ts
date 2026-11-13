@@ -14,6 +14,8 @@ export const en = {
   'nav.artists': 'Artists',
   'nav.genres': 'Genres',
   'nav.search': 'Search',
+  'nav.playlists': 'Playlists',
+  'nav.favorites': 'Favorites',
   'nav.queue': 'Queue',
   'nav.signOut': 'Sign out',
 
@@ -56,6 +58,33 @@ export const en = {
   'song.playNext': 'Play next',
   'song.addToQueue': 'Add to queue',
   'song.added': 'Added to the queue.',
+  'song.addToPlaylist': 'Add to playlist…',
+  'song.rating': 'Rating',
+
+  'star.add': 'Add to favorites',
+  'star.remove': 'Remove from favorites',
+  'rating.set': 'Rate {stars} out of 5',
+  'rating.clear': 'Remove rating',
+
+  'playlists.title': 'Playlists',
+  'playlists.empty': 'No playlists yet.',
+  'playlists.new': 'New playlist',
+  'playlists.namePlaceholder': 'Playlist name',
+  'playlists.create': 'Create',
+  'playlists.tracks': '{count} tracks',
+  'playlist.play': 'Play',
+  'playlist.rename': 'Rename',
+  'playlist.save': 'Save',
+  'playlist.cancel': 'Cancel',
+  'playlist.delete': 'Delete',
+  'playlist.deleteConfirm': 'Delete the playlist “{name}”? This cannot be undone.',
+  'playlist.removeTrack': 'Remove from playlist',
+  'playlist.empty': 'This playlist is empty.',
+  'playlist.pickTitle': 'Add to playlist',
+  'playlist.added': 'Added to “{name}”.',
+
+  'favorites.title': 'Favorites',
+  'favorites.empty': 'Nothing here yet. Use ☆ to add artists, albums or tracks.',
 
   'devices.title': 'Play on',
   'devices.none': 'No Cast device found yet. Discovery is running…',
@@ -81,6 +110,7 @@ export const en = {
   'queue.count': '{count} tracks',
   'queue.remove': 'Remove from queue',
   'queue.drag': 'Drag to reorder',
+  'queue.saveAsPlaylist': 'Save as playlist',
 
   'connection.offline': 'Reconnecting to CastHome…',
 
@@ -104,6 +134,8 @@ export const en = {
   'error.navidrome_password_changed': 'Your Navidrome password changed. Please sign in again.',
   'error.genre_required': 'A genre is required.',
   'error.added_to_queue': 'Added to the queue.',
+  'error.playlist_saved': 'Playlist saved.',
+  'error.playlist_added': 'Added to “{name}”.',
   'error.unknown': 'Something went wrong.',
 } as const;
 

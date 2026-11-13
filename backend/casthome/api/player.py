@@ -45,6 +45,7 @@ class MoveBody(BaseModel):
 class QueueAddBody(BaseModel):
     album_id: str | None = None
     artist_id: str | None = None
+    playlist_id: str | None = None
     song_ids: list[str] | None = Field(default=None, max_length=2000)
     mode: AddMode = AddMode.NOW
     start_index: int = Field(default=0, ge=0)
@@ -52,9 +53,9 @@ class QueueAddBody(BaseModel):
 
     @model_validator(mode="after")
     def _one_source(self) -> QueueAddBody:
-        sources = [self.album_id, self.artist_id, self.song_ids]
+        sources = [self.album_id, self.artist_id, self.playlist_id, self.song_ids]
         if sum(source is not None for source in sources) != 1:
-            raise ValueError("exactly one of album_id, artist_id or song_ids is required")
+            raise ValueError("exactly one of album_id, artist_id, playlist_id or song_ids is required")
         return self
 
 
@@ -112,6 +113,8 @@ async def add_to_queue(body: QueueAddBody, request: Request) -> None:
     if body.album_id is not None:
         album = await ctx.subsonic.get_album(body.album_id)
         songs = album.songs or []
+    elif body.playlist_id is not None:
+        songs = (await ctx.subsonic.get_playlist(body.playlist_id)).songs or []
     elif body.artist_id is not None:
         _artist, artist_albums = await ctx.subsonic.get_artist(body.artist_id)
         full = await asyncio.gather(*(ctx.subsonic.get_album(a.id) for a in artist_albums))

@@ -4,6 +4,7 @@
   import { store } from '../lib/store.svelte';
   import type { ArtistDetail } from '../lib/types';
   import AlbumGrid from './AlbumGrid.svelte';
+  import StarButton from './StarButton.svelte';
 
   let { id }: { id: string } = $props();
   let artist = $state<ArtistDetail | null>(null);
@@ -28,7 +29,7 @@
 
 {#if artist}
   <section>
-    <h2>{artist.name}</h2>
+    <h2>{artist.name} <StarButton kind="artist" id={artist.id} bind:starred={artist.starred} /></h2>
     <p class="muted">{t('album.count', { count: artist.albums.length })}</p>
     <div class="actions">
       <button class="primary" onclick={() => queue('now')}>{t('artist.playAll')}</button>
@@ -42,6 +43,9 @@
 <style>
   h2 {
     margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
   .actions {
     display: flex;

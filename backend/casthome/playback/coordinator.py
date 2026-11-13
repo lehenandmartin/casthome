@@ -18,7 +18,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -36,6 +36,7 @@ from casthome.cast.types import (
 from casthome.playback.media import MediaBuilder
 from casthome.playback.persistence import QueueStore
 from casthome.queue.logic import AddMode, QueueModel, RepeatMode
+from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import NavidromeUnavailableError, NotAuthenticatedError, SubsonicError
 from casthome.subsonic.models import Song
 
@@ -83,8 +84,10 @@ class PlaybackCoordinator:
         store: QueueStore,
         notifier: Notifier | None = None,
         clock: Callable[[], float] = time.time,
+        scrobbler: Scrobbler | None = None,
     ) -> None:
         self._connector = connector
+        self._scrobbler = scrobbler
         self._media = media
         self._store = store
         self.notifier = notifier or Notifier()
@@ -396,6 +399,8 @@ class PlaybackCoordinator:
         self._expected_content_id = media.url
         self._seen_active = False
         self._fallback_used = force_fallback
+        if self._scrobbler is not None:
+            self._scrobbler.track_loaded(song.id, song.duration)
         self._transcoded = media.transcoded
         self._reattach_song_id = None
         self.status = Status.LOADING
@@ -501,6 +506,8 @@ class PlaybackCoordinator:
                 self._seen_active = True
                 self._reattach_song_id = None
                 self._transcoded = "format=" in (ev.content_id or "")
+                if self._scrobbler is not None and self.queue.current is not None:
+                    self._scrobbler.track_loaded(self.queue.current.item.id, self.queue.current.item.duration)
             else:
                 return
         if ev.content_id and ev.content_id != self._expected_content_id:
@@ -515,6 +522,7 @@ class PlaybackCoordinator:
                 self.duration = ev.duration
             self._set_position(ev.current_time)
             self.notifier.player_changed()
+            await self._report_progress(ev)
             return
 
         if ev.player_state != "IDLE":
@@ -530,6 +538,26 @@ class PlaybackCoordinator:
             self.status = Status.STOPPED
             self.notifier.player_changed()
             self._schedule_save()
+
+    async def _report_progress(self, ev: MediaEvent) -> None:
+        if self._scrobbler is None or self.queue.current is None:
+            return
+        if ev.player_state == "PLAYING":
+            await self._scrobbler.progress(self.queue.current.item.id, ev.current_time)
+        else:
+            self._scrobbler.stopped()
+
+    def update_song_flags(self, song_id: str, **changes: Any) -> None:
+        """Reflect a star/rating change in the queue copies of a song."""
+        changed = False
+        for i, entry in enumerate(self.queue.entries):
+            if entry.item.id == song_id:
+                self.queue.entries[i] = replace(entry, item=entry.item.model_copy(update=changes))
+                changed = True
+        if changed:
+            self.queue_version += 1
+            self.notifier.queue_changed()
+            self.notifier.player_changed()
 
     async def _on_error(self) -> None:
         entry = self.queue.current

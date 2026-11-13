@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from pydantic import BaseModel, Field
 
 from casthome.api.deps import get_ctx, require_session
 
@@ -68,6 +69,37 @@ async def search(
     limit: int = Query(20, ge=1, le=100),
 ) -> dict:
     return (await get_ctx(request).subsonic.search(q, limit)).model_dump()
+
+
+class StarBody(BaseModel):
+    kind: Literal["song", "album", "artist"]
+    id: str
+    starred: bool
+
+
+class RatingBody(BaseModel):
+    id: str
+    rating: int = Field(ge=0, le=5)  # 0 removes the rating
+
+
+@router.get("/library/starred")
+async def starred(request: Request) -> dict:
+    return (await get_ctx(request).subsonic.get_starred()).model_dump()
+
+
+@router.put("/library/star", status_code=204)
+async def set_star(body: StarBody, request: Request) -> None:
+    ctx = get_ctx(request)
+    await ctx.subsonic.set_starred(body.kind, body.id, body.starred)
+    if body.kind == "song":
+        ctx.coordinator.update_song_flags(body.id, starred=body.starred)
+
+
+@router.put("/library/rating", status_code=204)
+async def set_rating(body: RatingBody, request: Request) -> None:
+    ctx = get_ctx(request)
+    await ctx.subsonic.set_rating(body.id, body.rating)
+    ctx.coordinator.update_song_flags(body.id, user_rating=body.rating)
 
 
 @router.get("/cover/{cover_id}")

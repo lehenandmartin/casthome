@@ -8,6 +8,7 @@
   --accent: #2f6fdb;
   --on-accent: #ffffff;
   --danger: #c93838;
+  --star: #d99a00;
   color-scheme: light;
 }
 
@@ -22,6 +23,7 @@
     --accent: #6aa0ff;
     --on-accent: #0b1220;
     --danger: #d9534f;
+    --star: #f2b63c;
     color-scheme: dark;
   }
 }

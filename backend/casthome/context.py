@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 
@@ -15,6 +16,7 @@ from casthome.db import Database
 from casthome.playback.coordinator import Notifier, PlaybackCoordinator
 from casthome.playback.media import MediaBuilder, StreamConfig
 from casthome.playback.persistence import NavidromeQueueStore
+from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import SubsonicClient
 from casthome.ws.hub import Hub
 
@@ -57,8 +59,21 @@ class AppContext:
         async def connector(uuid: str, sink: EventSink) -> CastTarget:
             return await cast.connect(uuid, sink)
 
+        async def scrobble(song_id: str, submission: bool, time_ms: int | None) -> None:
+            # Fire and forget: a slow or failing Navidrome must not delay playback.
+            async def send() -> None:
+                try:
+                    await subsonic.scrobble(song_id, submission, time_ms)
+                    log.info("Scrobbled %s (%s)", song_id, "played" if submission else "now playing")
+                except Exception as exc:  # noqa: BLE001
+                    log.warning("Scrobble failed for %s: %s", song_id, exc)
+
+            asyncio.create_task(send())
+
         hub = Hub()
-        coordinator = PlaybackCoordinator(connector, media, NavidromeQueueStore(db, subsonic))
+        coordinator = PlaybackCoordinator(
+            connector, media, NavidromeQueueStore(db, subsonic), scrobbler=Scrobbler(scrobble)
+        )
         ctx = cls(settings, db, sessions, credentials, subsonic, cast, coordinator, hub)
         coordinator.notifier = Notifier(
             player_changed=lambda: hub.publish("player", ctx.player_snapshot),

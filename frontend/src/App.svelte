@@ -8,7 +8,10 @@
   import Artists from './components/Artists.svelte';
   import GenreView from './components/GenreView.svelte';
   import Genres from './components/Genres.svelte';
+  import Favorites from './components/Favorites.svelte';
   import Login from './components/Login.svelte';
+  import PlaylistView from './components/PlaylistView.svelte';
+  import Playlists from './components/Playlists.svelte';
   import PlayerBar from './components/PlayerBar.svelte';
   import QueueView from './components/QueueView.svelte';
   import Search from './components/Search.svelte';
@@ -21,26 +24,27 @@
   });
 
   type Route =
-    | { name: 'albums' | 'artists' | 'genres' | 'search' | 'queue' }
-    | { name: 'album' | 'artist' | 'genre'; id: string };
+    | { name: 'albums' | 'artists' | 'genres' | 'playlists' | 'favorites' | 'search' | 'queue' }
+    | { name: 'album' | 'artist' | 'genre' | 'playlist'; id: string };
 
   const route = $derived.by((): Route => {
     const path = hash.split('?')[0];
-    const detail = path.match(/^#\/(album|artist|genre)\/(.+)$/);
-    if (detail) return { name: detail[1] as 'album' | 'artist' | 'genre', id: decodeURIComponent(detail[2]) };
-    const simple = path.match(/^#\/(artists|genres|search|queue)$/);
-    if (simple) return { name: simple[1] as 'artists' | 'genres' | 'search' | 'queue' };
+    const detail = path.match(/^#\/(album|artist|genre|playlist)\/(.+)$/);
+    if (detail) return { name: detail[1] as 'album' | 'artist' | 'genre' | 'playlist', id: decodeURIComponent(detail[2]) };
+    const simple = path.match(/^#\/(artists|genres|playlists|favorites|search|queue)$/);
+    if (simple) return { name: simple[1] as 'artists' | 'genres' | 'playlists' | 'favorites' | 'search' | 'queue' };
     return { name: 'albums' };
   });
 
-  const section = $derived(
-    route.name === 'album' ? 'albums' : route.name === 'artist' ? 'artists' : route.name === 'genre' ? 'genres' : route.name,
-  );
+  const PARENT: Record<string, string> = { album: 'albums', artist: 'artists', genre: 'genres', playlist: 'playlists' };
+  const section = $derived(PARENT[route.name] ?? route.name);
 
   const NAV = [
     { href: '#/', name: 'albums', label: 'nav.albums' },
     { href: '#/artists', name: 'artists', label: 'nav.artists' },
     { href: '#/genres', name: 'genres', label: 'nav.genres' },
+    { href: '#/playlists', name: 'playlists', label: 'nav.playlists' },
+    { href: '#/favorites', name: 'favorites', label: 'nav.favorites' },
     { href: '#/search', name: 'search', label: 'nav.search' },
     { href: '#/queue', name: 'queue', label: 'nav.queue' },
   ] as const;
@@ -77,6 +81,12 @@
       <ArtistView id={route.id} />
     {:else if route.name === 'genre'}
       {#key route.id}<GenreView name={route.id} />{/key}
+    {:else if route.name === 'playlist'}
+      <PlaylistView id={route.id} />
+    {:else if route.name === 'playlists'}
+      <Playlists />
+    {:else if route.name === 'favorites'}
+      <Favorites />
     {:else if route.name === 'artists'}
       <Artists />
     {:else if route.name === 'genres'}

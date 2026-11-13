@@ -23,6 +23,8 @@ class Song(BaseModel):
     bit_rate: int | None = None
     sampling_rate: int | None = None
     bit_depth: int | None = None
+    starred: bool = False
+    user_rating: int = 0
 
     @classmethod
     def from_api(cls, d: dict[str, Any]) -> Song:
@@ -42,6 +44,8 @@ class Song(BaseModel):
             bit_rate=d.get("bitRate"),
             sampling_rate=d.get("samplingRate"),
             bit_depth=d.get("bitDepth"),
+            starred=bool(d.get("starred")),
+            user_rating=int(d.get("userRating") or 0),
         )
 
 
@@ -54,6 +58,8 @@ class Album(BaseModel):
     year: int | None = None
     song_count: int = 0
     duration: float = 0
+    starred: bool = False
+    user_rating: int = 0
     songs: list[Song] | None = None
 
     @classmethod
@@ -68,6 +74,8 @@ class Album(BaseModel):
             year=d.get("year"),
             song_count=int(d.get("songCount") or 0),
             duration=float(d.get("duration") or 0),
+            starred=bool(d.get("starred")),
+            user_rating=int(d.get("userRating") or 0),
             songs=[Song.from_api(s) for s in songs] if songs is not None else None,
         )
 
@@ -77,6 +85,7 @@ class Artist(BaseModel):
     name: str
     album_count: int = 0
     cover_art: str | None = None
+    starred: bool = False
 
     @classmethod
     def from_api(cls, d: dict[str, Any]) -> Artist:
@@ -85,6 +94,7 @@ class Artist(BaseModel):
             name=d.get("name", ""),
             album_count=int(d.get("albumCount") or 0),
             cover_art=d.get("coverArt"),
+            starred=bool(d.get("starred")),
         )
 
 
@@ -103,9 +113,49 @@ class Genre(BaseModel):
 
 
 class SearchResult(BaseModel):
+    """Also used for starred items (getStarred2)."""
+
     artists: list[Artist]
     albums: list[Album]
     songs: list[Song]
+
+    @classmethod
+    def from_api(cls, d: dict[str, Any] | None) -> SearchResult:
+        d = d or {}
+        return cls(
+            artists=[Artist.from_api(a) for a in d.get("artist", [])],
+            albums=[Album.from_api(a) for a in d.get("album", [])],
+            songs=[Song.from_api(s) for s in d.get("song", [])],
+        )
+
+
+class Playlist(BaseModel):
+    id: str
+    name: str
+    comment: str = ""
+    owner: str = ""
+    public: bool = False
+    song_count: int = 0
+    duration: float = 0
+    cover_art: str | None = None
+    changed: str | None = None
+    songs: list[Song] | None = None
+
+    @classmethod
+    def from_api(cls, d: dict[str, Any]) -> Playlist:
+        entries = d.get("entry")
+        return cls(
+            id=str(d["id"]),
+            name=d.get("name", ""),
+            comment=d.get("comment") or "",
+            owner=d.get("owner") or "",
+            public=bool(d.get("public")),
+            song_count=int(d.get("songCount") or 0),
+            duration=float(d.get("duration") or 0),
+            cover_art=d.get("coverArt"),
+            changed=d.get("changed"),
+            songs=[Song.from_api(s) for s in entries] if entries is not None else None,
+        )
 
 
 class PlayQueue(BaseModel):

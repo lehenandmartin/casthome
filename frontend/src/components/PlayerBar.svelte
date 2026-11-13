@@ -5,6 +5,7 @@
   import { store } from '../lib/store.svelte';
   import type { RepeatMode } from '../lib/types';
   import DevicePicker from './DevicePicker.svelte';
+  import StarButton from './StarButton.svelte';
 
   let pickerOpen = $state(false);
   let seeking = $state<number | null>(null);
@@ -57,6 +58,9 @@
           {#if song}{song.artist} · {formatTime(position)} / {formatTime(duration)}{/if}
         </span>
       </div>
+      {#if song}
+        {#key song.id}<StarButton kind="song" id={song.id} starred={song.starred} />{/key}
+      {/if}
     </div>
 
     <div class="controls">
