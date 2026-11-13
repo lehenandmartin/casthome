@@ -1,10 +1,13 @@
 # CastHome
 
 A self-hosted web player that plays your [Navidrome](https://www.navidrome.org/)
-library on Google Cast devices (Chromecast, Nest speakers, speaker groups),
-from **any browser** (Firefox, Safari/iOS, Chrome…).
+library on Google Cast devices (Chromecast, Nest speakers, speaker groups) or
+in the browser itself, from **any browser** (Firefox, Safari/iOS, Chrome…).
+Mobile-first, installable on the home screen.
 
 - The **server** drives the Cast devices; browsers never use the Cast SDK.
+- **No device chosen? It plays in the browser** you are using, still with the
+  queue on the server.
 - The **queue lives on the server**: playback goes on to the next track with
   every browser closed.
 - **Navidrome stays the source of truth.** The queue *is* your Navidrome play
@@ -32,6 +35,11 @@ from **any browser** (Firefox, Safari/iOS, Chrome…).
   preloading of the next track to shorten gaps (`CAST_PRELOAD_NEXT`); the Navidrome
   play queue is re-read every minute while idle, so a queue saved by another
   Subsonic client is picked up.
+- Interface redesign: mobile tab bar and mini player, full-screen Now Playing,
+  queue in three parts, device picker grouped by type, track actions as a
+  bottom sheet, desktop sidebar; in-browser playback ("This browser"); fixes
+  for installed iOS web apps (no reload on navigation, instant startup, safe
+  areas).
 
 ## How it works
 
@@ -41,17 +49,41 @@ Browser ──REST (commands)──▶ CastHome ──Subsonic API──▶ Navi
    └──── WebSocket (state) ────┘  │ Cast protocol           │ /rest/stream?u&t&s
                                   ▼                         │
                             Chromecast ─────────────────────┘
+
+"This browser" as the device:
+Browser ◀── WebSocket: load / play / pause … ── CastHome
+   │  ─── WebSocket: playing / paused / ended ──▶   │
+   └──── <audio> GET /api/stream/<id> (cookie) ───▶ │ ──▶ Navidrome
 ```
 
 The Chromecast downloads audio **directly from Navidrome**, using a token URL
 (`t = md5(password + salt)`, random salt per URL) built on
-`NAVIDROME_PUBLIC_URL_FOR_CAST`.
+`NAVIDROME_PUBLIC_URL_FOR_CAST`. A browser used as the device gets its audio
+through CastHome instead, so it never sees Navidrome credentials.
 
 Single-user design: one Navidrome account (`NAVIDROME_USERNAME`) and one
 queue, played on the device you pick. Signing in checks the password against
 Navidrome; the password is then stored **encrypted** (key derived from
 `APP_SECRET_KEY`) so the server can keep streaming without a browser. It is
 never sent to the frontend.
+
+## Using CastHome
+
+- **Mobile:** tabs at the bottom (Home, Search, Library, Queue; Library holds
+  playlists, favorites, artists, genres and your account). Above them, the
+  mini player: tap it for the full-screen **Now Playing** view (large artwork,
+  seek bar, controls, shuffle/repeat, device, volume, next track). Swipe down
+  or use Back to close it.
+- **Desktop:** sidebar on the left, full player bar at the bottom.
+- **Queue:** *Now playing*, *Up next* (drag the handle to reorder, ✕ to
+  remove, tap to jump) and *Played* (collapsed). The menu saves the queue as a
+  playlist or clears it.
+- **Choosing where to play:** the device button (mini player, Now Playing or
+  player bar) opens the list: *This browser*, then speaker groups, then
+  speakers and TVs, with the active device's volume. Switching device carries
+  on at the same position.
+- **Track actions:** `⋯` on a track opens a sheet: play now, play next, add to
+  queue, add to playlist, go to album or artist, rating.
 
 ## Install (Docker, Linux host)
 
@@ -108,16 +140,19 @@ Otherwise it waits, paused, and never auto-plays.
 
 ### Playing in the browser
 
-Until you pick a Cast device, CastHome plays in the browser you are using
-("This browser" in the device list). The server still owns the queue and
-moves on to the next track; the tab only plays what it is told and reports
-back. Audio goes through CastHome's `/api/stream/<id>` proxy with your session
-cookie, so Navidrome credentials never reach the browser. Lock-screen and
-headset controls work through the Media Session API.
+Until you pick a Cast device, pressing Play plays in the browser you are
+using ("This browser" in the device list). The server still owns the queue
+and moves on to the next track; the tab only plays what it is told over its
+WebSocket and reports back. Audio goes through CastHome's `/api/stream/<id>`
+proxy with your session cookie (Range requests supported, so seeking works),
+so Navidrome credentials never reach the browser. Files the browser cannot
+play are retried transcoded, as with Cast. Lock-screen and headset controls
+work through the Media Session API.
 
 Closing or reloading that tab stops playback (there is nothing left to play
-on). On iOS, keep CastHome in the foreground or use a Cast device for long
-listening: Safari may suspend background tabs.
+on). On iOS, the volume slider is hidden for the browser (Safari only follows
+the hardware buttons), and Safari may suspend background tabs: for long
+listening with the screen locked, use a Cast device.
 
 ### Install as an app (PWA)
 
@@ -128,8 +163,19 @@ listening: Safari may suspend background tabs.
   Home screen*, which creates a shortcut without offline shell.
 
 The service worker only caches the app shell (HTML, JS, CSS, icons). The API
-and the WebSocket always go to the server, so state is never stale. Icons are
-generated by `python3 scripts/make_icons.py`.
+and the WebSocket always go to the server. Icons are generated by
+`python3 scripts/make_icons.py`.
+
+Details that matter for the installed iOS app:
+
+- Internal links are handled by a small client-side router (`history.pushState`),
+  because an installed iOS web app may otherwise reload the whole page on each
+  link tap.
+- The last known player, queue and device list are kept on the device
+  (`localStorage`) and shown instantly at startup, then replaced by the
+  server's state as soon as the WebSocket opens. They are cleared on sign-out.
+- The page always fills the screen and starts below the status bar's blur;
+  the "Reconnecting…" notice only appears after 3 s without a connection.
 
 ### Preloading
 
@@ -160,6 +206,14 @@ at startup for this reason.
 LAN, or a publicly trusted certificate (e.g. Let's Encrypt via DNS challenge)
 on a name the devices can resolve.
 
+**The installed app still shows the old version after an update.** Rebuild the
+frontend (`npm run build`), then close the app completely (swipe it away) and
+reopen it.
+
+**"Reconnecting to CastHome…" stays on screen.** The WebSocket cannot reach the
+server: check CastHome is running and reachable from the phone. Playback on a
+Cast device continues meanwhile; the app catches up when it reconnects.
+
 **Some files skip.** Cast cannot play WMA, APE, ALAC, DSD or > 96 kHz files.
 CastHome transcodes those (and retries after an error) with
 `TRANSCODE_FALLBACK_FORMAT`; make sure transcoding (ffmpeg) works in Navidrome.
@@ -175,8 +229,10 @@ cd frontend && npm install && cd ..
 ```
 
 Copy `.env.example` to `.env` at the repository root and fill it in. Then run
-the backend (it finds the root `.env` from any directory and stores its data in
-`./data`) and, for frontend work, the Vite dev server, which proxies `/api` to it:
+the backend (it finds the root `.env` from any directory, stores its data in
+`./data` and serves the built frontend from `frontend/dist`, so run
+`npm run build` after frontend changes) and, for frontend work, the Vite dev
+server, which proxies `/api` to it:
 
 ```bash
 .venv/bin/python -m casthome.main
@@ -204,13 +260,20 @@ backend/casthome/
   db.py                SQLite + migrations
   auth/                sessions, encrypted credentials
   subsonic/            Subsonic client, token URLs, Cast format policy
-  cast/                discovery (zeroconf) and pychromecast adapter
+  cast/                discovery (zeroconf), pychromecast adapter,
+                       browser.py: a browser tab driven like a Cast device
   queue/logic.py       pure queue logic (next/previous/shuffle/repeat/move)
   playback/            coordinator state machine, media payloads, persistence
-  api/                 REST routers + WebSocket endpoint
-  ws/hub.py            WebSocket broadcast
+  scrobble/            scrobbling rules
+  api/                 REST routers, WebSocket endpoint, stream.py (audio proxy)
+  ws/hub.py            WebSocket broadcast and per-tab messages
 frontend/src/
-  lib/i18n/en.ts       every UI string (add a locale by copying this file)
-  lib/store.svelte.ts  app state + WebSocket client
-  components/          UI
+  lib/i18n/en.ts            every UI string (add a locale by copying this file)
+  lib/store.svelte.ts       app state, WebSocket client, startup cache
+  lib/router.svelte.ts      hash routing without page loads
+  lib/browserPlayer.ts      <audio> player for "This browser", Media Session
+  lib/icons.ts              SVG icon set
+  components/               UI (PlayerBar, NowPlaying, QueueView, DevicePicker…)
+frontend/public/            manifest, service worker, icons
+scripts/make_icons.py       regenerates the PWA icons
 ```
