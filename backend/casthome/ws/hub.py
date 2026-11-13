@@ -1,0 +1,75 @@
+"""WebSocket hub: pushes state to every connected browser.
+
+Messages are `{"type": str, "data": object}`. Types:
+- hello          full snapshot on connect: {player, queue, devices}
+- player         playback state; `position` is the position at send time, which
+                 clients interpolate from their own receive time while playing
+- queue          full queue: {version, index, items}
+- devices        list of discovered Cast devices
+- notification   {level, code, params}; `code` is translated by the frontend
+- auth_expired   the session is no longer valid; go back to the login page
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+from collections.abc import Callable
+from typing import Any
+
+from fastapi import WebSocket
+
+log = logging.getLogger(__name__)
+
+
+class Hub:
+    def __init__(self) -> None:
+        self._clients: set[WebSocket] = set()
+        self._pending: dict[str, Callable[[], Any]] = {}
+        self._flush_scheduled = False
+
+    @property
+    def client_count(self) -> int:
+        return len(self._clients)
+
+    def add(self, ws: WebSocket) -> None:
+        self._clients.add(ws)
+
+    def remove(self, ws: WebSocket) -> None:
+        self._clients.discard(ws)
+
+    def publish(self, msg_type: str, build: Callable[[], Any]) -> None:
+        """Coalesce bursts: the latest builder per type is sent once per loop turn."""
+        self._pending[msg_type] = build
+        if not self._flush_scheduled:
+            self._flush_scheduled = True
+            asyncio.get_running_loop().call_soon(lambda: asyncio.create_task(self._flush()))
+
+    def send_now(self, msg_type: str, data: Any) -> None:
+        """For events that must not be coalesced (notifications)."""
+        asyncio.get_running_loop().create_task(self._broadcast(json.dumps({"type": msg_type, "data": data})))
+
+    async def _flush(self) -> None:
+        pending, self._pending = self._pending, {}
+        self._flush_scheduled = False
+        for msg_type, build in pending.items():
+            await self._broadcast(json.dumps({"type": msg_type, "data": build()}))
+
+    async def _broadcast(self, text: str) -> None:
+        dead: list[WebSocket] = []
+        for ws in list(self._clients):
+            try:
+                await ws.send_text(text)
+            except Exception:  # noqa: BLE001 - a closed socket is simply dropped
+                dead.append(ws)
+        for ws in dead:
+            self._clients.discard(ws)
+
+    async def close_all(self, code: int = 4401) -> None:
+        for ws in list(self._clients):
+            try:
+                await ws.close(code=code)
+            except Exception:  # noqa: BLE001
+                pass
+        self._clients.clear()

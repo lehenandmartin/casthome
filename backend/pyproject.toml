@@ -1,0 +1,29 @@
+[project]
+name = "casthome"
+version = "0.1.0"
+description = "Navidrome to Google Cast web player with a server-side queue"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pychromecast>=14.0",
+    "httpx>=0.27",
+    "aiosqlite>=0.20",
+    "cryptography>=43",
+    "pydantic-settings>=2.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "respx>=0.21"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["casthome*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
