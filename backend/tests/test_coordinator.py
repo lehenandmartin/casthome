@@ -269,7 +269,7 @@ async def test_play_when_stopped_resumes_at_position(h):
 
 async def test_add_next_does_not_interrupt(h):
     await h.c.play_songs(songs(2), 0)
-    await h.c.add_songs([Song(id="x", title="X")], AddMode.NEXT)
+    await h.c.add_songs([Song(id="x", title="X")], AddMode.QUEUE)
     assert [e.item.id for e in h.c.queue.entries] == ["s0", "x", "s1"]
     assert len(h.target.loads) == 1
 
@@ -384,3 +384,33 @@ async def test_jump_by_uid(h):
     await h.c.play_songs(songs(3), 0)
     await h.c.jump_uid(uid_of(h, "s2"))
     assert playing_id(h) == "s2" and "id=s2" in h.target.last_url
+
+
+async def test_new_album_keeps_next_in_queue_and_names_context(h):
+    await h.c.play_songs(songs(2), 0, "First album")
+    await h.c.add_songs([Song(id="x", title="X")], AddMode.QUEUE)
+    await h.c.play_songs([Song(id="k", title="K"), Song(id="l", title="L")], 0, "Second album")
+    snap = h.c.queue_snapshot()
+    assert [i["id"] for i in snap["items"]] == ["k", "x", "l"]
+    assert [i["queued"] for i in snap["items"]] == [False, True, False]
+    assert snap["context_name"] == "Second album"
+
+
+async def test_finished_track_plays_queued_before_album(h):
+    await h.c.play_songs(songs(3), 0)
+    await h.c.add_songs([Song(id="x", title="X", duration=200)], AddMode.QUEUE)
+    h.target.media("PLAYING")
+    h.target.media("IDLE", "FINISHED")
+    await h.settle()
+    assert playing_id(h) == "x"
+    h.target.media("PLAYING")
+    h.target.media("IDLE", "FINISHED")
+    await h.settle()
+    assert playing_id(h) == "s1"
+
+
+async def test_clear_queued_keeps_album(h):
+    await h.c.play_songs(songs(3), 0)
+    await h.c.add_songs([Song(id="x", title="X")], AddMode.QUEUE)
+    await h.c.clear_queued()
+    assert [e.item.id for e in h.c.queue.entries] == ["s0", "s1", "s2"] and len(h.target.loads) == 1

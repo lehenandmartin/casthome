@@ -10,7 +10,7 @@ selected Cast device.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Protocol
 
 from casthome.db import Database
@@ -58,6 +58,8 @@ class NavidromeQueueStore:
             {
                 "ids": ids,
                 "index": model.index,
+                "queued_positions": [i for i, e in enumerate(model.entries) if e.queued],
+                "context_name": model.context_name,
                 "repeat": model.repeat.value,
                 "shuffle": model.shuffle,
                 "original_positions": original_positions,
@@ -97,6 +99,12 @@ class NavidromeQueueStore:
         elif ids:
             index = 0
         model.index = index
+        if same_queue:
+            # Navidrome only stores a flat list: restore the "next in queue" split.
+            for position in local.get("queued_positions") or []:
+                if 0 <= position < len(model.entries) and position != index:
+                    model.entries[position] = replace(model.entries[position], queued=True)
+            model.context_name = local.get("context_name")
         if same_queue and local.get("shuffle"):
             model.shuffle = True
             positions = local.get("original_positions") or []

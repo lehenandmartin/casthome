@@ -17,12 +17,18 @@
     });
   });
 
-  async function queue(mode: 'now' | 'next' | 'end') {
+  async function playAll() {
+    if (!artist) return;
+    const artistId = artist.id;
+    await store.run(() => api.playArtist(artistId));
+  }
+
+  async function queue() {
     if (!artist) return;
     const artistId = artist.id;
     await store.run(async () => {
-      await api.queueArtist(artistId, mode);
-      if (mode !== 'now') store.notify('added_to_queue', {}, 'info');
+      await api.queueArtist(artistId);
+      store.notify('added_to_queue', {}, 'info');
     });
   }
 </script>
@@ -32,9 +38,8 @@
     <h2>{artist.name} <StarButton kind="artist" id={artist.id} bind:starred={artist.starred} /></h2>
     <p class="muted">{t('album.count', { count: artist.albums.length })}</p>
     <div class="actions">
-      <button class="primary" onclick={() => queue('now')}>{t('artist.playAll')}</button>
-      <button onclick={() => queue('next')}>{t('album.playNext')}</button>
-      <button onclick={() => queue('end')}>{t('album.addToQueue')}</button>
+      <button class="primary" onclick={playAll}>{t('artist.playAll')}</button>
+      <button onclick={queue}>{t('album.addToQueue')}</button>
     </div>
     <AlbumGrid albums={artist.albums} showArtist={false} />
   </section>

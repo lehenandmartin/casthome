@@ -15,6 +15,8 @@ export interface Song {
 
 export interface QueueItem extends Song {
   uid: number;
+  /** In "next in queue" (added by hand, not played yet). */
+  queued: boolean;
 }
 
 export interface Album {
@@ -63,6 +65,8 @@ export interface PlayerState {
 export interface QueueState {
   version: number;
   index: number | null;
+  /** Album or playlist the "next from" part comes from. */
+  context_name?: string | null;
   items: QueueItem[];
 }
 
@@ -98,7 +102,8 @@ export interface SearchResult {
 }
 
 export type AlbumListType = 'newest' | 'recent' | 'random' | 'frequent' | 'alphabeticalByName' | 'byGenre';
-export type AddMode = 'now' | 'next' | 'end';
+/** 'now' plays right away; 'queue' adds to "next in queue", before the rest of the album. */
+export type AddMode = 'now' | 'queue';
 
 export interface Playlist {
   id: string;

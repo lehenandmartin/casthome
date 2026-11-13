@@ -260,9 +260,10 @@ class PlaybackCoordinator:
 
     # --- commands ------------------------------------------------------------
 
-    async def play_songs(self, songs: list[Song], start_index: int = 0) -> None:
+    async def play_songs(self, songs: list[Song], start_index: int = 0, context_name: str | None = None) -> None:
+        """Play an album/playlist/list; tracks in "next in queue" are kept."""
         async with self._lock:
-            self.queue.replace(songs, start_index)
+            self.queue.play_context(songs, start_index, context_name)
             self._queue_mutated()
             await self._load_current(0)
 
@@ -348,11 +349,17 @@ class PlaybackCoordinator:
             else:
                 await self._load_current(0)
 
-    async def move_entry(self, uid: int, to_index: int) -> None:
+    async def move_entry(self, uid: int, to_index: int, queued: bool | None = None) -> None:
         async with self._lock:
             if not 0 <= to_index < len(self.queue):
                 raise PlaybackError("invalid_queue_index")
-            self.queue.move(self._position_of(uid), to_index)
+            self.queue.move(self._position_of(uid), to_index, queued)
+            self._queue_mutated()
+
+    async def clear_queued(self) -> None:
+        """Empty "next in queue" only; the album or playlist carries on."""
+        async with self._lock:
+            self.queue.clear_queued()
             self._queue_mutated()
 
     async def seek(self, position: float) -> None:
@@ -807,5 +814,6 @@ class PlaybackCoordinator:
         return {
             "version": self.queue_version,
             "index": self.queue.index,
-            "items": [{"uid": e.uid, **e.item.model_dump()} for e in self.queue.entries],
+            "context_name": self.queue.context_name,
+            "items": [{"uid": e.uid, "queued": e.queued, **e.item.model_dump()} for e in self.queue.entries],
         }

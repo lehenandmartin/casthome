@@ -41,6 +41,7 @@ class JumpBody(BaseModel):
 class MoveBody(BaseModel):
     uid: int
     to_index: int = Field(ge=0)
+    queued: bool | None = None  # move into (true) / out of (false) "next in queue"
 
 
 class QueueAddBody(BaseModel):
@@ -113,21 +114,26 @@ async def set_volume(body: VolumeBody, request: Request) -> None:
 @router.post("/queue", status_code=204)
 async def add_to_queue(body: QueueAddBody, request: Request) -> None:
     ctx = get_ctx(request)
+    context_name: str | None = None  # shown as "Next from: <name>"
     if body.album_id is not None:
         album = await ctx.subsonic.get_album(body.album_id)
         songs = album.songs or []
+        context_name = album.name
     elif body.playlist_id is not None:
-        songs = (await ctx.subsonic.get_playlist(body.playlist_id)).songs or []
+        playlist = await ctx.subsonic.get_playlist(body.playlist_id)
+        songs = playlist.songs or []
+        context_name = playlist.name
     elif body.artist_id is not None:
-        _artist, artist_albums = await ctx.subsonic.get_artist(body.artist_id)
+        artist, artist_albums = await ctx.subsonic.get_artist(body.artist_id)
         full = await asyncio.gather(*(ctx.subsonic.get_album(a.id) for a in artist_albums))
         songs = [song for a in full for song in (a.songs or [])]
+        context_name = artist.name
     else:
         songs = list(await asyncio.gather(*(ctx.subsonic.get_song(i) for i in body.song_ids or [])))
     if not songs:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "nothing_to_play"})
     if body.mode == AddMode.NOW and body.replace:
-        await ctx.coordinator.play_songs(songs, body.start_index)
+        await ctx.coordinator.play_songs(songs, body.start_index, context_name)
     else:
         await ctx.coordinator.add_songs(songs, body.mode)
 
@@ -139,12 +145,17 @@ async def remove_queue_item(uid: int, request: Request) -> None:
 
 @router.post("/queue/move", status_code=204)
 async def move_queue_item(body: MoveBody, request: Request) -> None:
-    await get_ctx(request).coordinator.move_entry(body.uid, body.to_index)
+    await get_ctx(request).coordinator.move_entry(body.uid, body.to_index, body.queued)
 
 
 @router.delete("/queue", status_code=204)
-async def clear_queue(request: Request) -> None:
-    await get_ctx(request).coordinator.clear()
+async def clear_queue(request: Request, queued_only: bool = False) -> None:
+    """queued_only=true empties "next in queue" only (Spotify's "Clear queue")."""
+    c = get_ctx(request).coordinator
+    if queued_only:
+        await c.clear_queued()
+    else:
+        await c.clear()
 
 
 # Declared last so /player/seek and /player/jump are matched first.

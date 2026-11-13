@@ -75,15 +75,21 @@ never sent to the frontend.
   seek bar, controls, shuffle/repeat, device, volume, next track). Swipe down
   or use Back to close it.
 - **Desktop:** sidebar on the left, full player bar at the bottom.
-- **Queue:** *Now playing*, *Up next* (drag the handle to reorder, ✕ to
-  remove, tap to jump) and *Played* (collapsed). The menu saves the queue as a
-  playlist or clears it.
+- **Queue** (works like Spotify's): *Now playing*, then **Next in queue** (the
+  tracks you added with *Add to queue*, in the order you added them), then
+  **Next from: <album or playlist>** (the rest of what you started), then
+  *Played* (collapsed). *Add to queue* always goes to *Next in queue*, so an
+  added track plays right after the current one and the album then carries on
+  where it was. Starting another album keeps *Next in queue*; shuffle never
+  mixes it. Drag the handle to reorder, including between the two parts; ✕
+  removes, a tap jumps. *Clear* empties *Next in queue* only; the menu saves
+  the whole queue as a playlist or clears everything.
 - **Choosing where to play:** the device button (mini player, Now Playing or
   player bar) opens the list: *This browser*, then speaker groups, then
   speakers and TVs, with the active device's volume. Switching device carries
   on at the same position.
-- **Track actions:** `⋯` on a track opens a sheet: play now, play next, add to
-  queue, add to playlist, go to album or artist, rating.
+- **Track actions:** `⋯` on a track opens a sheet: play now, add to queue, add
+  to playlist, go to album or artist, rating.
 
 ## Install (Docker, Linux host)
 

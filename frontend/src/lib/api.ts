@@ -99,8 +99,8 @@ export const api = {
   deletePlaylist: (id: string) => request<void>('DELETE', `/playlists/${encodeURIComponent(id)}`),
   playPlaylist: (id: string, startIndex = 0) =>
     request<void>('POST', '/queue', { playlist_id: id, mode: 'now', start_index: startIndex }),
-  queuePlaylist: (id: string, mode: 'next' | 'end') =>
-    request<void>('POST', '/queue', { playlist_id: id, mode, replace: false }),
+  queuePlaylist: (id: string) =>
+    request<void>('POST', '/queue', { playlist_id: id, mode: 'queue', replace: false }),
 
   selectDevice: (uuid: string) => request<void>('PUT', '/player/device', { uuid }),
   action: (name: 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'stop') =>
@@ -112,10 +112,12 @@ export const api = {
 
   playAlbum: (albumId: string, startIndex = 0) =>
     request<void>('POST', '/queue', { album_id: albumId, mode: 'now', start_index: startIndex }),
-  queueAlbum: (albumId: string, mode: 'next' | 'end') =>
-    request<void>('POST', '/queue', { album_id: albumId, mode, replace: false }),
-  queueArtist: (artistId: string, mode: AddMode) =>
-    request<void>('POST', '/queue', { artist_id: artistId, mode, replace: mode === 'now' }),
+  /** Add to "next in queue": plays after the current track, before the rest of the album. */
+  queueAlbum: (albumId: string) =>
+    request<void>('POST', '/queue', { album_id: albumId, mode: 'queue', replace: false }),
+  playArtist: (artistId: string) => request<void>('POST', '/queue', { artist_id: artistId, mode: 'now' }),
+  queueArtist: (artistId: string) =>
+    request<void>('POST', '/queue', { artist_id: artistId, mode: 'queue', replace: false }),
   /** Replace the queue with these songs, starting at startIndex. */
   playSongs: (songIds: string[], startIndex = 0) =>
     request<void>('POST', '/queue', { song_ids: songIds, mode: 'now', start_index: startIndex }),
@@ -123,6 +125,9 @@ export const api = {
   queueSongs: (songIds: string[], mode: AddMode) =>
     request<void>('POST', '/queue', { song_ids: songIds, mode, replace: false }),
   removeItem: (uid: number) => request<void>('DELETE', `/queue/items/${uid}`),
-  moveItem: (uid: number, toIndex: number) => request<void>('POST', '/queue/move', { uid, to_index: toIndex }),
+  moveItem: (uid: number, toIndex: number, queued?: boolean) =>
+    request<void>('POST', '/queue/move', { uid, to_index: toIndex, queued }),
+  /** Empty "next in queue" only. */
+  clearQueued: () => request<void>('DELETE', '/queue?queued_only=true'),
   clearQueue: () => request<void>('DELETE', '/queue'),
 };

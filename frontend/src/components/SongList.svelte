@@ -80,8 +80,7 @@
     </div>
     <div class="sheet-actions" role="menu">
       <button role="menuitem" onclick={() => add(menuSong, 'now')}><Icon name="play" size={20} />{t('song.playNow')}</button>
-      <button role="menuitem" onclick={() => add(menuSong, 'next')}><Icon name="queue" size={20} />{t('song.playNext')}</button>
-      <button role="menuitem" onclick={() => add(menuSong, 'end')}><Icon name="plus" size={20} />{t('song.addToQueue')}</button>
+      <button role="menuitem" onclick={() => add(menuSong, 'queue')}><Icon name="queue" size={20} />{t('song.addToQueue')}</button>
       <button
         role="menuitem"
         onclick={() => {

@@ -191,3 +191,22 @@ async def test_create_playlist_returns_created_playlist():
     playlist = await client.create_playlist("Mix", ["a", "b"])
     assert playlist.id == "p9" and playlist.song_count == 2
     await client.aclose()
+
+
+def test_queued_split_survives_a_restart():
+    from casthome.playback.persistence import NavidromeQueueStore
+    from casthome.queue.logic import AddMode, QueueModel
+
+    songs_ = [Song(id=i, title=i) for i in "abcd"]
+    model: QueueModel[Song] = QueueModel()
+    model.play_context(songs_, 0, "Album")
+    model.add([Song(id="x", title="x")], AddMode.QUEUE)
+    local = {
+        "ids": [e.item.id for e in model.entries],
+        "index": model.index,
+        "queued_positions": [i for i, e in enumerate(model.entries) if e.queued],
+        "context_name": "Album",
+    }
+    restored = NavidromeQueueStore._merge(local, model.items, "a", 0, None)
+    assert [e.queued for e in restored.model.entries] == [False, True, False, False, False]
+    assert restored.model.context_name == "Album"

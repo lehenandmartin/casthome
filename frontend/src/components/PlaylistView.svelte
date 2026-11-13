@@ -61,11 +61,11 @@
     });
   }
 
-  async function queue(mode: 'next' | 'end') {
+  async function queue() {
     if (!playlist) return;
     const playlistId = playlist.id;
     await store.run(async () => {
-      await api.queuePlaylist(playlistId, mode);
+      await api.queuePlaylist(playlistId);
       store.notify('added_to_queue', {}, 'info');
     });
   }
@@ -93,8 +93,7 @@
             disabled={!playlist.songs?.length}
             onclick={() => store.run(() => api.playPlaylist(playlist!.id))}>{t('playlist.play')}</button
           >
-          <button disabled={!playlist.songs?.length} onclick={() => queue('next')}>{t('album.playNext')}</button>
-          <button disabled={!playlist.songs?.length} onclick={() => queue('end')}>{t('album.addToQueue')}</button>
+          <button disabled={!playlist.songs?.length} onclick={queue}>{t('album.addToQueue')}</button>
           <button
             onclick={() => {
               newName = playlist!.name;

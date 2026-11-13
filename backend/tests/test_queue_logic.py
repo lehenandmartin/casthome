@@ -59,30 +59,126 @@ class TestPrevious:
         assert q.previous_index() == 4
 
 
-class TestAdd:
-    def test_end(self):
-        q = make("abc", 1)
-        assert q.add(["x"], AddMode.END) is False
-        assert q.items == ["a", "b", "c", "x"] and q.index == 1
+def ids(q: QueueModel[str]) -> str:
+    return "".join(q.items)
 
-    def test_next(self):
-        q = make("abc", 1)
-        assert q.add(["x", "y"], AddMode.NEXT) is False
-        assert q.items == ["a", "b", "x", "y", "c"] and q.index == 1
 
-    def test_now(self):
-        q = make("abc", 1)
-        assert q.add(["x"], AddMode.NOW) is True
-        assert q.items == ["a", "b", "x", "c"] and q.current.item == "x"
+def queued(q: QueueModel[str]) -> str:
+    return "".join(e.item for e in q.entries if e.queued)
+
+
+class TestAddToQueue:
+    def test_goes_before_the_rest_of_the_album(self):
+        q = make("abcde", 1)
+        assert q.add(["x"], AddMode.QUEUE) is False
+        assert ids(q) == "abxcde" and q.index == 1 and queued(q) == "x"
+
+    def test_keeps_the_order_you_added_them_in(self):
+        q = make("abcde", 1)
+        q.add(["x"], AddMode.QUEUE)
+        q.add(["y", "z"], AddMode.QUEUE)
+        assert ids(q) == "abxyzcde" and queued(q) == "xyz"
+
+    def test_plays_queued_then_resumes_album(self):
+        q = make("abcd", 0)
+        q.add(["x", "y"], AddMode.QUEUE)
+        order = []
+        while (n := q.next_index(natural=True)) is not None:
+            q.jump(n)
+            order.append(q.current.item)
+        assert "".join(order) == "xybcd"
+        assert queued(q) == ""  # consumed as they played
 
     def test_into_empty_queue_starts_there(self):
         q: QueueModel[str] = QueueModel()
-        assert q.add(["x", "y"], AddMode.END) is True
-        assert q.index == 0
+        assert q.add(["x", "y"], AddMode.QUEUE) is True
+        assert q.index == 0 and queued(q) == ""
 
     def test_duplicates_get_distinct_uids(self):
         q = make("aa")
         assert q.entries[0].uid != q.entries[1].uid
+
+
+class TestPlayNow:
+    def test_plays_now_and_keeps_queue_and_album(self):
+        q = make("abc", 0)
+        q.add(["x"], AddMode.QUEUE)
+        assert q.add(["n"], AddMode.NOW) is True
+        assert q.current.item == "n" and ids(q) == "anxbc" and queued(q) == "x"
+
+    def test_several_tracks_rest_go_to_front_of_queue(self):
+        q = make("abc", 0)
+        q.add(["x"], AddMode.QUEUE)
+        q.add(["n1", "n2"], AddMode.NOW)
+        assert q.current.item == "n1" and queued(q) == "n2x"
+
+
+class TestPlayContext:
+    def test_new_album_keeps_next_in_queue(self):
+        q = make("abc", 0)
+        q.add(["x", "y"], AddMode.QUEUE)
+        q.play_context(list("klmn"), 1)
+        assert q.current.item == "l" and ids(q) == "klxymn" and queued(q) == "xy"
+
+    def test_new_album_without_queue(self):
+        q = make("abc", 2)
+        q.play_context(list("kl"), 0)
+        assert ids(q) == "kl" and q.index == 0
+
+    def test_current_queued_track_is_not_kept_twice(self):
+        q = make("ab", 0)
+        q.add(["x"], AddMode.QUEUE)
+        q.jump(1)  # x plays now
+        q.play_context(list("kl"), 0)
+        assert ids(q) == "kl"
+
+
+class TestJumpKeepsQueue:
+    def test_jumping_ahead_in_the_album_keeps_queue_next(self):
+        q = make("abcdef", 0)
+        q.add(["x"], AddMode.QUEUE)
+        q.jump(ids(q).index("e"))
+        assert q.current.item == "e" and ids(q)[q.index + 1] == "x"
+
+    def test_going_back_keeps_queue_next(self):
+        q = make("abcd", 2)
+        q.add(["x"], AddMode.QUEUE)
+        q.jump(q.previous_index())
+        assert q.current.item == "b" and ids(q)[q.index + 1] == "x"
+
+    def test_tapping_a_queued_track_plays_it_and_keeps_the_others(self):
+        q = make("abc", 0)
+        q.add(["x", "y"], AddMode.QUEUE)
+        q.jump(ids(q).index("y"))
+        assert q.current.item == "y" and queued(q) == "x" and ids(q)[q.index + 1] == "x"
+
+
+class TestClearQueued:
+    def test_clears_only_next_in_queue(self):
+        q = make("abc", 0)
+        q.add(["x", "y"], AddMode.QUEUE)
+        q.clear_queued()
+        assert ids(q) == "abc" and q.index == 0
+
+
+class TestMoveBetweenSections:
+    def test_move_album_track_into_queue(self):
+        q = make("abcde", 0)
+        q.add(["x"], AddMode.QUEUE)
+        q.move(ids(q).index("d"), 1, queued=True)
+        assert queued(q) == "dx" and ids(q) == "adxbce"
+
+    def test_move_queued_track_into_album(self):
+        q = make("abcd", 0)
+        q.add(["x", "y"], AddMode.QUEUE)
+        q.move(ids(q).index("x"), ids(q).index("c"), queued=False)
+        assert queued(q) == "y" and ids(q) == "aybcxd"
+
+    def test_queue_stays_first_even_if_dropped_lower(self):
+        q = make("abcd", 0)
+        q.add(["x"], AddMode.QUEUE)
+        q.move(ids(q).index("x"), 4)  # section unchanged: still queued
+        assert ids(q) == "axbcd"
 
 
 class TestRemove:
@@ -155,19 +251,26 @@ class TestShuffle:
         assert q.items == list("abcdefgh")
         assert q.current == current
 
-    def test_items_added_while_shuffled_are_restored_in_place(self):
+    def test_next_in_queue_is_never_shuffled(self):
+        q = make("abcdefgh", 0)
+        q.add(["x", "y", "z"], AddMode.QUEUE)
+        q.set_shuffle(True, random.Random(4))
+        assert ids(q)[1:4] == "xyz" and queued(q) == "xyz"
+        q.set_shuffle(False)
+        assert ids(q) == "axyzbcdefgh"
+
+    def test_added_while_shuffled_stays_next_after_unshuffle(self):
         q = make("abcd", 1)
         q.set_shuffle(True, random.Random(3))
-        q.add(["x"], AddMode.NEXT)
-        q.add(["z"], AddMode.END)
+        q.add(["x"], AddMode.QUEUE)
         q.remove(q.items.index("d"))
         q.set_shuffle(False)
-        assert q.items == ["a", "b", "x", "c", "z"]
+        assert ids(q) == "abxc" and queued(q) == "x"
 
     def test_replace_while_shuffled_shuffles_new_queue(self):
         q = make("ab")
         q.set_shuffle(True)
-        q.replace(list("abcdefghij"), 0)
+        q.play_context(list("abcdefghij"), 0)
         assert q.current.item == "a"
         q.set_shuffle(False)
         assert q.items == list("abcdefghij")

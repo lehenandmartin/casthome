@@ -21,17 +21,29 @@
   const p = $derived(store.player);
   const playing = $derived(p?.status === 'playing');
 
-  // Local copy of the upcoming tracks so they can be reordered while dragging;
-  // resynced from the server on every queue update.
-  let upcoming = $state<Row[]>([]);
+  // Local copies of the two upcoming parts so they can be reordered (and
+  // tracks dragged from one to the other); resynced on every queue update.
+  //   queuedRows:  "Next in queue" (added by hand, plays first)
+  //   contextRows: "Next from: <album/playlist>"
+  type Zone = 'queued' | 'context';
+  let queuedRows = $state<Row[]>([]);
+  let contextRows = $state<Row[]>([]);
   let dragging = $state(false);
   let showHistory = $state(false);
   let menuOpen = $state(false);
 
   $effect(() => {
     const rows = items.slice(firstUpcoming).map((item) => ({ ...item, song_id: item.id, id: item.uid }));
-    if (!dragging) upcoming = rows;
+    if (!dragging) {
+      queuedRows = rows.filter((r) => r.queued);
+      contextRows = rows.filter((r) => !r.queued);
+    }
   });
+
+  const upcomingCount = $derived(queuedRows.length + contextRows.length);
+  const contextTitle = $derived(
+    store.queue.context_name ? t('queue.nextFrom', { name: store.queue.context_name }) : t('queue.nextFromUnnamed'),
+  );
 
   const remaining = $derived.by(() => {
     const rest = items.slice(firstUpcoming).reduce((sum, item) => sum + (item.duration || 0), 0);
@@ -39,19 +51,28 @@
     return rest + currentLeft;
   });
 
-  function consider(e: CustomEvent<DndEvent<Row>>) {
-    dragging = true;
-    upcoming = e.detail.items;
+  function setRows(zone: Zone, rows: Row[]) {
+    if (zone === 'queued') queuedRows = rows;
+    else contextRows = rows;
   }
 
-  async function finalize(e: CustomEvent<DndEvent<Row>>) {
-    upcoming = e.detail.items;
+  function consider(zone: Zone, e: CustomEvent<DndEvent<Row>>) {
+    dragging = true;
+    setRows(zone, e.detail.items);
+  }
+
+  async function finalize(zone: Zone, e: CustomEvent<DndEvent<Row>>) {
+    setRows(zone, e.detail.items);
     dragging = false;
     const uid = Number(e.detail.info.id);
-    const to = firstUpcoming + upcoming.findIndex((r) => r.uid === uid);
+    const at = e.detail.items.findIndex((r) => r.uid === uid);
+    if (at < 0) return; // this zone is where the track came from; the other one reports the drop
+    const to = firstUpcoming + (zone === 'queued' ? at : queuedRows.length + at);
+    const original = items.find((r) => r.uid === uid);
     const from = items.findIndex((r) => r.uid === uid);
-    if (to < firstUpcoming || to === from) return;
-    await store.run(() => api.moveItem(uid, to));
+    const queued = zone === 'queued';
+    if (to === from && original?.queued === queued) return;
+    await store.run(() => api.moveItem(uid, to, queued));
   }
 
   async function saveAsPlaylist() {
@@ -68,12 +89,12 @@
     });
   }
 
-  async function clear() {
+  async function clearAll() {
     menuOpen = false;
     const ok = await dialogs.confirm({
-      title: t('queue.clear'),
+      title: t('queue.clearAll'),
       message: t('queue.clearConfirm'),
-      confirmLabel: t('queue.clear'),
+      confirmLabel: t('queue.clearAll'),
       danger: true,
     });
     if (ok) await store.run(api.clearQueue);
@@ -113,7 +134,7 @@
           {#if menuOpen}
             <div class="menu" role="menu">
               <button role="menuitem" onclick={saveAsPlaylist}><Icon name="save" size={18} />{t('queue.saveAsPlaylist')}</button>
-              <button role="menuitem" class="danger" onclick={clear}><Icon name="trash" size={18} />{t('queue.clear')}</button>
+              <button role="menuitem" class="danger" onclick={clearAll}><Icon name="trash" size={18} />{t('queue.clearAll')}</button>
             </div>
           {/if}
         </div>
@@ -149,15 +170,15 @@
     </button>
   {/if}
 
-  {#if upcoming.length > 0}
-    <p class="section">{t('queue.upNext')} <span class="count">{upcoming.length}</span></p>
+  {#snippet zone(name: Zone, rows: Row[])}
     <ol
       class="list"
-      use:dragHandleZone={{ items: upcoming, flipDurationMs: FLIP_MS, dropTargetStyle: {} }}
-      onconsider={consider}
-      onfinalize={finalize}
+      class:drop-hint={dragging && rows.length === 0}
+      use:dragHandleZone={{ items: rows, type: 'upcoming', flipDurationMs: FLIP_MS, dropTargetStyle: {} }}
+      onconsider={(e) => consider(name, e)}
+      onfinalize={(e) => finalize(name, e)}
     >
-      {#each upcoming as item (item.id)}
+      {#each rows as item (item.id)}
         <li animate:flip={{ duration: FLIP_MS }}>
           <span class="handle" use:dragHandle aria-label={t('queue.drag')} title={t('queue.drag')}>
             <Icon name="grip" size={18} />
@@ -183,7 +204,26 @@
         </li>
       {/each}
     </ol>
-  {:else if current}
+  {/snippet}
+
+  {#if queuedRows.length > 0 || (dragging && contextRows.length > 0)}
+    <div class="section split">
+      <span>{t('queue.nextInQueue')} <span class="count">{queuedRows.length}</span></span>
+      {#if queuedRows.length > 0}
+        <button class="link-btn" aria-label={t('queue.clearQueuedLabel')} onclick={() => store.run(api.clearQueued)}>
+          {t('queue.clearQueued')}
+        </button>
+      {/if}
+    </div>
+    {@render zone('queued', queuedRows)}
+  {/if}
+
+  {#if contextRows.length > 0 || (dragging && queuedRows.length > 0)}
+    <p class="section"><span class="ellipsis">{contextTitle}</span> <span class="count">{contextRows.length}</span></p>
+    {@render zone('context', contextRows)}
+  {/if}
+
+  {#if current && upcomingCount === 0 && !dragging}
     <p class="muted end">{t('queue.nothingNext')}</p>
   {/if}
 
@@ -293,6 +333,24 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
+  }
+  .split {
+    justify-content: space-between;
+  }
+  .link-btn {
+    background: none;
+    min-height: 0;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--accent);
+  }
+  .drop-hint {
+    min-height: 52px;
+    border: 2px dashed var(--surface-3);
+    border-radius: 10px;
   }
   .count {
     font-weight: 600;

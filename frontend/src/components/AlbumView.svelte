@@ -22,11 +22,11 @@
     });
   });
 
-  async function queue(mode: 'next' | 'end') {
+  async function queue() {
     if (!album) return;
     const albumId = album.id;
     await store.run(async () => {
-      await api.queueAlbum(albumId, mode);
+      await api.queueAlbum(albumId);
       store.notify('added_to_queue', {}, 'info');
     });
   }
@@ -60,11 +60,8 @@
           <button class="primary play" onclick={() => store.run(() => api.playAlbum(album!.id))}>
             <Icon name="play" size={18} />{t('album.play')}
           </button>
-          <button class="icon-btn ring" title={t('album.playNext')} aria-label={t('album.playNext')} onclick={() => queue('next')}>
+          <button class="icon-btn ring" title={t('album.addToQueue')} aria-label={t('album.addToQueue')} onclick={queue}>
             <Icon name="queue" size={20} />
-          </button>
-          <button class="icon-btn ring" title={t('album.addToQueue')} aria-label={t('album.addToQueue')} onclick={() => queue('end')}>
-            <Icon name="plus" size={20} />
           </button>
           <button class="icon-btn ring" title={t('song.addToPlaylist')} aria-label={t('song.addToPlaylist')} onclick={() => (picking = true)}>
             <Icon name="playlist" size={20} />
