@@ -9,6 +9,7 @@
   import type { MessageKey } from '../lib/i18n/en';
   import type { QueueItem } from '../lib/types';
   import Icon from './Icon.svelte';
+  import SwipeRow from './SwipeRow.svelte';
 
   // svelte-dnd-action keys items by `id`; the song id is kept as `song_id`.
   type Row = Omit<QueueItem, 'id'> & { id: number; song_id: string };
@@ -60,6 +61,19 @@
     const currentLeft = current ? Math.max(0, (p?.duration ?? current.duration) - store.position) : 0;
     return rest + currentLeft;
   });
+
+  function remove(uid: number) {
+    store.run(() => api.removeItem(uid));
+  }
+
+  // Swipe right on an album/playlist track: move it to the end of "Next in queue".
+  function toNextInQueue(uid: number) {
+    const to = firstUpcoming + queuedRows.length;
+    store.run(async () => {
+      await api.moveItem(uid, Math.min(to, items.length - 1), true);
+      store.notify('added_to_queue', {}, 'info');
+    });
+  }
 
   function setRows(zone: Zone, rows: Row[]) {
     if (zone === 'queued') queuedRows = rows;
@@ -190,7 +204,11 @@
     >
       {#each rows as item (item.id)}
         <li animate:flip={{ duration: FLIP_MS }}>
-          <span class="handle" use:dragHandle aria-label={t('queue.drag')} title={t('queue.drag')}>
+          <SwipeRow
+            left={{ label: t('queue.remove'), icon: 'trash', action: () => remove(item.uid), dismiss: true }}
+            right={name === 'context' ? { label: t('song.addToQueue'), icon: 'queue', action: () => toNextInQueue(item.uid) } : undefined}
+          >
+          <span class="handle" data-no-swipe use:dragHandle aria-label={t('queue.drag')} title={t('queue.drag')}>
             <Icon name="grip" size={18} />
           </span>
           <button class="row" onclick={() => store.run(() => api.jump(item.uid))}>
@@ -211,6 +229,7 @@
             title={t('queue.remove')}
             onclick={() => store.run(() => api.removeItem(item.uid))}><Icon name="close" size={18} /></button
           >
+          </SwipeRow>
         </li>
       {/each}
     </ol>
@@ -252,6 +271,7 @@
       <ol class="list history">
         {#each history as item (item.uid)}
           <li>
+            <SwipeRow left={{ label: t('queue.remove'), icon: 'trash', action: () => remove(item.uid), dismiss: true }}>
             <button class="row" onclick={() => store.run(() => api.jump(item.uid))}>
               {#if item.cover_art}
                 <img src={coverUrl(item.cover_art, 96)} alt="" loading="lazy" />
@@ -270,6 +290,7 @@
               title={t('queue.remove')}
               onclick={() => store.run(() => api.removeItem(item.uid))}><Icon name="close" size={18} /></button
             >
+            </SwipeRow>
           </li>
         {/each}
       </ol>

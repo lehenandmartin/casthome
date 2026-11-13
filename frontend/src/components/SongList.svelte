@@ -9,6 +9,7 @@
   import PlaylistPicker from './PlaylistPicker.svelte';
   import RatingStars from './RatingStars.svelte';
   import StarButton from './StarButton.svelte';
+  import SwipeRow from './SwipeRow.svelte';
 
   let {
     songs,
@@ -45,6 +46,7 @@
 <ol class="songs">
   {#each songs as song, i (`${song.id}-${i}`)}
     <li class:current={song.id === currentId}>
+      <SwipeRow right={{ label: t('song.addToQueue'), icon: 'queue', action: () => add(song, 'queue') }}>
       <button class="row" onclick={() => onplay(i)}>
         {#if numbered}<span class="num muted">{song.track ?? i + 1}</span>{/if}
         <span class="text">
@@ -63,6 +65,7 @@
           menuFor = i;
         }}><Icon name="more" size={20} /></button
       >
+      </SwipeRow>
     </li>
   {/each}
 </ol>

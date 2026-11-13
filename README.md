@@ -101,6 +101,10 @@ never sent to the frontend.
   (AudioMuse-AI sonic similarity when that plugin is active, else Last.fm and
   other agents), then `getSimilarSongs2` on the artist, then the artist's top
   tracks. The queue shows which source was used.
+- **Swipe gestures (touch screens):** swipe a track right to add it to *Next
+  in queue* (any track list; in the queue, a track from the album or playlist
+  moves to *Next in queue*), swipe left in the queue to remove it. A coloured
+  background shows the action; a short swipe springs back and does nothing.
 - **Track actions:** `⋯` on a track opens a sheet: play now, add to queue, add
   to playlist, go to album or artist, rating.
 
