@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, coverUrl } from '../lib/api';
   import { dialogs } from '../lib/dialog.svelte';
+  import { router } from '../lib/router.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
@@ -56,7 +57,7 @@
     const playlistId = playlist.id;
     await store.run(async () => {
       await api.deletePlaylist(playlistId);
-      location.hash = '#/playlists';
+      router.navigate('#/playlists', { replace: true });
     });
   }
 

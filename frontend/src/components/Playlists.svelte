@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, coverUrl } from '../lib/api';
+  import { router } from '../lib/router.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
@@ -23,7 +24,7 @@
     await store.run(async () => {
       const playlist = await api.createPlaylist(trimmed);
       name = '';
-      location.hash = `#/playlist/${encodeURIComponent(playlist.id)}`;
+      router.navigate(`#/playlist/${encodeURIComponent(playlist.id)}`);
     });
   }
 

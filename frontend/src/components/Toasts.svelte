@@ -4,7 +4,7 @@
 </script>
 
 <div class="toasts" aria-live="polite">
-  {#if store.auth === 'signed-in' && !store.online}
+  {#if store.auth === 'signed-in' && store.offlineNotice}
     <div class="toast warning">{t('connection.offline')}</div>
   {/if}
   {#each store.notifications as n (n.id)}

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { coverUrl } from '../lib/api';
+  import { router } from '../lib/router.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
@@ -23,7 +24,7 @@
   function go(hash: string) {
     store.closeNowPlaying();
     // Let history.back() settle before navigating.
-    setTimeout(() => (location.hash = hash), 30);
+    setTimeout(() => router.navigate(hash), 30);
   }
 
   // Swipe down to close (mobile).

@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { api } from './lib/api';
+  import { ApiError, api } from './lib/api';
   import { t } from './lib/i18n';
   import type { IconName } from './lib/icons';
   import type { MessageKey } from './lib/i18n/en';
+  import { router } from './lib/router.svelte';
   import { store } from './lib/store.svelte';
   import AlbumView from './components/AlbumView.svelte';
   import Albums from './components/Albums.svelte';
@@ -25,11 +26,7 @@
   import Sessions from './components/Sessions.svelte';
   import Toasts from './components/Toasts.svelte';
 
-  let hash = $state(location.hash);
-  window.addEventListener('hashchange', () => {
-    hash = location.hash;
-    window.scrollTo(0, 0);
-  });
+  const hash = $derived(router.hash);
 
   const PAGES = ['artists', 'genres', 'playlists', 'favorites', 'search', 'queue', 'account', 'library'] as const;
   type Page = (typeof PAGES)[number] | 'albums';
@@ -76,14 +73,18 @@
   );
 
   // Restore the session (cookie) on load.
+  // Only a 401 signs out: if the server is briefly unreachable, keep the cached
+  // state on screen and let the live connection retry.
   api
     .me()
     .then(() => store.signedIn())
-    .catch(() => store.signedOut());
+    .catch((err) => (err instanceof ApiError && err.status === 401 ? store.signedOut() : store.signedIn()));
 </script>
 
 <Toasts />
 <Dialog />
+<!-- Installed iOS app: the status bar is translucent; keep scrolled content from showing through it. -->
+<div class="statusbar-bg" aria-hidden="true"></div>
 
 {#if store.auth === 'signed-out'}
   <Login />
@@ -152,6 +153,17 @@
 {/if}
 
 <style>
+  .statusbar-bg {
+    position: fixed;
+    z-index: 45;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: var(--bg);
+    pointer-events: none;
+  }
+
   .content {
     padding: calc(12px + env(safe-area-inset-top)) 16px calc(var(--tabbar-h) + var(--player-h) + 24px);
     max-width: 1200px;

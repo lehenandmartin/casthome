@@ -3,6 +3,26 @@ import { browserPlayer } from './browserPlayer';
 import type { Device, Notification, PlayerState, QueueState } from './types';
 import { describeUserAgent } from './useragent';
 
+// Last known state, shown instantly when the app (re)starts so a reload never
+// flashes an empty player. Only a per-device convenience: the server's
+// snapshot replaces it as soon as the live connection opens.
+const CACHE_KEY = 'casthome.snapshot';
+interface Cached {
+  player: PlayerState | null;
+  queue: QueueState;
+  devices: Device[];
+  savedAt: number;
+}
+
+function readCache(): Cached | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? (JSON.parse(raw) as Cached) : null;
+  } catch {
+    return null;
+  }
+}
+
 // One id per tab, kept across reloads of that tab.
 function tabId(): string {
   try {
@@ -21,6 +41,8 @@ type AuthState = 'unknown' | 'signed-out' | 'signed-in';
 class AppStore {
   auth = $state<AuthState>('unknown');
   online = $state(false);
+  /** True only after the live connection has been down for a while. */
+  offlineNotice = $state(false);
   player = $state<PlayerState | null>(null);
   queue = $state<QueueState>({ version: 0, index: null, items: [] });
   devices = $state<Device[]>([]);
@@ -40,8 +62,19 @@ class AppStore {
   #retry = 0;
   #nextId = 1;
   #pingTimer: ReturnType<typeof setInterval> | undefined;
+  #offlineTimer: ReturnType<typeof setTimeout> | undefined;
+  #cacheTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
+    const cached = readCache();
+    if (cached) {
+      // Optimistic: render right away; /auth/me confirms or signs out.
+      this.auth = 'signed-in';
+      this.player = cached.player;
+      this.queue = cached.queue;
+      this.devices = cached.devices;
+      this.receivedAt = cached.savedAt;
+    }
     setUnauthorizedHandler(() => this.signedOut());
     setBeforePlayHook(() => this.#ensureDevice());
     setInterval(() => (this.now = Date.now() / 1000), 500);
@@ -91,8 +124,33 @@ class AppStore {
     this.connect();
   }
 
+  #saveCache(): void {
+    clearTimeout(this.#cacheTimer);
+    this.#cacheTimer = setTimeout(() => {
+      try {
+        const data: Cached = {
+          player: $state.snapshot(this.player),
+          queue: $state.snapshot(this.queue),
+          devices: $state.snapshot(this.devices),
+          savedAt: this.receivedAt || Date.now() / 1000,
+        };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      } catch {
+        /* storage full or unavailable */
+      }
+    }, 500);
+  }
+
   signedOut(): void {
     this.auth = 'signed-out';
+    this.offlineNotice = false;
+    clearTimeout(this.#cacheTimer);
+    try {
+      localStorage.removeItem(CACHE_KEY);
+    } catch {
+      /* ignore */
+    }
+    clearTimeout(this.#offlineTimer);
     this.#ws?.close();
     this.#ws = null;
     this.player = null;
@@ -104,8 +162,11 @@ class AppStore {
     const params = new URLSearchParams({ client: this.clientId, name: this.browserName });
     const ws = new WebSocket(`${proto}://${location.host}/api/ws?${params}`);
     this.#ws = ws;
+    this.#armOfflineNotice();
     ws.onopen = () => {
       this.online = true;
+      clearTimeout(this.#offlineTimer);
+      this.offlineNotice = false;
       this.#retry = 0;
       clearInterval(this.#pingTimer);
       this.#pingTimer = setInterval(() => ws.readyState === WebSocket.OPEN && ws.send('ping'), 25_000);
@@ -115,6 +176,7 @@ class AppStore {
       clearInterval(this.#pingTimer);
       this.online = false;
       this.#ws = null;
+      this.#armOfflineNotice();
       if (event.code === 4401) {
         this.signedOut();
         return;
@@ -126,7 +188,19 @@ class AppStore {
     };
   }
 
+  // Short drops (app start, a reconnect, the phone waking up) are normal:
+  // only tell the user when the connection stays down.
+  #armOfflineNotice(): void {
+    clearTimeout(this.#offlineTimer);
+    this.#offlineTimer = setTimeout(() => {
+      if (!this.online && this.auth === 'signed-in') this.offlineNotice = true;
+    }, 3000);
+  }
+
   #handle(msg: { type: string; data: any }): void {
+    if (msg.type === 'hello' || msg.type === 'player' || msg.type === 'queue' || msg.type === 'devices') {
+      queueMicrotask(() => this.#saveCache());
+    }
     switch (msg.type) {
       case 'hello':
         this.devices = msg.data.devices;
