@@ -159,13 +159,15 @@
     top: 0;
     left: 0;
     right: 0;
-    height: env(safe-area-inset-top);
-    background: var(--bg);
+    /* Solid under the status bar, then a short fade for content scrolling under it. */
+    height: calc(env(safe-area-inset-top) + 14px);
+    background: linear-gradient(var(--bg) calc(100% - 14px), transparent);
     pointer-events: none;
   }
 
   .content {
-    padding: calc(12px + env(safe-area-inset-top)) 16px calc(var(--tabbar-h) + var(--player-h) + 24px);
+    /* Extra room at the top: installed iOS apps blur the area under the status bar. */
+    padding: calc(env(safe-area-inset-top) + 28px) 16px calc(var(--tabbar-h) + var(--player-h) + 24px);
     max-width: 1200px;
     margin: 0 auto;
   }

@@ -131,7 +131,7 @@
     flex-direction: column;
     background: var(--bg);
     overflow: hidden auto;
-    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    padding: calc(env(safe-area-inset-top) + 10px) 0 env(safe-area-inset-bottom);
     animation: rise 0.22s ease-out;
     transition: transform 0.05s;
   }
