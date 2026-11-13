@@ -125,6 +125,7 @@ export const en = {
   'devices.connecting': 'Connecting…',
   'devices.connected': 'Connected',
   'devices.playing': 'Playing',
+  'devices.disconnect': 'Disconnect',
   'devices.none': 'Searching for Cast devices on your network…',
   'devices.choose': 'Choose a device',
   'devices.group': 'Group',

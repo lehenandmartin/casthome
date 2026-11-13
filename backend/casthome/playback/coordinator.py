@@ -106,6 +106,7 @@ class PlaybackCoordinator:
         radio_builder: RadioBuilder | None = None,
     ) -> None:
         self._radio_builder = radio_builder
+        self._connection_id = 0
         self._radio_refilling = False
         self._connector = connector
         self._scrobbler = scrobbler
@@ -226,7 +227,16 @@ class PlaybackCoordinator:
     async def _connect(self, uuid: str) -> None:
         self._connecting = True
         try:
-            self.target = await self._connector(uuid, self._events.put_nowait)
+            # Each connection gets its own sink: events still arriving from a
+            # device we left (its last volume, its session closing) are dropped.
+            self._connection_id += 1
+            connection_id = self._connection_id
+
+            def sink(event: CastEvent) -> None:
+                if connection_id == self._connection_id:
+                    self._events.put_nowait(event)
+
+            self.target = await self._connector(uuid, sink)
             self.connected = True
         except Exception as exc:  # noqa: BLE001 - any connection failure is reported the same way
             log.warning("Cannot connect to Cast device %s: %s", uuid, exc)
@@ -244,6 +254,7 @@ class PlaybackCoordinator:
             was_active = self.status in (Status.PLAYING, Status.BUFFERING, Status.LOADING)
             position = self.current_position()
             old = self.target
+            self._connection_id += 1  # ignore whatever the old device still sends
             self._expected_content_id = None
             self._reattach_song_id = None
             self.target = None
@@ -251,8 +262,9 @@ class PlaybackCoordinator:
             self.device_uuid = uuid
             if old is not None:
                 try:
-                    if was_active or self.status == Status.PAUSED:
-                        await old.stop()
+                    # End the session on the old device (it goes back to idle),
+                    # then drop the connection.
+                    await old.quit()
                     await old.disconnect()
                 except Exception:  # noqa: BLE001 - the old device may already be gone
                     log.info("Previous device did not stop cleanly", exc_info=True)

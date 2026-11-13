@@ -17,6 +17,7 @@ from pychromecast.controllers.receiver import CastStatus, CastStatusListener
 from pychromecast.socket_client import CONNECTION_STATUS_CONNECTED, ConnectionStatus, ConnectionStatusListener
 
 from casthome.cast.types import (
+    DEFAULT_MEDIA_RECEIVER_APP_ID,
     CastEvent,
     ConnectionEvent,
     DeviceInfo,
@@ -127,6 +128,13 @@ class CastDevice:
 
     async def stop(self) -> None:
         await self._run(self._cast.media_controller.stop)
+
+    async def quit(self) -> None:
+        """Close our receiver app so the device ends the session and goes back
+        to idle. (The Default Media Receiver plays a sound when it starts, not
+        when it stops.) Never closes an app someone else started."""
+        if self._cast.app_id == DEFAULT_MEDIA_RECEIVER_APP_ID:
+            await self._run(self._cast.quit_app)
 
     async def seek(self, position: float) -> None:
         await self._run(self._cast.media_controller.seek, position)

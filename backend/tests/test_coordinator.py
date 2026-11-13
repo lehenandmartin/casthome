@@ -49,6 +49,9 @@ class FakeTarget:
     async def stop(self) -> None:
         self.calls.append("stop")
 
+    async def quit(self) -> None:
+        self.calls.append("quit")
+
     async def seek(self, position: float) -> None:
         self.calls.append(("seek", position))
 
@@ -291,7 +294,7 @@ async def test_switching_device_transfers_playback(h):
     h.target.media("PLAYING", t=30.0)
     await h.settle()
     await h.c.select_device("dev2")
-    assert first.calls[-2:] == ["stop", "disconnect"]
+    assert first.calls[-2:] == ["quit", "disconnect"]  # quit: the session is ended, not left open
     assert h.target is not first
     assert "id=s1" in h.target.last_url and h.target.loads[-1][1] >= 30.0
 
@@ -414,3 +417,12 @@ async def test_clear_queued_keeps_album(h):
     await h.c.add_songs([Song(id="x", title="X")], AddMode.QUEUE)
     await h.c.clear_queued()
     assert [e.item.id for e in h.c.queue.entries] == ["s0", "s1", "s2"] and len(h.target.loads) == 1
+
+
+async def test_events_from_a_device_we_left_are_ignored(h):
+    await h.c.play_songs(songs(2), 0)
+    old = h.target
+    await h.c.select_device("dev2")
+    old.sink(ReceiverEvent(app_id=None, volume_level=0.9, volume_muted=True))  # its session closing
+    await h.settle()
+    assert h.c.volume != 0.9 and h.c.muted is False

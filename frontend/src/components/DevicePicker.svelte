@@ -61,6 +61,16 @@
   function close() {
     store.devicePickerOpen = false;
   }
+
+  async function disconnect() {
+    if (busy) return;
+    busy = store.browserUuid;
+    await store.run(async () => {
+      await api.selectDevice(store.browserUuid);
+      close();
+    });
+    busy = null;
+  }
 </script>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && close()} />
@@ -94,6 +104,13 @@
     </button>
     {#if active && p?.connected}
       <div class="vol"><VolumeSlider /></div>
+    {/if}
+    {#if active && choice.uuid !== store.browserUuid}
+      <!-- Ends the session on the speaker (it goes back to idle) and carries on
+           in this browser. -->
+      <button class="disconnect" disabled={busy !== null} onclick={disconnect}>
+        <Icon name="logout" size={18} />{t('devices.disconnect')}
+      </button>
     {/if}
   </li>
 {/snippet}
@@ -210,6 +227,17 @@
   }
   .vol {
     padding: 0 16px 10px 66px;
+  }
+  .disconnect {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 12px 10px 66px;
+    padding: 6px 14px;
+    min-height: 34px;
+    font-size: 0.9rem;
+    background: var(--surface);
+    color: var(--danger);
   }
   .searching {
     display: flex;

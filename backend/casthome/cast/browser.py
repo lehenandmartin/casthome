@@ -64,6 +64,9 @@ class BrowserTarget:
     async def stop(self) -> None:
         await self._cmd("stop")
 
+    async def quit(self) -> None:
+        await self._cmd("stop")
+
     async def seek(self, position: float) -> None:
         await self._cmd("seek", position=position)
 
