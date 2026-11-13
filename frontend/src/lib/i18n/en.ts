@@ -85,6 +85,7 @@ export const en = {
   'song.added': 'Added to the queue.',
   'song.addToPlaylist': 'Add to playlist…',
   'song.rating': 'Rating',
+  'song.startRadio': 'Start radio',
   'song.goToAlbum': 'Go to album',
   'song.goToArtist': 'Go to artist',
 
@@ -156,6 +157,12 @@ export const en = {
   'queue.nextInQueue': 'Next in queue',
   'queue.nextFrom': 'Next from: {name}',
   'queue.nextFromUnnamed': 'Next up',
+  'queue.nextFromRadio': 'Next from: Radio · {title}',
+  'queue.radioHint': 'Endless radio: similar tracks are added as it plays. Starting an album or playlist ends it.',
+  'radio.source.audiomuse': 'Sonic similarity (AudioMuse)',
+  'radio.source.similar': 'Similar tracks',
+  'radio.source.similar_artists': 'Similar artists',
+  'radio.source.top_songs': 'Popular tracks by the artist',
   'queue.clearQueued': 'Clear',
   'queue.clearQueuedLabel': 'Clear "Next in queue"',
   'queue.clearAll': 'Clear everything',
@@ -191,6 +198,8 @@ export const en = {
   'error.added_to_queue': 'Added to the queue.',
   'error.playlist_saved': 'Playlist saved.',
   'error.playlist_added': 'Added to “{name}”.',
+  'error.no_similar_tracks': 'No similar tracks found for “{title}”.',
+  'error.radio_started': 'Radio started from “{title}”.',
   'error.unknown': 'Something went wrong.',
 } as const;
 

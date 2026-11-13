@@ -37,7 +37,7 @@ export function setBeforePlayHook(hook: () => Promise<void>): void {
   beforePlay = hook;
 }
 
-const PLAY_PATHS = new Set(['/player/play', '/player/toggle', '/player/jump']);
+const PLAY_PATHS = new Set(['/player/play', '/player/toggle', '/player/jump', '/radio']);
 function startsPlayback(method: string, path: string, body: unknown): boolean {
   if (method !== 'POST') return false;
   if (PLAY_PATHS.has(path)) return true;
@@ -123,6 +123,8 @@ export const api = {
   /** Replace the queue with these songs, starting at startIndex. */
   playSongs: (songIds: string[], startIndex = 0, contextName?: string) =>
     request<void>('POST', '/queue', { song_ids: songIds, mode: 'now', start_index: startIndex, context_name: contextName }),
+  /** Endless radio: the track, then similar tracks, refilled as it plays. */
+  startRadio: (songId: string) => request<{ source: string }>('POST', '/radio', { song_id: songId }),
   /** Every track, paged; 'recent' = most recently added first. */
   songs: (sort: SongSort = 'recent', offset = 0, size = 100) =>
     request<SongPage>('GET', `/library/songs?sort=${sort}&offset=${offset}&size=${size}`),

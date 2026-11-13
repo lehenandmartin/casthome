@@ -140,6 +140,19 @@ async def add_to_queue(body: QueueAddBody, request: Request) -> None:
         await ctx.coordinator.add_songs(songs, body.mode)
 
 
+class RadioBody(BaseModel):
+    song_id: str
+
+
+@router.post("/radio")
+async def start_radio(body: RadioBody, request: Request) -> dict:
+    """Play a track then similar ones, refilled as it plays (endless radio)."""
+    ctx = get_ctx(request)
+    seed = await ctx.subsonic.get_song(body.song_id)
+    source = await ctx.coordinator.start_radio(seed)
+    return {"source": source}
+
+
 @router.delete("/queue/items/{uid}", status_code=204)
 async def remove_queue_item(uid: int, request: Request) -> None:
     await get_ctx(request).coordinator.remove_entry(uid)

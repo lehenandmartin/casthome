@@ -6,6 +6,7 @@
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
+  import type { MessageKey } from '../lib/i18n/en';
   import type { QueueItem } from '../lib/types';
   import Icon from './Icon.svelte';
 
@@ -42,7 +43,16 @@
 
   const upcomingCount = $derived(queuedRows.length + contextRows.length);
   const contextTitle = $derived(
-    store.queue.context_name ? t('queue.nextFrom', { name: store.queue.context_name }) : t('queue.nextFromUnnamed'),
+    store.queue.radio
+      ? t('queue.nextFromRadio', { title: store.queue.context_name ?? '' })
+      : store.queue.context_name
+        ? t('queue.nextFrom', { name: store.queue.context_name })
+        : t('queue.nextFromUnnamed'),
+  );
+  const radioSource = $derived(
+    store.queue.radio && store.queue.radio_source
+      ? t(`radio.source.${store.queue.radio_source}` as MessageKey)
+      : null,
   );
 
   const remaining = $derived.by(() => {
@@ -219,7 +229,13 @@
   {/if}
 
   {#if contextRows.length > 0 || (dragging && queuedRows.length > 0)}
-    <p class="section"><span class="ellipsis">{contextTitle}</span> <span class="count">{contextRows.length}</span></p>
+    <p class="section">
+      {#if store.queue.radio}<Icon name="radio" size={14} />{/if}
+      <span class="ellipsis">{contextTitle}</span> <span class="count">{contextRows.length}</span>
+    </p>
+    {#if store.queue.radio}
+      <p class="radio-hint muted">{t('queue.radioHint')}{radioSource ? ` · ${radioSource}` : ''}</p>
+    {/if}
     {@render zone('context', contextRows)}
   {/if}
 
@@ -333,6 +349,10 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
+  }
+  .radio-hint {
+    margin: -4px 0 8px;
+    font-size: 0.8rem;
   }
   .split {
     justify-content: space-between;

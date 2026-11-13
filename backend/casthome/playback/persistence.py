@@ -48,6 +48,7 @@ class NavidromeQueueStore:
 
     async def save(self, model: QueueModel[Song], position: float, device_uuid: str | None) -> None:
         ids = [e.item.id for e in model.entries]
+        radio_source = model.radio_source if model.radio else None
         current = model.current
         original_positions: list[int] | None = None
         if model.original_order is not None:
@@ -60,6 +61,8 @@ class NavidromeQueueStore:
                 "index": model.index,
                 "queued_positions": [i for i, e in enumerate(model.entries) if e.queued],
                 "context_name": model.context_name,
+                "radio": model.radio,
+                "radio_source": radio_source,
                 "repeat": model.repeat.value,
                 "shuffle": model.shuffle,
                 "original_positions": original_positions,
@@ -105,6 +108,8 @@ class NavidromeQueueStore:
                 if 0 <= position < len(model.entries) and position != index:
                     model.entries[position] = replace(model.entries[position], queued=True)
             model.context_name = local.get("context_name")
+            model.radio = bool(local.get("radio"))
+            model.radio_source = local.get("radio_source")
         if same_queue and local.get("shuffle"):
             model.shuffle = True
             positions = local.get("original_positions") or []

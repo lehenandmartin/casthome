@@ -65,8 +65,12 @@ export interface PlayerState {
 export interface QueueState {
   version: number;
   index: number | null;
-  /** Album or playlist the "next from" part comes from. */
+  /** Album or playlist the "next from" part comes from (the seed track's title for a radio). */
   context_name?: string | null;
+  /** The "next from" part is an endless radio of similar tracks. */
+  radio?: boolean;
+  /** Where the radio's tracks come from: audiomuse | similar | similar_artists | top_songs. */
+  radio_source?: string | null;
   items: QueueItem[];
 }
 

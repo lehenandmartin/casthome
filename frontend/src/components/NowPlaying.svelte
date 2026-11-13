@@ -1,5 +1,6 @@
 <script lang="ts">
   import { coverUrl } from '../lib/api';
+  import { startRadio } from '../lib/radio';
   import { router } from '../lib/router.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
@@ -98,6 +99,9 @@
         {/if}
       </div>
       {#if song}
+        <button class="icon-btn" aria-label={t('song.startRadio')} title={t('song.startRadio')} onclick={() => startRadio(song)}>
+          <Icon name="radio" size={22} />
+        </button>
         {#key song.id}<StarButton kind="song" id={song.id} starred={song.starred} />{/key}
       {/if}
     </div>

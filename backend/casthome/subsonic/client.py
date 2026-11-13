@@ -154,6 +154,22 @@ class SubsonicClient:
         )
         return SearchResult.from_api(data.get("searchResult3"))
 
+    # --- similar tracks (radio) ---------------------------------------------
+
+    async def get_similar_songs(self, item_id: str, count: int = 50) -> list[Song]:
+        """Tracks similar to a track/album/artist (AudioMuse, Last.fm… on Navidrome)."""
+        data = await self.call("getSimilarSongs", {"id": item_id, "count": count})
+        return [Song.from_api(s) for s in (data.get("similarSongs") or {}).get("song", [])]
+
+    async def get_similar_songs2(self, artist_id: str, count: int = 50) -> list[Song]:
+        """Tracks from the artist and similar artists (ID3 version, artist id only)."""
+        data = await self.call("getSimilarSongs2", {"id": artist_id, "count": count})
+        return [Song.from_api(s) for s in (data.get("similarSongs2") or {}).get("song", [])]
+
+    async def get_top_songs(self, artist: str, count: int = 50) -> list[Song]:
+        data = await self.call("getTopSongs", {"artist": artist, "count": count})
+        return [Song.from_api(s) for s in (data.get("topSongs") or {}).get("song", [])]
+
     # --- favorites & ratings -------------------------------------------------
 
     async def get_starred(self) -> SearchResult:

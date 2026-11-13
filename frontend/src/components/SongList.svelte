@@ -2,6 +2,7 @@
   import { api } from '../lib/api';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
+  import { startRadio } from '../lib/radio';
   import { store } from '../lib/store.svelte';
   import type { AddMode, Song } from '../lib/types';
   import Icon from './Icon.svelte';
@@ -81,6 +82,14 @@
     <div class="sheet-actions" role="menu">
       <button role="menuitem" onclick={() => add(menuSong, 'now')}><Icon name="play" size={20} />{t('song.playNow')}</button>
       <button role="menuitem" onclick={() => add(menuSong, 'queue')}><Icon name="queue" size={20} />{t('song.addToQueue')}</button>
+      <button
+        role="menuitem"
+        onclick={() => {
+          const seed = menuSong;
+          menuFor = null;
+          startRadio(seed);
+        }}><Icon name="radio" size={20} />{t('song.startRadio')}</button
+      >
       <button
         role="menuitem"
         onclick={() => {

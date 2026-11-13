@@ -57,6 +57,9 @@ class QueueModel(Generic[T]):
     original_order: list[int] | None = None
     # What "next from …" refers to (album or playlist name), for display.
     context_name: str | None = None
+    # The context is a radio (similar tracks, refilled as it plays).
+    radio: bool = False
+    radio_source: str | None = None  # only used to carry it across a restart
     _uids: itertools.count = field(default_factory=lambda: itertools.count(1), repr=False)
 
     # --- read helpers --------------------------------------------------------
@@ -92,6 +95,8 @@ class QueueModel(Generic[T]):
         """Start a new album/playlist/list. Tracks in "next in queue" are kept
         and play right after the chosen track."""
         self.context_name = name
+        self.radio = False
+        self.radio_source = None
         pending = [e for i, e in enumerate(self.entries) if e.queued and i != self.index]
         new = self._wrap(items)
         if not new:
@@ -118,6 +123,18 @@ class QueueModel(Generic[T]):
         self.entries = []
         self.index = None
         self.context_name = None
+        self.radio = False
+
+    def extend_context(self, items: list[T]) -> None:
+        """Append tracks to the end of the album/playlist part (radio refill)."""
+        new = self._wrap(items)
+        self.entries.extend(new)
+        self._original_insert(new, after_uid=None)
+
+    @property
+    def upcoming_context(self) -> int:
+        """How many album/playlist tracks are left after the current one."""
+        return len(self.entries) - self._context_start()
         self.original_order = [] if self.shuffle else None
 
     def clear_queued(self) -> None:

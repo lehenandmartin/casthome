@@ -36,6 +36,7 @@ from casthome.cast.types import (
 from casthome.playback.media import MediaBuilder
 from casthome.playback.persistence import QueueStore
 from casthome.queue.logic import AddMode, QueueModel, RepeatMode
+from casthome.playback.radio import RadioBuilder
 from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import NavidromeUnavailableError, NotAuthenticatedError, SubsonicError
 from casthome.subsonic.models import Song
@@ -47,6 +48,8 @@ MAX_CONSECUTIVE_ERRORS = 5
 STATUS_POLL_INTERVAL_S = 2.0
 POSITION_SAVE_INTERVAL_S = 15.0
 SAVE_DEBOUNCE_S = 1.0
+# Endless radio: fetch more similar tracks when this few are left.
+RADIO_REFILL_AT = 5
 REMOTE_REFRESH_INTERVAL_S = 60.0
 # Preloading (opt-in): the next track is queued on the receiver this long
 # before the current one ends. Preloading late keeps the window in which the
@@ -100,7 +103,10 @@ class PlaybackCoordinator:
         clock: Callable[[], float] = time.time,
         scrobbler: Scrobbler | None = None,
         preload_next: bool = False,
+        radio_builder: RadioBuilder | None = None,
     ) -> None:
+        self._radio_builder = radio_builder
+        self._radio_refilling = False
         self._connector = connector
         self._scrobbler = scrobbler
         self._preload_enabled = preload_next
@@ -266,6 +272,60 @@ class PlaybackCoordinator:
             self.queue.play_context(songs, start_index, context_name)
             self._queue_mutated()
             await self._load_current(0)
+
+    @property
+    def radio_source(self) -> str | None:
+        return self.queue.radio_source if self.queue.radio else None
+
+    async def start_radio(self, seed: Song) -> str:
+        """Play `seed`, then similar tracks; the radio refills itself as it plays.
+        Returns the source used. Tracks in "next in queue" are kept."""
+        if self._radio_builder is None:
+            raise PlaybackError("no_similar_tracks")
+        try:
+            songs, source = await self._radio_builder(seed, {seed.id})
+        except NavidromeUnavailableError as exc:
+            raise PlaybackError("navidrome_unavailable") from exc
+        if not songs or source is None:
+            raise PlaybackError("no_similar_tracks", {"title": seed.title})
+        async with self._lock:
+            self.queue.play_context([seed, *songs], 0, seed.title)
+            self.queue.radio = True
+            self.queue.radio_source = source
+            self._queue_mutated()
+            await self._load_current(0)
+        return source
+
+    def _maybe_refill_radio(self) -> None:
+        if (
+            self.queue.radio
+            and self._radio_builder is not None
+            and not self._radio_refilling
+            and self.queue.current is not None
+            and self.queue.upcoming_context < RADIO_REFILL_AT
+        ):
+            self._radio_refilling = True
+            asyncio.create_task(self._refill_radio())
+
+    async def _refill_radio(self) -> None:
+        """Endless radio: add tracks similar to the last one of the queue."""
+        try:
+            seed = self.queue.entries[-1].item if self.queue.entries else None
+            if seed is None or self._radio_builder is None:
+                return
+            exclude = {e.item.id for e in self.queue.entries}
+            songs, source = await self._radio_builder(seed, exclude)
+            async with self._lock:
+                if not self.queue.radio or not songs:
+                    return
+                self.queue.extend_context(songs)
+                self.queue.radio_source = source or self.queue.radio_source
+                self._queue_mutated()
+                log.info("Radio refilled with %d tracks", len(songs))
+        except Exception:  # noqa: BLE001 - a failed refill just means the radio ends later
+            log.warning("Radio refill failed", exc_info=True)
+        finally:
+            self._radio_refilling = False
 
     async def add_songs(self, songs: list[Song], mode: AddMode) -> None:
         async with self._lock:
@@ -438,6 +498,7 @@ class PlaybackCoordinator:
         self.notifier.player_changed()
         self._schedule_save()
         log.info("Loading %r on %s%s", song.title, self.device_uuid, " (transcoded)" if media.transcoded else "")
+        self._maybe_refill_radio()
         await self._device_call(self.target.load(media.url, media.content_type, media.metadata, start_at))
 
     def _is_browser(self) -> bool:
@@ -665,6 +726,7 @@ class PlaybackCoordinator:
             self._scrobbler.track_loaded(song.id, song.duration)
         self.notifier.player_changed()
         self._schedule_save()
+        self._maybe_refill_radio()
 
     def _start_preload_watchdog(self) -> None:
         async def watchdog() -> None:
@@ -815,5 +877,7 @@ class PlaybackCoordinator:
             "version": self.queue_version,
             "index": self.queue.index,
             "context_name": self.queue.context_name,
+            "radio": self.queue.radio,
+            "radio_source": self.queue.radio_source if self.queue.radio else None,
             "items": [{"uid": e.uid, "queued": e.queued, **e.item.model_dump()} for e in self.queue.entries],
         }

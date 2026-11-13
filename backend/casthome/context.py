@@ -18,6 +18,7 @@ from casthome.db import Database
 from casthome.playback.coordinator import Notifier, PlaybackCoordinator
 from casthome.playback.media import MediaBuilder, StreamConfig
 from casthome.playback.persistence import NavidromeQueueStore
+from casthome.playback.radio import make_radio_builder
 from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import SubsonicClient
 from casthome.subsonic.native import NativeClient
@@ -88,6 +89,7 @@ class AppContext:
             NavidromeQueueStore(db, subsonic),
             scrobbler=Scrobbler(scrobble),
             preload_next=settings.cast_preload_next,
+            radio_builder=make_radio_builder(subsonic),
         )
         ctx = cls(settings, db, sessions, credentials, subsonic, native, cast, coordinator, hub)
         coordinator.notifier = Notifier(
