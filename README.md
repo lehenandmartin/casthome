@@ -106,6 +106,19 @@ After a CastHome restart, the queue is restored from Navidrome. If the device
 is still playing the current track, CastHome re-attaches to it without a gap.
 Otherwise it waits, paused, and never auto-plays.
 
+### Playing in the browser
+
+Until you pick a Cast device, CastHome plays in the browser you are using
+("This browser" in the device list). The server still owns the queue and
+moves on to the next track; the tab only plays what it is told and reports
+back. Audio goes through CastHome's `/api/stream/<id>` proxy with your session
+cookie, so Navidrome credentials never reach the browser. Lock-screen and
+headset controls work through the Media Session API.
+
+Closing or reloading that tab stops playback (there is nothing left to play
+on). On iOS, keep CastHome in the foreground or use a Cast device for long
+listening: Safari may suspend background tabs.
+
 ### Install as an app (PWA)
 
 - **iPhone/iPad (Safari):** Share → *Add to Home Screen*. Works over plain HTTP.

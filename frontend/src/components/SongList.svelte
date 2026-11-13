@@ -4,6 +4,7 @@
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { AddMode, Song } from '../lib/types';
+  import Icon from './Icon.svelte';
   import PlaylistPicker from './PlaylistPicker.svelte';
   import RatingStars from './RatingStars.svelte';
   import StarButton from './StarButton.svelte';
@@ -27,6 +28,7 @@
   let menuFor = $state<number | null>(null);
   let pickerFor = $state<string | null>(null);
   const currentId = $derived(store.player?.current?.id);
+  const menuSong = $derived(menuFor !== null ? (songs[menuFor] ?? null) : null);
 
   async function add(song: Song, mode: AddMode) {
     menuFor = null;
@@ -37,7 +39,7 @@
   }
 </script>
 
-<svelte:window onclick={() => (menuFor = null)} />
+<svelte:window onkeydown={(e) => e.key === 'Escape' && (menuFor = null)} />
 
 <ol class="songs">
   {#each songs as song, i (`${song.id}-${i}`)}
@@ -51,47 +53,65 @@
         <span class="muted">{formatTime(song.duration)}</span>
       </button>
       <StarButton kind="song" id={song.id} bind:starred={song.starred} />
-      <div class="menu-wrap">
-        <button
-          class="more"
-          aria-label={t('song.more')}
-          aria-expanded={menuFor === i}
-          onclick={(e) => {
-            e.stopPropagation();
-            menuFor = menuFor === i ? null : i;
-          }}>⋯</button
-        >
-        {#if menuFor === i}
-          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-          <div class="menu" role="menu" tabindex="-1" onclick={(e) => e.stopPropagation()}>
-            <button role="menuitem" onclick={() => add(song, 'now')}>{t('song.playNow')}</button>
-            <button role="menuitem" onclick={() => add(song, 'next')}>{t('song.playNext')}</button>
-            <button role="menuitem" onclick={() => add(song, 'end')}>{t('song.addToQueue')}</button>
-            <button
-              role="menuitem"
-              onclick={() => {
-                menuFor = null;
-                pickerFor = song.id;
-              }}>{t('song.addToPlaylist')}</button
-            >
-            {#if onremove}
-              <button
-                role="menuitem"
-                onclick={() => {
-                  menuFor = null;
-                  onremove(i);
-                }}>{t('playlist.removeTrack')}</button
-              >
-            {/if}
-            <div class="rating-row">
-              <RatingStars id={song.id} bind:rating={song.user_rating} />
-            </div>
-          </div>
-        {/if}
-      </div>
+      <button
+        class="more"
+        aria-label={t('song.more')}
+        aria-haspopup="dialog"
+        onclick={(e) => {
+          e.stopPropagation();
+          menuFor = i;
+        }}><Icon name="more" size={20} /></button
+      >
     </li>
   {/each}
 </ol>
+
+<!-- Actions open as a bottom sheet: a dropdown would end up under the player on mobile. -->
+{#if menuSong && menuFor !== null}
+  {@const index = menuFor}
+  <div class="sheet-backdrop" role="presentation" onclick={() => (menuFor = null)}></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label={t('song.more')}>
+    <div class="sheet-head">
+      <span class="text">
+        <strong class="ellipsis">{menuSong.title}</strong>
+        <span class="muted ellipsis">{menuSong.artist}{menuSong.album ? ` · ${menuSong.album}` : ''}</span>
+      </span>
+      <RatingStars id={menuSong.id} bind:rating={songs[index].user_rating} />
+    </div>
+    <div class="sheet-actions" role="menu">
+      <button role="menuitem" onclick={() => add(menuSong, 'now')}><Icon name="play" size={20} />{t('song.playNow')}</button>
+      <button role="menuitem" onclick={() => add(menuSong, 'next')}><Icon name="queue" size={20} />{t('song.playNext')}</button>
+      <button role="menuitem" onclick={() => add(menuSong, 'end')}><Icon name="plus" size={20} />{t('song.addToQueue')}</button>
+      <button
+        role="menuitem"
+        onclick={() => {
+          pickerFor = menuSong.id;
+          menuFor = null;
+        }}><Icon name="playlist" size={20} />{t('song.addToPlaylist')}</button
+      >
+      {#if menuSong.album_id}
+        <a role="menuitem" href={`#/album/${encodeURIComponent(menuSong.album_id)}`} onclick={() => (menuFor = null)}
+          ><Icon name="disc" size={20} />{t('song.goToAlbum')}</a
+        >
+      {/if}
+      {#if menuSong.artist_id}
+        <a role="menuitem" href={`#/artist/${encodeURIComponent(menuSong.artist_id)}`} onclick={() => (menuFor = null)}
+          ><Icon name="artist" size={20} />{t('song.goToArtist')}</a
+        >
+      {/if}
+      {#if onremove}
+        <button
+          role="menuitem"
+          class="danger"
+          onclick={() => {
+            menuFor = null;
+            onremove(index);
+          }}><Icon name="trash" size={20} />{t('playlist.removeTrack')}</button
+        >
+      {/if}
+    </div>
+  </div>
+{/if}
 
 {#if pickerFor}
   <PlaylistPicker songIds={[pickerFor]} onclose={() => (pickerFor = null)} />
@@ -140,41 +160,47 @@
     color: var(--accent);
     font-weight: 600;
   }
-  .menu-wrap {
-    position: relative;
-  }
   .more {
+    display: grid;
+    place-items: center;
     background: none;
-    border: 0;
     width: 40px;
     height: 40px;
-    font-size: 18px;
+    min-height: 0;
+    padding: 0;
+    color: var(--muted);
+    flex: none;
   }
-  .menu {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    z-index: 15;
+  .sheet-head {
     display: grid;
-    min-width: 190px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
-    padding: 4px;
+    gap: 8px;
+    padding: 4px 4px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
   }
-  .menu > button {
+  .sheet-head .text {
+    display: grid;
+    min-width: 0;
+  }
+  .sheet-actions {
+    display: grid;
+  }
+  .sheet-actions > * {
+    display: flex;
+    align-items: center;
+    gap: 14px;
     background: none;
-    border: 0;
+    border-radius: 10px;
+    padding: 12px 8px;
     text-align: left;
-    padding: 8px 10px;
+    text-decoration: none;
+    color: inherit;
+    font-size: 1rem;
   }
-  .menu > button:hover {
+  .sheet-actions > *:hover {
     background: var(--surface-2);
   }
-  .rating-row {
-    border-top: 1px solid var(--border);
-    margin-top: 4px;
-    padding: 4px 6px 0;
+  .sheet-actions .danger {
+    color: var(--danger);
   }
 </style>

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import secrets
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import quote, urlencode
 
 from casthome.subsonic.client import NotAuthenticatedError, PasswordProvider
 from casthome.subsonic.formats import plan_stream
@@ -55,4 +57,21 @@ class MediaBuilder:
         if song.cover_art:
             cover = cover_art_url(cfg.public_base_url, cfg.username, password, song.cover_art)
             metadata["images"] = [{"url": cover}]
+        return CastMedia(url=url, content_type=plan.content_type, metadata=metadata, transcoded=plan.format is not None)
+
+    def build_for_browser(self, song: Song, force_fallback: bool = False) -> CastMedia:
+        """Media for the in-browser player: a same-origin URL of the CastHome stream
+        proxy, so Navidrome credentials never reach the browser."""
+        cfg = self._config
+        plan = plan_stream(song, cfg.stream_format, cfg.max_bitrate, cfg.fallback_format, force_fallback)
+        params: dict[str, Any] = {}
+        if plan.format:
+            params["format"] = plan.format
+        if plan.max_bitrate:
+            params["max_bitrate"] = plan.max_bitrate
+        params["n"] = secrets.token_hex(4)  # unique per load, so stale reports can be told apart
+        url = f"/api/stream/{quote(song.id, safe='')}?{urlencode(params)}"
+        metadata: dict[str, Any] = {"title": song.title, "artist": song.artist, "albumName": song.album}
+        if song.cover_art:
+            metadata["images"] = [{"url": f"/api/cover/{quote(song.cover_art, safe='')}?size=600"}]
         return CastMedia(url=url, content_type=plan.content_type, metadata=metadata, transcoded=plan.format is not None)

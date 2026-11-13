@@ -37,7 +37,7 @@
   }
 </script>
 
-<div class="backdrop" role="presentation" onclick={onclose}></div>
+<div class="sheet-backdrop" role="presentation" onclick={onclose}></div>
 <div class="sheet" role="dialog" aria-modal="true" aria-label={t('playlist.pickTitle')}>
   <h3>{t('playlist.pickTitle')}</h3>
   <form onsubmit={create}>
@@ -57,36 +57,6 @@
 </div>
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgb(0 0 0 / 0.4);
-    z-index: 20;
-  }
-  .sheet {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 21;
-    max-height: 75dvh;
-    overflow: auto;
-    background: var(--surface);
-    border-radius: 16px 16px 0 0;
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
-  }
-  @media (min-width: 640px) {
-    .sheet {
-      left: 50%;
-      right: auto;
-      bottom: auto;
-      top: 15dvh;
-      transform: translateX(-50%);
-      width: 400px;
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgb(0 0 0 / 0.3);
-    }
-  }
   h3 {
     margin: 0 0 12px;
   }

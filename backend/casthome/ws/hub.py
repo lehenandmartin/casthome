@@ -8,6 +8,10 @@ Messages are `{"type": str, "data": object}`. Types:
 - devices        list of discovered Cast devices
 - notification   {level, code, params}; `code` is translated by the frontend
 - auth_expired   the session is no longer valid; go back to the login page
+- browser_cmd    only to the tab used as "This browser": load/play/pause/...
+
+Client -> server (JSON): browser_status / browser_volume from that tab; the
+plain text "ping" keeps the connection alive.
 """
 
 from __future__ import annotations
@@ -27,6 +31,9 @@ class Hub:
     def __init__(self) -> None:
         self._clients: set[WebSocket] = set()
         self._sessions: dict[WebSocket, str] = {}
+        self._client_ids: dict[WebSocket, str] = {}
+        self.client_names: dict[str, str] = {}
+        self.on_client_gone: Callable[[str], None] | None = None
         self._pending: dict[str, Callable[[], Any]] = {}
         self._flush_scheduled = False
 
@@ -34,13 +41,34 @@ class Hub:
     def client_count(self) -> int:
         return len(self._clients)
 
-    def add(self, ws: WebSocket, session_id: str) -> None:
+    def add(self, ws: WebSocket, session_id: str, client_id: str | None = None, name: str = "") -> None:
         self._clients.add(ws)
         self._sessions[ws] = session_id
+        if client_id:
+            # A reconnecting tab replaces its previous socket.
+            for other, cid in list(self._client_ids.items()):
+                if cid == client_id and other is not ws:
+                    self._client_ids.pop(other, None)
+            self._client_ids[ws] = client_id
+            self.client_names[client_id] = name
 
     def remove(self, ws: WebSocket) -> None:
         self._clients.discard(ws)
         self._sessions.pop(ws, None)
+        client_id = self._client_ids.pop(ws, None)
+        if client_id and client_id not in self._client_ids.values() and self.on_client_gone:
+            self.on_client_gone(client_id)
+
+    def has_client(self, client_id: str) -> bool:
+        return client_id in self._client_ids.values()
+
+    async def send_to_client(self, client_id: str, msg_type: str, data: Any) -> None:
+        """Send to one tab. Raises LookupError if that tab is not connected."""
+        for ws, cid in list(self._client_ids.items()):
+            if cid == client_id:
+                await ws.send_text(json.dumps({"type": msg_type, "data": data}))
+                return
+        raise LookupError(client_id)
 
     async def close_sessions(self, session_ids: set[str], code: int = 4401) -> None:
         """Disconnect the browsers of revoked sessions (they then show the sign-in page)."""
@@ -91,3 +119,4 @@ class Hub:
                 pass
         self._clients.clear()
         self._sessions.clear()
+        self._client_ids.clear()

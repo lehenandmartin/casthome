@@ -18,7 +18,7 @@
     top: calc(8px + env(safe-area-inset-top));
     left: 16px;
     right: 16px;
-    z-index: 30;
+    z-index: 70;
     display: grid;
     gap: 8px;
     justify-items: center;

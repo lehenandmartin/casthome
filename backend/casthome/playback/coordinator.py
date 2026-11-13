@@ -168,7 +168,9 @@ class PlaybackCoordinator:
             return
         async with self._lock:
             self._apply_loaded(loaded.model, loaded.position, loaded.changed)
-            self.device_uuid = loaded.device_uuid
+            # A browser tab does not survive a restart; Cast devices are reconnected.
+            stored = loaded.device_uuid
+            self.device_uuid = None if stored and stored.startswith("browser:") else stored
             current = self.queue.current
             # If the selected device still plays our current song, re-attach to it seamlessly.
             self._reattach_song_id = current.item.id if current else None
@@ -412,7 +414,7 @@ class PlaybackCoordinator:
             raise PlaybackError("no_device")
         song = entry.item
         try:
-            media = await self._media.build(song, force_fallback=force_fallback)
+            media = await self._build_media(song, force_fallback)
         except NotAuthenticatedError as exc:
             raise PlaybackError("not_signed_in") from exc
         self._expected_content_id = media.url
@@ -430,6 +432,14 @@ class PlaybackCoordinator:
         self._schedule_save()
         log.info("Loading %r on %s%s", song.title, self.device_uuid, " (transcoded)" if media.transcoded else "")
         await self._device_call(self.target.load(media.url, media.content_type, media.metadata, start_at))
+
+    def _is_browser(self) -> bool:
+        return self.target is not None and self.target.info.cast_type == "browser"
+
+    async def _build_media(self, song: Song, force_fallback: bool):  # type: ignore[no-untyped-def]
+        if self._is_browser():
+            return self._media.build_for_browser(song, force_fallback)
+        return await self._media.build(song, force_fallback=force_fallback)
 
     async def _advance(self, natural: bool) -> None:
         index = self.queue.next_index(natural=natural)
@@ -505,6 +515,18 @@ class PlaybackCoordinator:
         elif isinstance(event, ReceiverEvent):
             await self._on_receiver(event)
         elif isinstance(event, ConnectionEvent):
+            if not event.connected and self._is_browser():
+                # The tab that was playing closed: there is nothing to reconnect to.
+                log.info("The browser used for playback went away")
+                self._expected_content_id = None
+                self._clear_preload()
+                self.status = Status.STOPPED
+                self.target = None
+                self.connected = False
+                self.device_uuid = None
+                self.notifier.player_changed()
+                self._schedule_save()
+                return
             if event.connected != self.connected:
                 self.connected = event.connected
                 if not event.connected:
@@ -588,6 +610,8 @@ class PlaybackCoordinator:
     async def _maybe_preload(self, ev: MediaEvent) -> None:
         if not self._preload_enabled or self._preload_attempted or self.target is None:
             return
+        if not getattr(self.target, "supports_preload", True):
+            return
         duration = ev.duration or self.duration
         if not duration or duration - ev.current_time > PRELOAD_LEAD_S:
             return
@@ -597,7 +621,7 @@ class PlaybackCoordinator:
             return
         entry = self.queue.entries[index]
         try:
-            media = await self._media.build(entry.item)
+            media = await self._build_media(entry.item, False)
             await self.target.enqueue(media.url, media.content_type, media.metadata)
         except Exception as exc:  # noqa: BLE001 - preloading is best effort
             log.info("Could not preload the next track: %s", exc)
@@ -763,6 +787,7 @@ class PlaybackCoordinator:
         return {
             "device_uuid": self.device_uuid,
             "device_name": device_name,
+            "device_type": self.target.info.cast_type if self.target is not None else None,
             "connected": self.connected and self.target is not None,
             "status": self.status.value,
             "index": self.queue.index,

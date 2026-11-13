@@ -9,7 +9,9 @@ from dataclasses import dataclass
 from casthome.auth.credentials import CredentialStore
 from casthome.auth.crypto import SecretBox
 from casthome.auth.sessions import SessionStore
+from casthome.cast.browser import BrowserTarget, client_id_of
 from casthome.cast.manager import CastManager
+from casthome.cast.types import ConnectionEvent
 from casthome.cast.types import CastTarget, EventSink
 from casthome.config import Settings
 from casthome.db import Database
@@ -56,7 +58,14 @@ class AppContext:
             credentials.get_password,
         )
 
+        hub = Hub()
+
         async def connector(uuid: str, sink: EventSink) -> CastTarget:
+            client_id = client_id_of(uuid)
+            if client_id is not None:
+                if not hub.has_client(client_id):
+                    raise LookupError(f"browser tab {client_id} is not connected")
+                return BrowserTarget(client_id, hub.client_names.get(client_id) or "Web browser", hub, sink)
             return await cast.connect(uuid, sink)
 
         async def scrobble(song_id: str, submission: bool, time_ms: int | None) -> None:
@@ -70,7 +79,6 @@ class AppContext:
 
             asyncio.create_task(send())
 
-        hub = Hub()
         coordinator = PlaybackCoordinator(
             connector,
             media,
@@ -92,13 +100,35 @@ class AppContext:
             coordinator.on_devices_changed({d.uuid for d in cast.devices})
 
         cast.on_devices_changed = devices_changed
+
+        def client_gone(client_id: str) -> None:
+            target = coordinator.target
+            if isinstance(target, BrowserTarget) and target.client_id == client_id:
+                target.sink(ConnectionEvent(connected=False))
+
+        hub.on_client_gone = client_gone
         subsonic.on_invalid_credentials = ctx.invalidate_credentials
         return ctx
 
     def player_snapshot(self) -> dict:
         uuid = self.coordinator.device_uuid
-        info = self.cast.get(uuid) if uuid else None
-        return self.coordinator.player_snapshot(info.name if info else None)
+        target = self.coordinator.target
+        if target is not None:
+            name: str | None = target.info.name
+        else:
+            info = self.cast.get(uuid) if uuid else None
+            name = info.name if info else None
+        return self.coordinator.player_snapshot(name)
+
+    def browser_report(self, client_id: str, msg_type: str, data: dict) -> None:
+        """Status from the tab used as "This browser"; ignored from any other tab."""
+        target = self.coordinator.target
+        if not isinstance(target, BrowserTarget) or target.client_id != client_id:
+            return
+        if msg_type == "browser_status":
+            target.report_status(data)
+        elif msg_type == "browser_volume":
+            target.report_volume(data)
 
     def devices_snapshot(self) -> list[dict]:
         return [d.__dict__ for d in self.cast.devices]

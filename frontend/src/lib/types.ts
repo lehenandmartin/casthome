@@ -46,6 +46,7 @@ export type RepeatMode = 'off' | 'all' | 'one';
 export interface PlayerState {
   device_uuid: string | null;
   device_name: string | null;
+  device_type: 'cast' | 'audio' | 'group' | 'browser' | string | null;
   connected: boolean;
   status: PlayerStatus;
   index: number | null;

@@ -57,11 +57,11 @@
     position: fixed;
     inset: 0;
     background: rgb(0 0 0 / 0.45);
-    z-index: 40;
+    z-index: 65;
   }
   .dialog {
     position: fixed;
-    z-index: 41;
+    z-index: 66;
     left: 16px;
     right: 16px;
     top: 20dvh;

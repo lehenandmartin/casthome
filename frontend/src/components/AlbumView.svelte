@@ -4,6 +4,7 @@
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Album } from '../lib/types';
+  import Icon from './Icon.svelte';
   import PlaylistPicker from './PlaylistPicker.svelte';
   import RatingStars from './RatingStars.svelte';
   import SongList from './SongList.svelte';
@@ -20,22 +21,55 @@
       album = await api.album(albumId);
     });
   });
+
+  async function queue(mode: 'next' | 'end') {
+    if (!album) return;
+    const albumId = album.id;
+    await store.run(async () => {
+      await api.queueAlbum(albumId, mode);
+      store.notify('added_to_queue', {}, 'info');
+    });
+  }
 </script>
 
 {#if album}
   <section>
     <header>
-      {#if album.cover_art}<img src={coverUrl(album.cover_art, 600)} alt="" />{/if}
-      <div>
-        <h2>{album.name} <StarButton kind="album" id={album.id} bind:starred={album.starred} /></h2>
-        <p class="muted"><a href={`#/artist/${encodeURIComponent(album.artist_id ?? '')}`}>{album.artist}</a>{album.year ? ` · ${album.year}` : ''}</p>
-        <p class="muted">{t('album.tracks', { count: album.song_count })} · {formatTime(album.duration)}</p>
+      <div class="cover">
+        {#if album.cover_art}
+          <img src={coverUrl(album.cover_art, 600)} alt="" />
+        {:else}
+          <span class="placeholder"><Icon name="disc" size={64} /></span>
+        {/if}
+      </div>
+      <div class="meta">
+        <span class="eyebrow">{t('album.label')}</span>
+        <h2>{album.name}</h2>
+        <p class="artist">
+          {#if album.artist_id}
+            <a href={`#/artist/${encodeURIComponent(album.artist_id)}`}>{album.artist}</a>
+          {:else}{album.artist}{/if}
+        </p>
+        <p class="muted">
+          {[album.year, album.song_count === 1 ? t('album.oneTrack') : t('album.tracks', { count: album.song_count }), formatTime(album.duration)]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
         <RatingStars id={album.id} bind:rating={album.user_rating} />
         <div class="actions">
-          <button class="primary" onclick={() => store.run(() => api.playAlbum(album!.id))}>{t('album.play')}</button>
-          <button onclick={() => store.run(() => api.queueAlbum(album!.id, 'next'))}>{t('album.playNext')}</button>
-          <button onclick={() => store.run(() => api.queueAlbum(album!.id, 'end'))}>{t('album.addToQueue')}</button>
-          <button onclick={() => (picking = true)}>{t('song.addToPlaylist')}</button>
+          <button class="primary play" onclick={() => store.run(() => api.playAlbum(album!.id))}>
+            <Icon name="play" size={18} />{t('album.play')}
+          </button>
+          <button class="icon-btn ring" title={t('album.playNext')} aria-label={t('album.playNext')} onclick={() => queue('next')}>
+            <Icon name="queue" size={20} />
+          </button>
+          <button class="icon-btn ring" title={t('album.addToQueue')} aria-label={t('album.addToQueue')} onclick={() => queue('end')}>
+            <Icon name="plus" size={20} />
+          </button>
+          <button class="icon-btn ring" title={t('song.addToPlaylist')} aria-label={t('song.addToPlaylist')} onclick={() => (picking = true)}>
+            <Icon name="playlist" size={20} />
+          </button>
+          <span class="ring-star"><StarButton kind="album" id={album.id} bind:starred={album.starred} /></span>
         </div>
       </div>
     </header>
@@ -51,36 +85,83 @@
     display: grid;
     gap: 16px;
     margin-bottom: 16px;
+    justify-items: center;
+    text-align: center;
   }
-  @media (min-width: 640px) {
-    header {
-      grid-template-columns: 220px 1fr;
-      align-items: end;
-    }
-  }
-  img {
-    width: 100%;
-    max-width: 320px;
+  .cover {
+    width: min(260px, 70vw);
     aspect-ratio: 1;
+  }
+  .cover img,
+  .placeholder {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border-radius: 8px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    background: var(--surface-2);
+    color: var(--muted);
+    display: grid;
+    place-items: center;
+  }
+  .meta {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
   h2 {
-    margin: 0 0 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    margin: 0;
   }
   p {
-    margin: 0 0 4px;
+    margin: 0;
+  }
+  .artist {
+    font-weight: 600;
+  }
+  .artist a {
+    text-decoration: none;
+  }
+  .artist a:hover {
+    text-decoration: underline;
   }
   .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
+    margin-top: 10px;
+    align-items: center;
+    justify-content: center;
   }
-  a {
-    color: inherit;
+  .play {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+  }
+  .ring {
+    background: var(--surface-2);
+  }
+  @media (min-width: 720px) {
+    header {
+      grid-template-columns: 240px 1fr;
+      align-items: end;
+      justify-items: start;
+      text-align: left;
+      gap: 28px;
+    }
+    .cover {
+      width: 240px;
+    }
+    .meta {
+      justify-items: start;
+    }
+    .actions {
+      justify-content: flex-start;
+    }
   }
 </style>

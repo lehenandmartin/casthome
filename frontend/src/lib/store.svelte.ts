@@ -1,5 +1,20 @@
-import { ApiError, setUnauthorizedHandler } from './api';
+import { ApiError, api, setBeforePlayHook, setUnauthorizedHandler } from './api';
+import { browserPlayer } from './browserPlayer';
 import type { Device, Notification, PlayerState, QueueState } from './types';
+import { describeUserAgent } from './useragent';
+
+// One id per tab, kept across reloads of that tab.
+function tabId(): string {
+  try {
+    const existing = sessionStorage.getItem('casthome.tab');
+    if (existing) return existing;
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+    sessionStorage.setItem('casthome.tab', id);
+    return id;
+  } catch {
+    return Math.random().toString(36).slice(2);
+  }
+}
 
 type AuthState = 'unknown' | 'signed-out' | 'signed-in';
 
@@ -13,6 +28,13 @@ class AppStore {
   /** Local clock (seconds) when the last player snapshot arrived. */
   receivedAt = $state(0);
   now = $state(Date.now() / 1000);
+  /** UI state shared by several components. */
+  nowPlayingOpen = $state(false);
+  devicePickerOpen = $state(false);
+
+  readonly clientId = tabId();
+  readonly browserUuid = `browser:${this.clientId}`;
+  readonly browserName = describeUserAgent(navigator.userAgent);
 
   #ws: WebSocket | null = null;
   #retry = 0;
@@ -21,7 +43,38 @@ class AppStore {
 
   constructor() {
     setUnauthorizedHandler(() => this.signedOut());
+    setBeforePlayHook(() => this.#ensureDevice());
     setInterval(() => (this.now = Date.now() / 1000), 500);
+    browserPlayer.connect((type, data) => this.send(type, data));
+    // Back button / swipe-back closes the Now Playing sheet.
+    window.addEventListener('popstate', () => (this.nowPlayingOpen = Boolean(history.state?.nowPlaying)));
+  }
+
+  /** True when this tab is the playback device. */
+  get isThisBrowser(): boolean {
+    return this.player?.device_uuid === this.browserUuid;
+  }
+
+  openNowPlaying(): void {
+    if (this.nowPlayingOpen) return;
+    history.pushState({ nowPlaying: true }, '');
+    this.nowPlayingOpen = true;
+  }
+
+  closeNowPlaying(): void {
+    if (!this.nowPlayingOpen) return;
+    if (history.state?.nowPlaying) history.back();
+    else this.nowPlayingOpen = false;
+  }
+
+  send(type: string, data: Record<string, unknown>): void {
+    if (this.#ws?.readyState === WebSocket.OPEN) this.#ws.send(JSON.stringify({ type, data }));
+  }
+
+  async #ensureDevice(): Promise<void> {
+    if (this.player && !this.player.device_uuid) {
+      await api.selectDevice(this.browserUuid);
+    }
   }
 
   /** Current position, interpolated locally while playing. */
@@ -48,7 +101,8 @@ class AppStore {
   connect(): void {
     if (this.#ws) return;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${location.host}/api/ws`);
+    const params = new URLSearchParams({ client: this.clientId, name: this.browserName });
+    const ws = new WebSocket(`${proto}://${location.host}/api/ws?${params}`);
     this.#ws = ws;
     ws.onopen = () => {
       this.online = true;
@@ -78,6 +132,11 @@ class AppStore {
         this.devices = msg.data.devices;
         this.queue = msg.data.queue;
         this.#setPlayer(msg.data.player);
+        // After a reload the server may still think this tab is playing.
+        if (this.isThisBrowser && !browserPlayer.active) browserPlayer.reportIdle();
+        break;
+      case 'browser_cmd':
+        browserPlayer.handle(msg.data);
         break;
       case 'player':
         this.#setPlayer(msg.data);
@@ -101,6 +160,11 @@ class AppStore {
   #setPlayer(player: PlayerState): void {
     this.player = player;
     this.receivedAt = Date.now() / 1000;
+    // Moving to another track only sends a player update: keep the queue's
+    // current index in step (same queue version only).
+    if (player.queue_version === this.queue.version && player.index !== this.queue.index) {
+      this.queue = { ...this.queue, index: player.index };
+    }
   }
 
   notify(code: string, params: Record<string, unknown> = {}, level: Notification['level'] = 'error'): void {

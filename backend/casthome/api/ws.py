@@ -26,7 +26,9 @@ async def websocket(ws: WebSocket) -> None:
         await ws.close(code=WS_UNAUTHORIZED)
         return
     await ws.send_text(json.dumps({"type": "hello", "data": ctx.full_snapshot()}))
-    ctx.hub.add(ws, session.id)
+    client_id = (ws.query_params.get("client") or "")[:64] or None
+    client_name = (ws.query_params.get("name") or "")[:80]
+    ctx.hub.add(ws, session.id, client_id, client_name)
     # A client opening the app is a good moment to pick up a queue saved elsewhere.
     asyncio.create_task(ctx.coordinator.refresh_from_navidrome())
     try:
@@ -34,6 +36,13 @@ async def websocket(ws: WebSocket) -> None:
             message = await ws.receive_text()
             if message == "ping":
                 await ws.send_text(json.dumps({"type": "pong", "data": None}))
+                continue
+            try:
+                msg = json.loads(message)
+            except ValueError:
+                continue
+            if client_id and isinstance(msg, dict) and isinstance(msg.get("data"), dict):
+                ctx.browser_report(client_id, str(msg.get("type")), msg["data"])
     except WebSocketDisconnect:
         pass
     finally:

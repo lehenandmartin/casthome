@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, model_validator
 
 from casthome.api.deps import get_ctx, require_session
+from casthome.cast.browser import client_id_of
 from casthome.queue.logic import AddMode, RepeatMode
 
 router = APIRouter(prefix="/api", tags=["player"], dependencies=[Depends(require_session)])
@@ -72,7 +73,9 @@ async def devices(request: Request) -> list[dict]:
 @router.put("/player/device", status_code=204)
 async def select_device(body: DeviceBody, request: Request) -> None:
     ctx = get_ctx(request)
-    if ctx.cast.get(body.uuid) is None:
+    client_id = client_id_of(body.uuid)
+    known = ctx.hub.has_client(client_id) if client_id is not None else ctx.cast.get(body.uuid) is not None
+    if not known:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "device_not_found"})
     await ctx.coordinator.select_device(body.uuid)
 

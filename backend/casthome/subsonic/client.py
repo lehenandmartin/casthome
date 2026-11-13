@@ -230,6 +230,26 @@ class SubsonicClient:
         # Long queues do not fit in a URL: use a form POST when the server supports it.
         await self.call("savePlayQueue", params, post=await self._can_post())
 
+    async def open_stream(
+        self, song_id: str, fmt: str | None, max_bitrate: int, range_header: str | None
+    ) -> httpx.Response:
+        """Start streaming a song from Navidrome; the caller must close the response."""
+        query: dict[str, Any] = {**auth_params(self.username, await self._password()), "id": song_id}
+        if fmt:
+            query["format"] = fmt
+            query["estimateContentLength"] = "true"
+        if max_bitrate > 0:
+            query["maxBitRate"] = max_bitrate
+        headers = {"Range": range_header} if range_header else {}
+        request = self._http.build_request(
+            "GET", f"{self.base_url}/rest/stream", params=query, headers=headers,
+            timeout=httpx.Timeout(60.0, connect=5.0),
+        )
+        try:
+            return await self._http.send(request, stream=True)
+        except httpx.HTTPError as exc:
+            raise NavidromeUnavailableError(str(exc)) from exc
+
     async def get_cover_art(self, cover_id: str, size: int | None) -> httpx.Response:
         query: dict[str, Any] = {**auth_params(self.username, await self._password()), "id": cover_id}
         if size:

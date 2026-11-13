@@ -71,12 +71,19 @@
     display: flex;
     gap: 8px;
     overflow-x: auto;
+    scrollbar-width: none;
+    margin-right: -16px;
+    padding-right: 16px;
     padding-bottom: 12px;
     margin-bottom: 4px;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
   }
   .tabs button {
     flex: none;
     border-radius: 999px;
+    font-size: 0.9rem;
   }
   .tabs .active {
     background: var(--accent);

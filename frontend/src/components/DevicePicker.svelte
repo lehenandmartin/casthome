@@ -1,96 +1,238 @@
 <script lang="ts">
   import { api } from '../lib/api';
+  import { deviceIcon } from '../lib/devices';
   import { t } from '../lib/i18n';
+  import type { IconName } from '../lib/icons';
   import { store } from '../lib/store.svelte';
+  import Icon from './Icon.svelte';
+  import VolumeSlider from './VolumeSlider.svelte';
 
-  let { onclose }: { onclose: () => void } = $props();
+  interface Choice {
+    uuid: string;
+    name: string;
+    detail: string;
+    icon: IconName;
+  }
+
   let busy = $state<string | null>(null);
 
+  const p = $derived(store.player);
+  const activeUuid = $derived(p?.device_uuid ?? null);
+  const playing = $derived(p?.status === 'playing' || p?.status === 'buffering' || p?.status === 'loading');
+
+  const typeLabel = (type: string, model: string) =>
+    type === 'group' ? t('devices.group') : type === 'audio' ? model || t('devices.speaker') : model || t('devices.tv');
+
+  const thisBrowser = $derived<Choice>({
+    uuid: store.browserUuid,
+    name: t('devices.thisBrowser'),
+    detail: t('devices.thisBrowserDetail', { name: store.browserName }),
+    icon: deviceIcon('browser'),
+  });
+  // Another tab (e.g. your laptop) currently playing.
+  const otherBrowser = $derived<Choice | null>(
+    p?.device_type === 'browser' && activeUuid && activeUuid !== store.browserUuid
+      ? { uuid: activeUuid, name: p.device_name ?? t('devices.otherBrowser'), detail: t('devices.otherBrowser'), icon: deviceIcon('browser') }
+      : null,
+  );
+  const groups = $derived(store.devices.filter((d) => d.cast_type === 'group'));
+  const singles = $derived(store.devices.filter((d) => d.cast_type !== 'group'));
+  const toChoice = (d: (typeof store.devices)[number]): Choice => ({
+    uuid: d.uuid,
+    name: d.name,
+    detail: typeLabel(d.cast_type, d.model),
+    icon: deviceIcon(d.cast_type),
+  });
+
   async function choose(uuid: string) {
+    if (busy) return;
+    if (uuid === activeUuid && p?.connected) {
+      close();
+      return;
+    }
     busy = uuid;
-    await store.run(() => api.selectDevice(uuid));
+    await store.run(async () => {
+      await api.selectDevice(uuid);
+      close();
+    });
     busy = null;
-    onclose();
+  }
+
+  function close() {
+    store.devicePickerOpen = false;
   }
 </script>
 
-<div class="backdrop" role="presentation" onclick={onclose}></div>
-<div class="sheet" role="dialog" aria-modal="true" aria-label={t('devices.title')}>
-  <h3>{t('devices.title')}</h3>
-  {#if store.devices.length === 0}
-    <p class="muted">{t('devices.none')}</p>
-  {/if}
+<svelte:window onkeydown={(e) => e.key === 'Escape' && close()} />
+
+{#snippet row(choice: Choice)}
+  {@const active = choice.uuid === activeUuid}
+  <li class:active>
+    <button class="choice" disabled={busy !== null && busy !== choice.uuid} onclick={() => choose(choice.uuid)}>
+      <span class="icon"><Icon name={choice.icon} size={22} /></span>
+      <span class="text">
+        <span class="name ellipsis">{choice.name}</span>
+        <span class="detail ellipsis">
+          {#if busy === choice.uuid}
+            {t('devices.connecting')}
+          {:else if active && !p?.connected}
+            {t('devices.disconnected')}
+          {:else if active && playing}
+            {t('devices.playing')}
+          {:else if active}
+            {t('devices.connected')}
+          {:else}
+            {choice.detail}
+          {/if}
+        </span>
+      </span>
+      {#if busy === choice.uuid}
+        <span class="spinner" aria-hidden="true"></span>
+      {:else if active}
+        <span class="check"><Icon name="check" size={20} /></span>
+      {/if}
+    </button>
+    {#if active && p?.connected}
+      <div class="vol"><VolumeSlider /></div>
+    {/if}
+  </li>
+{/snippet}
+
+<div class="sheet-backdrop" role="presentation" onclick={close}></div>
+<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="device-title">
+  <div class="head">
+    <h3 id="device-title">{t('devices.title')}</h3>
+    <button class="icon-btn" aria-label={t('playlist.cancel')} onclick={close}><Icon name="close" size={20} /></button>
+  </div>
+
   <ul>
-    {#each store.devices as device (device.uuid)}
-      <li>
-        <button
-          class:selected={device.uuid === store.player?.device_uuid}
-          disabled={busy !== null}
-          onclick={() => choose(device.uuid)}
-        >
-          <span>{device.name}</span>
-          <span class="muted">
-            {device.cast_type === 'group' ? t('devices.group') : device.model}
-            {#if busy === device.uuid}· {t('player.loading')}{/if}
-          </span>
-        </button>
-      </li>
-    {/each}
+    {@render row(thisBrowser)}
+    {#if otherBrowser}{@render row(otherBrowser)}{/if}
   </ul>
+
+  {#if groups.length > 0}
+    <p class="section">{t('devices.groups')}</p>
+    <ul>
+      {#each groups as device (device.uuid)}{@render row(toChoice(device))}{/each}
+    </ul>
+  {/if}
+
+  <p class="section">{t('devices.castDevices')}</p>
+  {#if singles.length === 0}
+    <p class="searching muted"><span class="spinner small" aria-hidden="true"></span>{t('devices.none')}</p>
+  {:else}
+    <ul>
+      {#each singles as device (device.uuid)}{@render row(toChoice(device))}{/each}
+    </ul>
+  {/if}
 </div>
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgb(0 0 0 / 0.4);
-    z-index: 20;
-  }
-  .sheet {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 21;
-    max-height: 70dvh;
-    overflow: auto;
-    background: var(--surface);
-    border-radius: 16px 16px 0 0;
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
-  }
-  @media (min-width: 640px) {
-    .sheet {
-      left: auto;
-      right: 16px;
-      bottom: 96px;
-      width: 360px;
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgb(0 0 0 / 0.3);
-    }
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
   h3 {
-    margin: 0 0 8px;
+    margin: 0;
+    font-size: 1.2rem;
+  }
+  .section {
+    margin: 16px 4px 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
   ul {
     list-style: none;
-    margin: 0;
+    margin: 8px 0 0;
     padding: 0;
-  }
-  li button {
-    width: 100%;
     display: grid;
-    text-align: left;
     gap: 2px;
-    background: none;
-    border: 0;
-    padding: 10px 8px;
-    border-radius: 8px;
   }
-  li button:hover {
+  li {
+    border-radius: 12px;
+  }
+  li.active {
+    background: var(--accent-soft);
+  }
+  .choice {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    background: none;
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-height: 60px;
+  }
+  .choice:hover:not(:disabled) {
     background: var(--surface-2);
   }
-  .selected span:first-child {
-    color: var(--accent);
+  .active .choice:hover {
+    background: none;
+  }
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--muted);
+    flex: none;
+  }
+  .active .icon {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .text {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+  }
+  .name {
     font-weight: 600;
+  }
+  .active .name,
+  .active .detail {
+    color: var(--accent);
+  }
+  .detail {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .check {
+    color: var(--accent);
+  }
+  .vol {
+    padding: 0 16px 10px 66px;
+  }
+  .searching {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 4px;
+  }
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--surface-3);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+    flex: none;
+  }
+  .spinner.small {
+    width: 14px;
+    height: 14px;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

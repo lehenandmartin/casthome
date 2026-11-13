@@ -28,7 +28,22 @@ export function setUnauthorizedHandler(handler: () => void): void {
   onUnauthorized = handler;
 }
 
+// Runs before any command that starts playback, e.g. to pick "This browser"
+// when no device was chosen yet.
+let beforePlay: () => Promise<void> = async () => {};
+export function setBeforePlayHook(hook: () => Promise<void>): void {
+  beforePlay = hook;
+}
+
+const PLAY_PATHS = new Set(['/player/play', '/player/toggle', '/player/jump']);
+function startsPlayback(method: string, path: string, body: unknown): boolean {
+  if (method !== 'POST') return false;
+  if (PLAY_PATHS.has(path)) return true;
+  return path === '/queue' && (body as { mode?: string } | undefined)?.mode === 'now';
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  if (startsPlayback(method, path, body)) await beforePlay();
   const response = await fetch(`/api${path}`, {
     method,
     credentials: 'same-origin',
