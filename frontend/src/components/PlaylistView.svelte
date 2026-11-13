@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, coverUrl } from '../lib/api';
+  import { dialogs } from '../lib/dialog.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
@@ -44,7 +45,14 @@
   }
 
   async function destroy() {
-    if (!playlist || !confirm(t('playlist.deleteConfirm', { name: playlist.name }))) return;
+    if (!playlist) return;
+    const ok = await dialogs.confirm({
+      title: t('playlist.delete'),
+      message: t('playlist.deleteConfirm', { name: playlist.name }),
+      confirmLabel: t('playlist.delete'),
+      danger: true,
+    });
+    if (!ok || !playlist) return;
     const playlistId = playlist.id;
     await store.run(async () => {
       await api.deletePlaylist(playlistId);

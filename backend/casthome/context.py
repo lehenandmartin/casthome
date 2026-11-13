@@ -72,7 +72,11 @@ class AppContext:
 
         hub = Hub()
         coordinator = PlaybackCoordinator(
-            connector, media, NavidromeQueueStore(db, subsonic), scrobbler=Scrobbler(scrobble)
+            connector,
+            media,
+            NavidromeQueueStore(db, subsonic),
+            scrobbler=Scrobbler(scrobble),
+            preload_next=settings.cast_preload_next,
         )
         ctx = cls(settings, db, sessions, credentials, subsonic, cast, coordinator, hub)
         coordinator.notifier = Notifier(
@@ -111,4 +115,5 @@ class AppContext:
         log.warning("Navidrome rejected the stored password; signing out every session")
         await self.credentials.clear()
         await self.sessions.revoke_all()
-        self.hub.send_now("auth_expired", {"reason": "navidrome_password_changed"})
+        await self.hub.send("auth_expired", {"reason": "navidrome_password_changed"})
+        await self.hub.close_all()

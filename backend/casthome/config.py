@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     stream_max_bitrate: int = 0
     transcode_fallback_format: str = "mp3"
 
+    # Hand the next track to the Cast device ~20 s before the end of the
+    # current one, to shorten the silence between tracks.
+    cast_preload_next: bool = True
+
     # Comma-separated IPs of Cast devices, for networks where mDNS is filtered.
     cast_known_hosts: str = ""
 

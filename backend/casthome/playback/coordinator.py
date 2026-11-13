@@ -47,6 +47,20 @@ MAX_CONSECUTIVE_ERRORS = 5
 STATUS_POLL_INTERVAL_S = 2.0
 POSITION_SAVE_INTERVAL_S = 15.0
 SAVE_DEBOUNCE_S = 1.0
+REMOTE_REFRESH_INTERVAL_S = 60.0
+# Preloading (opt-in): the next track is queued on the receiver this long
+# before the current one ends. Preloading late keeps the window in which the
+# preloaded track can become stale (queue edited) small; a stale preload is
+# replaced as soon as the receiver switches to it.
+PRELOAD_LEAD_S = 20.0
+PRELOAD_SWITCH_TIMEOUT_S = 6.0
+
+
+@dataclass
+class _Preload:
+    url: str
+    uid: int
+    transcoded: bool
 
 
 class Status(StrEnum):
@@ -85,9 +99,14 @@ class PlaybackCoordinator:
         notifier: Notifier | None = None,
         clock: Callable[[], float] = time.time,
         scrobbler: Scrobbler | None = None,
+        preload_next: bool = False,
     ) -> None:
         self._connector = connector
         self._scrobbler = scrobbler
+        self._preload_enabled = preload_next
+        self._preload: _Preload | None = None
+        self._preload_attempted = False
+        self._preload_wait: asyncio.Task[None] | None = None
         self._media = media
         self._store = store
         self.notifier = notifier or Notifier()
@@ -397,6 +416,7 @@ class PlaybackCoordinator:
         except NotAuthenticatedError as exc:
             raise PlaybackError("not_signed_in") from exc
         self._expected_content_id = media.url
+        self._clear_preload()  # a LOAD replaces the receiver's whole queue
         self._seen_active = False
         self._fallback_used = force_fallback
         if self._scrobbler is not None:
@@ -444,6 +464,7 @@ class PlaybackCoordinator:
         self._schedule_save()
 
     async def _stop_device(self) -> None:
+        self._clear_preload()
         position = self.current_position()
         expected, self._expected_content_id = self._expected_content_id, None
         if self.target is not None and expected is not None:
@@ -499,6 +520,16 @@ class PlaybackCoordinator:
         return query.get("id") == [self._reattach_song_id] and query.get("c") == ["CastHome"]
 
     async def _on_media(self, ev: MediaEvent) -> None:
+        if self._preload is not None and ev.content_id == self._preload.url:
+            if ev.player_state in ("PLAYING", "PAUSED", "BUFFERING"):
+                await self._switch_to_preloaded()
+                if self._expected_content_id != ev.content_id:
+                    return  # the preload was stale and has been replaced
+            elif ev.player_state == "IDLE" and ev.idle_reason == "ERROR":
+                log.info("Preloaded track failed on the receiver; loading it normally")
+                self._clear_preload()
+                await self._advance(natural=True)
+                return
         if self._expected_content_id is None:
             if ev.player_state in ("PLAYING", "PAUSED", "BUFFERING") and self._matches_reattach(ev.content_id):
                 log.info("Re-attached to media already playing on the device")
@@ -523,6 +554,8 @@ class PlaybackCoordinator:
             self._set_position(ev.current_time)
             self.notifier.player_changed()
             await self._report_progress(ev)
+            if ev.player_state == "PLAYING":
+                await self._maybe_preload(ev)
             return
 
         if ev.player_state != "IDLE":
@@ -530,6 +563,10 @@ class PlaybackCoordinator:
         if ev.idle_reason == "ERROR":
             await self._on_error()
         elif ev.idle_reason == "FINISHED" and self._seen_active:
+            if self._preload is not None:
+                # The receiver moves on to the preloaded track by itself.
+                self._start_preload_watchdog()
+                return
             self._expected_content_id = None
             await self._advance(natural=True)
         elif ev.idle_reason in ("CANCELLED", "INTERRUPTED") and self._seen_active:
@@ -538,6 +575,79 @@ class PlaybackCoordinator:
             self.status = Status.STOPPED
             self.notifier.player_changed()
             self._schedule_save()
+
+    # --- internals: preloading ------------------------------------------------
+
+    def _clear_preload(self) -> None:
+        self._preload = None
+        self._preload_attempted = False
+        if self._preload_wait is not None:
+            self._preload_wait.cancel()
+            self._preload_wait = None
+
+    async def _maybe_preload(self, ev: MediaEvent) -> None:
+        if not self._preload_enabled or self._preload_attempted or self.target is None:
+            return
+        duration = ev.duration or self.duration
+        if not duration or duration - ev.current_time > PRELOAD_LEAD_S:
+            return
+        self._preload_attempted = True
+        index = self.queue.next_index(natural=True)
+        if index is None:
+            return
+        entry = self.queue.entries[index]
+        try:
+            media = await self._media.build(entry.item)
+            await self.target.enqueue(media.url, media.content_type, media.metadata)
+        except Exception as exc:  # noqa: BLE001 - preloading is best effort
+            log.info("Could not preload the next track: %s", exc)
+            return
+        self._preload = _Preload(url=media.url, uid=entry.uid, transcoded=media.transcoded)
+        log.info("Preloaded %r", entry.item.title)
+
+    async def _switch_to_preloaded(self) -> None:
+        """The receiver started the preloaded track: follow it, or correct it if stale."""
+        preload = self._preload
+        assert preload is not None
+        self._preload = None
+        self._preload_attempted = False
+        if self._preload_wait is not None:
+            self._preload_wait.cancel()
+            self._preload_wait = None
+        expected_next = self.queue.next_index(natural=True)
+        try:
+            position = self._position_of(preload.uid)
+        except PlaybackError:
+            position = None
+        if position is None or position != expected_next:
+            log.info("Preloaded track is no longer next; loading the right one")
+            await self._advance(natural=True)
+            return
+        self.queue.jump(position)
+        song = self.queue.entries[position].item
+        self._expected_content_id = preload.url
+        self._seen_active = True
+        self._fallback_used = False
+        self._transcoded = preload.transcoded
+        self.duration = song.duration or None
+        if self._scrobbler is not None:
+            self._scrobbler.track_loaded(song.id, song.duration)
+        self.notifier.player_changed()
+        self._schedule_save()
+
+    def _start_preload_watchdog(self) -> None:
+        async def watchdog() -> None:
+            await asyncio.sleep(PRELOAD_SWITCH_TIMEOUT_S)
+            async with self._lock:
+                if self._preload is None:
+                    return
+                log.info("Receiver did not start the preloaded track; loading it")
+                self._clear_preload()
+                self._expected_content_id = None
+                await self._advance(natural=True)
+
+        if self._preload_wait is None:
+            self._preload_wait = asyncio.create_task(watchdog())
 
     async def _report_progress(self, ev: MediaEvent) -> None:
         if self._scrobbler is None or self.queue.current is None:
@@ -631,8 +741,13 @@ class PlaybackCoordinator:
             log.warning("Could not save the play queue to Navidrome: %s", exc)
 
     async def _ticker(self) -> None:
+        last_refresh = self._clock()
         while True:
             await asyncio.sleep(STATUS_POLL_INTERVAL_S)
+            if self.status == Status.STOPPED and self._clock() - last_refresh >= REMOTE_REFRESH_INTERVAL_S:
+                # Idle: pick up a play queue saved by another Subsonic client.
+                last_refresh = self._clock()
+                await self.refresh_from_navidrome()
             try:
                 if self.target is not None and self.status in (Status.PLAYING, Status.BUFFERING):
                     await self.target.request_status()

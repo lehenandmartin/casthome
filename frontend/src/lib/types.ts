@@ -113,3 +113,14 @@ export interface Playlist {
 }
 
 export type StarKind = 'song' | 'album' | 'artist';
+
+export interface SessionInfo {
+  id: string;
+  persistent: boolean;
+  created_at: number;
+  last_seen_at: number;
+  expires_at: number;
+  user_agent: string;
+  ip: string;
+  current: boolean;
+}

@@ -2,6 +2,7 @@
   import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action';
   import { flip } from 'svelte/animate';
   import { api, coverUrl } from '../lib/api';
+  import { dialogs } from '../lib/dialog.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
@@ -29,7 +30,11 @@
   }
 
   async function saveAsPlaylist() {
-    const name = prompt(t('playlists.namePlaceholder'))?.trim();
+    const name = await dialogs.prompt({
+      title: t('queue.saveAsPlaylist'),
+      placeholder: t('playlists.namePlaceholder'),
+      confirmLabel: t('playlist.save'),
+    });
     if (!name) return;
     await store.run(async () => {
       await api.createPlaylist(name, [], true);

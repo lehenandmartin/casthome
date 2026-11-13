@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 class Hub:
     def __init__(self) -> None:
         self._clients: set[WebSocket] = set()
+        self._sessions: dict[WebSocket, str] = {}
         self._pending: dict[str, Callable[[], Any]] = {}
         self._flush_scheduled = False
 
@@ -33,11 +34,23 @@ class Hub:
     def client_count(self) -> int:
         return len(self._clients)
 
-    def add(self, ws: WebSocket) -> None:
+    def add(self, ws: WebSocket, session_id: str) -> None:
         self._clients.add(ws)
+        self._sessions[ws] = session_id
 
     def remove(self, ws: WebSocket) -> None:
         self._clients.discard(ws)
+        self._sessions.pop(ws, None)
+
+    async def close_sessions(self, session_ids: set[str], code: int = 4401) -> None:
+        """Disconnect the browsers of revoked sessions (they then show the sign-in page)."""
+        for ws, session_id in list(self._sessions.items()):
+            if session_id in session_ids:
+                self.remove(ws)
+                try:
+                    await ws.close(code=code)
+                except Exception:  # noqa: BLE001 - already closed
+                    pass
 
     def publish(self, msg_type: str, build: Callable[[], Any]) -> None:
         """Coalesce bursts: the latest builder per type is sent once per loop turn."""
@@ -49,6 +62,10 @@ class Hub:
     def send_now(self, msg_type: str, data: Any) -> None:
         """For events that must not be coalesced (notifications)."""
         asyncio.get_running_loop().create_task(self._broadcast(json.dumps({"type": msg_type, "data": data})))
+
+    async def send(self, msg_type: str, data: Any) -> None:
+        """Send now and wait for it (e.g. right before closing every socket)."""
+        await self._broadcast(json.dumps({"type": msg_type, "data": data}))
 
     async def _flush(self) -> None:
         pending, self._pending = self._pending, {}
@@ -64,7 +81,7 @@ class Hub:
             except Exception:  # noqa: BLE001 - a closed socket is simply dropped
                 dead.append(ws)
         for ws in dead:
-            self._clients.discard(ws)
+            self.remove(ws)
 
     async def close_all(self, code: int = 4401) -> None:
         for ws in list(self._clients):
@@ -73,3 +90,4 @@ class Hub:
             except Exception:  # noqa: BLE001
                 pass
         self._clients.clear()
+        self._sessions.clear()

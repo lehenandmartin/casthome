@@ -108,6 +108,17 @@ class CastDevice:
             autoplay=True,
         )
 
+    async def enqueue(self, url: str, content_type: str, metadata: dict[str, Any]) -> None:
+        """QUEUE_INSERT after the current item: the receiver buffers it and plays it gaplessly."""
+        await self._run(
+            self._cast.media_controller.play_media,
+            url,
+            content_type,
+            stream_type=STREAM_TYPE_BUFFERED,
+            metadata=metadata,
+            enqueue=True,
+        )
+
     async def play(self) -> None:
         await self._run(self._cast.media_controller.play)
 

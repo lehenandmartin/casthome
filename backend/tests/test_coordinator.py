@@ -27,6 +27,7 @@ class FakeTarget:
         self.info = DeviceInfo(uuid, "Living room", "Chromecast", "cast", "10.0.0.2", 8009)
         self.sink = sink
         self.loads: list[tuple[str, float]] = []
+        self.enqueued: list[str] = []
         self.calls: list[Any] = []
 
     @property
@@ -35,6 +36,9 @@ class FakeTarget:
 
     async def load(self, url: str, content_type: str, metadata: dict, start_at: float) -> None:
         self.loads.append((url, start_at))
+
+    async def enqueue(self, url: str, content_type: str, metadata: dict) -> None:
+        self.enqueued.append(url)
 
     async def play(self) -> None:
         self.calls.append("play")

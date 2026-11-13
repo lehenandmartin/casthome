@@ -18,6 +18,18 @@ export const en = {
   'nav.favorites': 'Favorites',
   'nav.queue': 'Queue',
   'nav.signOut': 'Sign out',
+  'nav.account': 'Account',
+
+  'sessions.title': 'Signed-in devices',
+  'sessions.intro': 'Every browser where you are signed in to CastHome. Signing a device out takes effect immediately.',
+  'sessions.current': 'This device',
+  'sessions.lastSeen': 'Last active {date}',
+  'sessions.expiresSliding': 'Kept signed in; expires {date} if unused',
+  'sessions.browserSession': 'Signed out when the browser closes',
+  'sessions.revoke': 'Sign out',
+  'sessions.revokeOthers': 'Sign out all other devices',
+  'sessions.unknownDevice': 'Unknown device',
+  'sessions.browserOn': '{browser} on {os}',
 
   'albums.title': 'Albums',
   'albums.newest': 'Recently added',

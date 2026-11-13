@@ -62,7 +62,9 @@ async def login(body: LoginBody, request: Request, response: Response) -> dict:
 async def logout(
     request: Request, response: Response, session: Annotated[Session, Depends(require_session)]
 ) -> None:
-    await get_ctx(request).sessions.revoke(session.id)
+    ctx = get_ctx(request)
+    await ctx.sessions.revoke(session.id)
+    await ctx.hub.close_sessions({session.id})
     response.delete_cookie(COOKIE_NAME, path="/")
 
 
@@ -81,5 +83,17 @@ async def list_sessions(request: Request, session: Annotated[Session, Depends(re
 async def revoke_session(
     session_id: str, request: Request, _session: Annotated[Session, Depends(require_session)]
 ) -> None:
-    if not await get_ctx(request).sessions.revoke(session_id):
+    ctx = get_ctx(request)
+    if not await ctx.sessions.revoke(session_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "session_not_found"})
+    await ctx.hub.close_sessions({session_id})
+
+
+@router.delete("/sessions", status_code=204)
+async def revoke_other_sessions(request: Request, session: Annotated[Session, Depends(require_session)]) -> None:
+    """Sign out every other device."""
+    ctx = get_ctx(request)
+    others = {s.id for s in await ctx.sessions.list() if s.id != session.id}
+    for session_id in others:
+        await ctx.sessions.revoke(session_id)
+    await ctx.hub.close_sessions(others)

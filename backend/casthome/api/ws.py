@@ -26,7 +26,7 @@ async def websocket(ws: WebSocket) -> None:
         await ws.close(code=WS_UNAUTHORIZED)
         return
     await ws.send_text(json.dumps({"type": "hello", "data": ctx.full_snapshot()}))
-    ctx.hub.add(ws)
+    ctx.hub.add(ws, session.id)
     # A client opening the app is a good moment to pick up a queue saved elsewhere.
     asyncio.create_task(ctx.coordinator.refresh_from_navidrome())
     try:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import mimetypes
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -19,6 +20,8 @@ from casthome.playback.coordinator import PlaybackError
 from casthome.subsonic.client import NavidromeUnavailableError, NotAuthenticatedError, SubsonicError
 
 log = logging.getLogger("casthome")
+
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
@@ -91,7 +94,9 @@ def create_app(settings: Settings | None = None, ctx: AppContext | None = None, 
         async def spa(path: str) -> FileResponse:
             candidate = (dist / path).resolve()
             if path and candidate.is_file() and dist.resolve() in candidate.parents:
-                return FileResponse(candidate)
+                # The service worker must be revalidated, or updates never reach clients.
+                headers = {"Cache-Control": "no-cache"} if path == "sw.js" else None
+                return FileResponse(candidate, headers=headers)
             return FileResponse(dist / "index.html", headers={"Cache-Control": "no-cache"})
     else:
         log.warning("Frontend build not found at %s; serving the API only", dist)

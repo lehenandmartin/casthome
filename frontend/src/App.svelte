@@ -8,6 +8,7 @@
   import Artists from './components/Artists.svelte';
   import GenreView from './components/GenreView.svelte';
   import Genres from './components/Genres.svelte';
+  import Dialog from './components/Dialog.svelte';
   import Favorites from './components/Favorites.svelte';
   import Login from './components/Login.svelte';
   import PlaylistView from './components/PlaylistView.svelte';
@@ -15,6 +16,7 @@
   import PlayerBar from './components/PlayerBar.svelte';
   import QueueView from './components/QueueView.svelte';
   import Search from './components/Search.svelte';
+  import Sessions from './components/Sessions.svelte';
   import Toasts from './components/Toasts.svelte';
 
   let hash = $state(location.hash);
@@ -24,15 +26,15 @@
   });
 
   type Route =
-    | { name: 'albums' | 'artists' | 'genres' | 'playlists' | 'favorites' | 'search' | 'queue' }
+    | { name: 'albums' | 'artists' | 'genres' | 'playlists' | 'favorites' | 'search' | 'queue' | 'account' }
     | { name: 'album' | 'artist' | 'genre' | 'playlist'; id: string };
 
   const route = $derived.by((): Route => {
     const path = hash.split('?')[0];
     const detail = path.match(/^#\/(album|artist|genre|playlist)\/(.+)$/);
     if (detail) return { name: detail[1] as 'album' | 'artist' | 'genre' | 'playlist', id: decodeURIComponent(detail[2]) };
-    const simple = path.match(/^#\/(artists|genres|playlists|favorites|search|queue)$/);
-    if (simple) return { name: simple[1] as 'artists' | 'genres' | 'playlists' | 'favorites' | 'search' | 'queue' };
+    const simple = path.match(/^#\/(artists|genres|playlists|favorites|search|queue|account)$/);
+    if (simple) return { name: simple[1] as 'artists' | 'genres' | 'playlists' | 'favorites' | 'search' | 'queue' | 'account' };
     return { name: 'albums' };
   });
 
@@ -55,13 +57,10 @@
     .then(() => store.signedIn())
     .catch(() => store.signedOut());
 
-  async function signOut() {
-    await store.run(api.logout);
-    store.signedOut();
-  }
 </script>
 
 <Toasts />
+<Dialog />
 
 {#if store.auth === 'signed-out'}
   <Login />
@@ -72,7 +71,7 @@
         <a href={item.href} class:active={section === item.name}>{t(item.label)}</a>
       {/each}
     </div>
-    <button class="link" onclick={signOut}>{t('nav.signOut')}</button>
+    <a class="account" href="#/account" class:active={section === 'account'}>{t('nav.account')}</a>
   </nav>
   <main class="content">
     {#if route.name === 'album'}
@@ -81,6 +80,8 @@
       <ArtistView id={route.id} />
     {:else if route.name === 'genre'}
       {#key route.id}<GenreView name={route.id} />{/key}
+    {:else if route.name === 'account'}
+      <Sessions />
     {:else if route.name === 'playlist'}
       <PlaylistView id={route.id} />
     {:else if route.name === 'playlists'}
@@ -130,13 +131,8 @@
   nav a.active {
     color: var(--text);
   }
-  .link {
-    flex: none;
+  .account {
     margin-left: auto;
-    background: none;
-    border: 0;
-    color: var(--muted);
-    padding: 0;
   }
   .content {
     padding: 16px 16px 180px;

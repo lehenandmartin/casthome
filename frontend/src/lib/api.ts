@@ -6,6 +6,7 @@ import type {
   ArtistDetail,
   Genre,
   Playlist,
+  SessionInfo,
   RepeatMode,
   SearchResult,
   Song,
@@ -51,6 +52,9 @@ export const api = {
     request<{ username: string }>('POST', '/auth/login', { password, remember }),
   logout: () => request<void>('POST', '/auth/logout'),
   me: () => request<{ username: string }>('GET', '/auth/me'),
+  sessions: () => request<SessionInfo[]>('GET', '/sessions'),
+  revokeSession: (id: string) => request<void>('DELETE', `/sessions/${encodeURIComponent(id)}`),
+  revokeOtherSessions: () => request<void>('DELETE', '/sessions'),
 
   albums: (type: AlbumListType = 'newest', size = 40, offset = 0, genre?: string) =>
     request<Album[]>(
