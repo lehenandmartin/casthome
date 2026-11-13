@@ -21,7 +21,7 @@
   import PlayerBar from './components/PlayerBar.svelte';
   import PlaylistView from './components/PlaylistView.svelte';
   import Playlists from './components/Playlists.svelte';
-  import QueueView from './components/QueueView.svelte';
+  import QueuePanel from './components/QueuePanel.svelte';
   import Search from './components/Search.svelte';
   import Sessions from './components/Sessions.svelte';
   import Toasts from './components/Toasts.svelte';
@@ -29,9 +29,17 @@
 
   const hash = $derived(router.hash);
 
-  const PAGES = ['artists', 'genres', 'playlists', 'favorites', 'tracks', 'search', 'queue', 'account', 'library'] as const;
+  const PAGES = ['artists', 'genres', 'playlists', 'favorites', 'tracks', 'search', 'account', 'library'] as const;
   type Page = (typeof PAGES)[number] | 'albums';
   type Route = { name: Page } | { name: 'album' | 'artist' | 'genre' | 'playlist'; id: string };
+
+  // Old links to #/queue (bookmarks, the PWA's last page): open the queue layer instead.
+  $effect(() => {
+    if (router.hash.split('?')[0] === '#/queue') {
+      router.navigate('#/', { replace: true });
+      queueMicrotask(() => store.openQueue());
+    }
+  });
 
   const route = $derived.by((): Route => {
     const path = hash.split('?')[0];
@@ -61,13 +69,11 @@
     { href: '#/genres', name: 'genres', label: 'nav.genres', icon: 'tag' },
     { href: '#/playlists', name: 'playlists', label: 'nav.playlists', icon: 'playlist' },
     { href: '#/favorites', name: 'favorites', label: 'nav.favorites', icon: 'star' },
-    { href: '#/queue', name: 'queue', label: 'nav.queue', icon: 'queue' },
   ];
   const TABS: NavItem[] = [
     { href: '#/', name: 'albums', label: 'nav.home', icon: 'home' },
     { href: '#/search', name: 'search', label: 'nav.search', icon: 'search' },
     { href: '#/library', name: 'library', label: 'nav.library', icon: 'library' },
-    { href: '#/queue', name: 'queue', label: 'nav.queue', icon: 'queue' },
   ];
 
   const upcoming = $derived(
@@ -97,16 +103,20 @@
       {#each SIDEBAR as item (item.name)}
         <a href={item.href} class:active={section === item.name}>
           <Icon name={item.icon} size={20} />{t(item.label)}
-          {#if item.name === 'queue' && upcoming > 0}<span class="badge">{upcoming}</span>{/if}
         </a>
       {/each}
+      <!-- The queue is a panel next to the page, not a page. -->
+      <button class="nav-btn" class:active={store.queuePanel} aria-pressed={store.queuePanel} onclick={() => store.toggleQueue()}>
+        <Icon name="queue" size={20} />{t('nav.queue')}
+        {#if upcoming > 0}<span class="badge">{upcoming}</span>{/if}
+      </button>
     </nav>
     <a class="account" href="#/account" class:active={section === 'account'}>
       <Icon name="account" size={20} />{t('nav.account')}
     </a>
   </aside>
 
-  <main class="content">
+  <main class="content" class:with-queue={store.isDesktop && store.queuePanel}>
     {#if route.name === 'album'}
       <AlbumView id={route.id} />
     {:else if route.name === 'artist'}
@@ -131,8 +141,6 @@
       <Genres />
     {:else if route.name === 'search'}
       <Search />
-    {:else if route.name === 'queue'}
-      <QueueView />
     {:else}
       <Albums />
     {/if}
@@ -143,16 +151,14 @@
   <nav class="tabbar">
     {#each TABS as item (item.name)}
       <a href={item.href} class:active={tab === item.name}>
-        <span class="tab-icon">
-          <Icon name={item.icon} size={22} />
-          {#if item.name === 'queue' && upcoming > 0}<span class="badge">{upcoming > 99 ? '99+' : upcoming}</span>{/if}
-        </span>
+        <span class="tab-icon"><Icon name={item.icon} size={22} /></span>
         <span>{t(item.label)}</span>
       </a>
     {/each}
   </nav>
 
   {#if store.nowPlayingOpen}<NowPlaying />{/if}
+  {#if store.queueVisible}<QueuePanel />{/if}
   {#if store.devicePickerOpen}<DevicePicker />{/if}
 {/if}
 
@@ -202,7 +208,7 @@
     height: var(--tabbar-h);
     padding-bottom: env(safe-area-inset-bottom);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     background: var(--surface);
     border-top: 1px solid var(--border);
   }
@@ -221,11 +227,6 @@
   }
   .tab-icon {
     position: relative;
-  }
-  .tab-icon .badge {
-    position: absolute;
-    top: -6px;
-    left: 14px;
   }
 
   /* --- desktop sidebar --- */
@@ -272,6 +273,33 @@
     .sidebar a:hover {
       background: var(--surface-2);
       color: var(--text);
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: none;
+      color: var(--muted);
+      font-weight: 600;
+      text-align: left;
+      min-height: 0;
+    }
+    .nav-btn:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+    .nav-btn.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .nav-btn .badge {
+      margin-left: auto;
+    }
+    .content.with-queue {
+      margin-right: var(--queue-w);
     }
     .sidebar a.active {
       background: var(--accent-soft);

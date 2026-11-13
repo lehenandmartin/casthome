@@ -69,12 +69,17 @@ never sent to the frontend.
 
 ## Using CastHome
 
-- **Mobile:** tabs at the bottom (Home, Search, Library, Queue; Library holds
-  playlists, favorites, artists, genres and your account). Above them, the
-  mini player: tap it for the full-screen **Now Playing** view (large artwork,
-  seek bar, controls, shuffle/repeat, device, volume, next track). Swipe down
-  or use Back to close it.
-- **Desktop:** sidebar on the left, full player bar at the bottom.
+- **Mobile:** tabs at the bottom (Home, Search, Library; Library holds
+  playlists, favorites, tracks, artists, genres and your account). Above them,
+  the mini player: tap it for the full-screen **Now Playing** view (large
+  artwork, seek bar, controls, shuffle/repeat, device, volume, next track).
+  Swipe down or use Back to close it. The queue button under *repeat* slides
+  the **queue up as a sheet** over the player; Back, the chevron or a swipe
+  down on its header returns to the player.
+- **Desktop:** sidebar on the left, full player bar at the bottom. The queue
+  button (player bar or sidebar) opens the **queue as a panel on the right**,
+  next to the page you are browsing; it stays open across pages and is
+  remembered.
 - **Queue** (works like Spotify's): *Now playing*, then **Next in queue** (the
   tracks you added with *Add to queue*, in the order you added them), then
   **Next from: <album or playlist>** (the rest of what you started), then
@@ -105,6 +110,8 @@ never sent to the frontend.
   in queue* (any track list; in the queue, a track from the album or playlist
   moves to *Next in queue*), swipe left in the queue to remove it. A coloured
   background shows the action; a short swipe springs back and does nothing.
+  On touch screens the queue has no ✕ (swipe left instead) and the reorder
+  handle sits on the right, under the thumb.
 - **Track actions:** `⋯` on a track opens a sheet: play now, add to queue, add
   to playlist, go to album or artist, rating.
 

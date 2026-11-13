@@ -62,6 +62,21 @@
     return rest + currentLeft;
   });
 
+  // Shown inside the queue sheet/panel (which has its own title).
+  let { embedded = false }: { embedded?: boolean } = $props();
+
+  // Tapping the current track shows the player: on mobile, go back to it
+  // (closing the sheet) or open it if the queue was opened from a page.
+  function openPlayer() {
+    if (store.isDesktop) {
+      store.openNowPlaying();
+      return;
+    }
+    const wasOverPlayer = store.nowPlayingOpen;
+    store.closeQueue();
+    if (!wasOverPlayer) setTimeout(() => store.openNowPlaying(), 40);
+  }
+
   function remove(uid: number) {
     store.run(() => api.removeItem(uid));
   }
@@ -128,9 +143,9 @@
 <svelte:window onclick={() => (menuOpen = false)} />
 
 <section>
-  <header class="page-head">
+  <header class="page-head" class:embedded>
     <div>
-      <h2>{t('queue.title')}</h2>
+      {#if !embedded}<h2>{t('queue.title')}</h2>{/if}
       {#if items.length > 0}
         <p class="muted">{t('queue.summary', { count: items.length, time: formatTime(remaining) })}</p>
       {/if}
@@ -170,13 +185,13 @@
     <div class="empty">
       <Icon name="queue" size={44} />
       <p>{t('queue.empty')}</p>
-      <a class="button primary" href="#/">{t('queue.browse')}</a>
+      <a class="button primary" href="#/" onclick={() => !store.isDesktop && store.closeQueue()}>{t('queue.browse')}</a>
     </div>
   {/if}
 
   {#if current}
     <p class="section">{t('queue.nowPlaying')}</p>
-    <button class="current" onclick={() => store.openNowPlaying()}>
+    <button class="current" onclick={openPlayer}>
       {#if current.cover_art}
         <img src={coverUrl(current.cover_art, 128)} alt="" />
       {:else}
@@ -304,6 +319,12 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+  }
+  .page-head.embedded {
+    align-items: center;
+  }
+  .page-head.embedded p {
+    margin: 0;
   }
   .page-head h2 {
     margin-bottom: 0;
@@ -510,6 +531,21 @@
   .remove {
     color: var(--muted);
     flex: none;
+  }
+  /* Touch screens: swipe left removes, so no ✕; the reorder handle moves to
+     the right edge, under the thumb. Mouse users keep handle left + ✕. */
+  @media (hover: none) and (pointer: coarse) {
+    .remove {
+      display: none;
+    }
+    .handle {
+      order: 1;
+      width: 48px;
+      height: 52px;
+    }
+    .row {
+      padding-left: 10px;
+    }
   }
   .end {
     margin: 12px 4px;

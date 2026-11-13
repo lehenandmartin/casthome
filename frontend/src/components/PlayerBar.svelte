@@ -65,7 +65,14 @@
     <div class="right">
       <div class="vol"><VolumeSlider /></div>
       <DeviceButton />
-      <a class="icon-btn" href="#/queue" aria-label={t('nav.queue')} title={t('nav.queue')}><Icon name="queue" size={20} /></a>
+      <button
+        class="icon-btn"
+        class:on={store.queuePanel}
+        aria-pressed={store.queuePanel}
+        aria-label={t('nav.queue')}
+        title={t('nav.queue')}
+        onclick={() => store.toggleQueue()}><Icon name="queue" size={20} /></button
+      >
     </div>
   </div>
 </footer>

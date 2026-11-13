@@ -67,9 +67,7 @@
       <span class="eyebrow">{t('nowPlaying.title')}</span>
       {#if position}<span class="muted">{position}</span>{/if}
     </div>
-    <button class="icon-btn" aria-label={t('nav.queue')} title={t('nav.queue')} onclick={() => go('#/queue')}>
-      <Icon name="queue" size={22} />
-    </button>
+    <span aria-hidden="true"></span>
   </header>
 
   <div class="body">
@@ -114,10 +112,14 @@
     <div class="bottom">
       <DeviceButton />
       <div class="vol"><VolumeSlider /></div>
+      <!-- Under the repeat button, as in Spotify. -->
+      <button class="icon-btn queue-btn" aria-label={t('nav.queue')} title={t('nav.queue')} onclick={() => store.openQueue()}>
+        <Icon name="queue" size={22} />
+      </button>
     </div>
 
     {#if next}
-      <button class="up-next" onclick={() => go('#/queue')}>
+      <button class="up-next" onclick={() => store.openQueue()}>
         <span class="eyebrow">{t('queue.upNext')}</span>
         <span class="ellipsis"><strong>{next.title}</strong> <span class="muted">· {next.artist}</span></span>
         <span class="muted">{formatTime(next.duration)}</span>
@@ -252,6 +254,13 @@
   .vol {
     flex: 1;
     min-width: 0;
+  }
+  .queue-btn {
+    /* Same width as the large repeat button above it, so their centres line up. */
+    width: 52px;
+    height: 52px;
+    margin-left: auto;
+    flex: none;
   }
   .up-next {
     display: grid;

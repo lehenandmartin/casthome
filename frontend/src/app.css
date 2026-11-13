@@ -16,6 +16,7 @@
   --tabbar-h: calc(58px + env(safe-area-inset-bottom));
   --player-h: 64px;
   --sidebar-w: 232px;
+  --queue-w: 360px;
   color-scheme: light;
 }
 

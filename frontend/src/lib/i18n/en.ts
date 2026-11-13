@@ -149,6 +149,7 @@ export const en = {
   'player.loading': 'Loading…',
 
   'queue.title': 'Queue',
+  'queue.close': 'Close the queue',
   'queue.empty': 'Your queue is empty.',
   'queue.browse': 'Browse albums',
   'queue.summary': '{count} tracks · {time} left',

@@ -23,6 +23,17 @@ function readCache(): Cached | null {
   }
 }
 
+const DESKTOP_QUERY = '(min-width: 900px)';
+const QUEUE_PANEL_KEY = 'casthome.queuePanel';
+
+function readFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
 // One id per tab, kept across reloads of that tab.
 function tabId(): string {
   try {
@@ -53,6 +64,12 @@ class AppStore {
   /** UI state shared by several components. */
   nowPlayingOpen = $state(false);
   devicePickerOpen = $state(false);
+  /** Mobile: the queue sheet over the page / Now Playing (part of Back history). */
+  queueOpen = $state(false);
+  /** Desktop: the queue side panel, remembered on the device. */
+  queuePanel = $state(readFlag(QUEUE_PANEL_KEY));
+  /** Same breakpoint as the CSS: sidebar + side panel layout. */
+  isDesktop = $state(window.matchMedia(DESKTOP_QUERY).matches);
 
   readonly clientId = tabId();
   readonly browserUuid = `browser:${this.clientId}`;
@@ -80,7 +97,12 @@ class AppStore {
     setInterval(() => (this.now = Date.now() / 1000), 500);
     browserPlayer.connect((type, data) => this.send(type, data));
     // Back button / swipe-back closes the Now Playing sheet.
-    window.addEventListener('popstate', () => (this.nowPlayingOpen = Boolean(history.state?.nowPlaying)));
+    // Back button / swipe-back closes the queue sheet, then the Now Playing view.
+    window.addEventListener('popstate', () => {
+      this.nowPlayingOpen = Boolean(history.state?.nowPlaying);
+      this.queueOpen = Boolean(history.state?.queue);
+    });
+    window.matchMedia(DESKTOP_QUERY).addEventListener('change', (e) => (this.isDesktop = e.matches));
   }
 
   /** True when this tab is the playback device. */
@@ -98,6 +120,48 @@ class AppStore {
     if (!this.nowPlayingOpen) return;
     if (history.state?.nowPlaying) history.back();
     else this.nowPlayingOpen = false;
+  }
+
+  /** Is the queue visible (sheet on mobile, side panel on desktop)? */
+  get queueVisible(): boolean {
+    return this.isDesktop ? this.queuePanel : this.queueOpen;
+  }
+
+  openQueue(): void {
+    if (this.isDesktop) {
+      // Desktop: the side panel sits next to the page, so leave Now Playing for it.
+      this.#setQueuePanel(true);
+      this.closeNowPlaying();
+      return;
+    }
+    if (this.queueOpen) return;
+    // Stacked on top of whatever is shown (e.g. Now Playing): Back returns to it.
+    history.pushState({ ...(history.state ?? {}), queue: true }, '');
+    this.queueOpen = true;
+  }
+
+  closeQueue(): void {
+    if (this.isDesktop) {
+      this.#setQueuePanel(false);
+      return;
+    }
+    if (!this.queueOpen) return;
+    if (history.state?.queue) history.back();
+    else this.queueOpen = false;
+  }
+
+  toggleQueue(): void {
+    if (this.queueVisible) this.closeQueue();
+    else this.openQueue();
+  }
+
+  #setQueuePanel(open: boolean): void {
+    this.queuePanel = open;
+    try {
+      localStorage.setItem(QUEUE_PANEL_KEY, open ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
   }
 
   send(type: string, data: Record<string, unknown>): void {
