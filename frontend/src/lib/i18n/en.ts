@@ -12,6 +12,7 @@ export const en = {
 
   'nav.albums': 'Albums',
   'nav.artists': 'Artists',
+  'nav.tracks': 'Tracks',
   'nav.genres': 'Genres',
   'nav.search': 'Search',
   'nav.playlists': 'Playlists',
@@ -49,6 +50,16 @@ export const en = {
   'album.tracks': '{count} tracks',
   'album.oneTrack': '1 track',
   'album.count': '{count} albums',
+
+  'tracks.title': 'Tracks',
+  'tracks.count': '{count} tracks',
+  'tracks.empty': 'No tracks found.',
+  'tracks.sort.recent': 'Recently added',
+  'tracks.sort.title': 'A–Z',
+  'tracks.sort.artist': 'Artist',
+  'tracks.sort.album': 'Album',
+  'tracks.sort.frequent': 'Most played',
+  'tracks.sort.played': 'Recently played',
 
   'artists.title': 'Artists',
   'artists.filter': 'Filter artists',

@@ -88,6 +88,11 @@ never sent to the frontend.
   player bar) opens the list: *This browser*, then speaker groups, then
   speakers and TVs, with the active device's volume. Switching device carries
   on at the same position.
+- **Tracks** (in Library): every track, newest additions first by default;
+  also A–Z, by artist, by album, most played and recently played. Your choice
+  is remembered on the device. Tapping a track plays the loaded list from it.
+  Navidrome's Subsonic API cannot list tracks this way, so this page uses
+  Navidrome's own API (`/api/song`, signed in with the same account).
 - **Track actions:** `⋯` on a track opens a sheet: play now, add to queue, add
   to playlist, go to album or artist, rating.
 

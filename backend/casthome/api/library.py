@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from pydantic import BaseModel, Field
 
 from casthome.api.deps import get_ctx, require_session
+from casthome.subsonic.native import SongSort
 
 router = APIRouter(prefix="/api", tags=["library"], dependencies=[Depends(require_session)])
 
@@ -26,6 +27,18 @@ async def albums(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "genre_required"})
     items = await get_ctx(request).subsonic.get_album_list(type, size, offset, genre if type == "byGenre" else None)
     return [a.model_dump(exclude={"songs"}) for a in items]
+
+
+@router.get("/library/songs")
+async def songs(
+    request: Request,
+    sort: SongSort = "recent",
+    offset: int = Query(0, ge=0),
+    size: int = Query(100, ge=1, le=500),
+) -> dict:
+    """Every track, paged; "recent" = most recently added first."""
+    items, total = await get_ctx(request).native.get_songs(sort, offset, size)
+    return {"items": [s.model_dump() for s in items], "total": total}
 
 
 @router.get("/library/albums/{album_id}")

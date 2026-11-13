@@ -20,6 +20,7 @@ from casthome.playback.media import MediaBuilder, StreamConfig
 from casthome.playback.persistence import NavidromeQueueStore
 from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import SubsonicClient
+from casthome.subsonic.native import NativeClient
 from casthome.ws.hub import Hub
 
 log = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ class AppContext:
     sessions: SessionStore
     credentials: CredentialStore
     subsonic: SubsonicClient
+    native: NativeClient
     cast: CastManager
     coordinator: PlaybackCoordinator
     hub: Hub
@@ -46,6 +48,7 @@ class AppContext:
         )
         credentials = CredentialStore(db, SecretBox(settings.app_secret_key))
         subsonic = SubsonicClient(settings.navidrome_url, settings.navidrome_username, credentials.get_password)
+        native = NativeClient(settings.navidrome_url, settings.navidrome_username, credentials.get_password, subsonic.http)
         cast = CastManager(settings.known_hosts)
         media = MediaBuilder(
             StreamConfig(
@@ -86,7 +89,7 @@ class AppContext:
             scrobbler=Scrobbler(scrobble),
             preload_next=settings.cast_preload_next,
         )
-        ctx = cls(settings, db, sessions, credentials, subsonic, cast, coordinator, hub)
+        ctx = cls(settings, db, sessions, credentials, subsonic, native, cast, coordinator, hub)
         coordinator.notifier = Notifier(
             player_changed=lambda: hub.publish("player", ctx.player_snapshot),
             queue_changed=lambda: hub.publish("queue", coordinator.queue_snapshot),

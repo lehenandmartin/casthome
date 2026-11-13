@@ -7,6 +7,8 @@ import type {
   Genre,
   Playlist,
   SessionInfo,
+  SongPage,
+  SongSort,
   RepeatMode,
   SearchResult,
   Song,
@@ -119,8 +121,11 @@ export const api = {
   queueArtist: (artistId: string) =>
     request<void>('POST', '/queue', { artist_id: artistId, mode: 'queue', replace: false }),
   /** Replace the queue with these songs, starting at startIndex. */
-  playSongs: (songIds: string[], startIndex = 0) =>
-    request<void>('POST', '/queue', { song_ids: songIds, mode: 'now', start_index: startIndex }),
+  playSongs: (songIds: string[], startIndex = 0, contextName?: string) =>
+    request<void>('POST', '/queue', { song_ids: songIds, mode: 'now', start_index: startIndex, context_name: contextName }),
+  /** Every track, paged; 'recent' = most recently added first. */
+  songs: (sort: SongSort = 'recent', offset = 0, size = 100) =>
+    request<SongPage>('GET', `/library/songs?sort=${sort}&offset=${offset}&size=${size}`),
   /** Insert songs without replacing the queue. */
   queueSongs: (songIds: string[], mode: AddMode) =>
     request<void>('POST', '/queue', { song_ids: songIds, mode, replace: false }),

@@ -25,10 +25,11 @@
   import Search from './components/Search.svelte';
   import Sessions from './components/Sessions.svelte';
   import Toasts from './components/Toasts.svelte';
+  import Tracks from './components/Tracks.svelte';
 
   const hash = $derived(router.hash);
 
-  const PAGES = ['artists', 'genres', 'playlists', 'favorites', 'search', 'queue', 'account', 'library'] as const;
+  const PAGES = ['artists', 'genres', 'playlists', 'favorites', 'tracks', 'search', 'queue', 'account', 'library'] as const;
   type Page = (typeof PAGES)[number] | 'albums';
   type Route = { name: Page } | { name: 'album' | 'artist' | 'genre' | 'playlist'; id: string };
 
@@ -43,7 +44,7 @@
   const PARENT: Record<string, string> = { album: 'albums', artist: 'artists', genre: 'genres', playlist: 'playlists' };
   const section = $derived(PARENT[route.name] ?? route.name);
   // Mobile tabs: Library groups artists, genres, playlists, favorites and account.
-  const LIBRARY_SECTIONS = new Set(['library', 'artists', 'genres', 'playlists', 'favorites', 'account']);
+  const LIBRARY_SECTIONS = new Set(['library', 'artists', 'genres', 'playlists', 'favorites', 'tracks', 'account']);
   const tab = $derived(LIBRARY_SECTIONS.has(section) ? 'library' : section);
 
   interface NavItem {
@@ -55,6 +56,7 @@
   const SIDEBAR: NavItem[] = [
     { href: '#/', name: 'albums', label: 'nav.albums', icon: 'disc' },
     { href: '#/search', name: 'search', label: 'nav.search', icon: 'search' },
+    { href: '#/tracks', name: 'tracks', label: 'nav.tracks', icon: 'music' },
     { href: '#/artists', name: 'artists', label: 'nav.artists', icon: 'artist' },
     { href: '#/genres', name: 'genres', label: 'nav.genres', icon: 'tag' },
     { href: '#/playlists', name: 'playlists', label: 'nav.playlists', icon: 'playlist' },
@@ -119,6 +121,8 @@
       <Library />
     {:else if route.name === 'playlists'}
       <Playlists />
+    {:else if route.name === 'tracks'}
+      <Tracks />
     {:else if route.name === 'favorites'}
       <Favorites />
     {:else if route.name === 'artists'}

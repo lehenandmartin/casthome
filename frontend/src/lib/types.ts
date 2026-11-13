@@ -130,3 +130,10 @@ export interface SessionInfo {
   ip: string;
   current: boolean;
 }
+
+export type SongSort = 'recent' | 'title' | 'artist' | 'album' | 'frequent' | 'played';
+
+export interface SongPage {
+  items: Song[];
+  total: number;
+}

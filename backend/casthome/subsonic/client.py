@@ -55,6 +55,11 @@ class SubsonicClient:
         # Called when Navidrome rejects the stored password (it changed).
         self.on_invalid_credentials: Callable[[], Awaitable[None]] | None = None
 
+    @property
+    def http(self) -> httpx.AsyncClient:
+        """Shared HTTP client (also used for Navidrome's native API)."""
+        return self._http
+
     async def aclose(self) -> None:
         await self._http.aclose()
 

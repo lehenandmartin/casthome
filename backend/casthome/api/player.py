@@ -48,6 +48,7 @@ class QueueAddBody(BaseModel):
     album_id: str | None = None
     artist_id: str | None = None
     playlist_id: str | None = None
+    context_name: str | None = Field(default=None, max_length=200)  # label for a song_ids list
     song_ids: list[str] | None = Field(default=None, max_length=2000)
     mode: AddMode = AddMode.NOW
     start_index: int = Field(default=0, ge=0)
@@ -130,6 +131,7 @@ async def add_to_queue(body: QueueAddBody, request: Request) -> None:
         context_name = artist.name
     else:
         songs = list(await asyncio.gather(*(ctx.subsonic.get_song(i) for i in body.song_ids or [])))
+        context_name = body.context_name
     if not songs:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "nothing_to_play"})
     if body.mode == AddMode.NOW and body.replace:
