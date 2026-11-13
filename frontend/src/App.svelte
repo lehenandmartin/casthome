@@ -237,7 +237,8 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding: 20px 12px 104px;
+      /* The player bar starts right of the sidebar, so nothing to clear at the bottom. */
+      padding: 20px 12px 20px;
       background: var(--surface);
       border-right: 1px solid var(--border);
     }
