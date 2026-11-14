@@ -28,7 +28,7 @@ class InvalidCredentialsError(SubsonicError):
 
 
 class NotAuthenticatedError(Exception):
-    """No Navidrome password is stored yet."""
+    """Navidrome is not set up yet (no server, account or password)."""
 
 
 class NavidromeUnavailableError(Exception):
@@ -52,8 +52,23 @@ class SubsonicClient:
         self._password_provider = password_provider
         self._http = http or httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=5.0))
         self._extensions: set[str] | None = None
-        # Called when Navidrome rejects the stored password (it changed).
-        self.on_invalid_credentials: Callable[[], Awaitable[None]] | None = None
+        # True once Navidrome rejected the stored password, until a call succeeds.
+        self.credentials_rejected = False
+        # Called when `credentials_rejected` changes.
+        self.on_credentials_state: Callable[[bool], None] | None = None
+
+    def configure(self, base_url: str, username: str) -> None:
+        """Point at another server or account (settings changed)."""
+        self.base_url = base_url.rstrip("/")
+        self.username = username
+        self._extensions = None
+        self.set_credentials_rejected(False)
+
+    def set_credentials_rejected(self, rejected: bool) -> None:
+        if rejected != self.credentials_rejected:
+            self.credentials_rejected = rejected
+            if self.on_credentials_state is not None:
+                self.on_credentials_state(rejected)
 
     @property
     def http(self) -> httpx.AsyncClient:
@@ -101,10 +116,12 @@ class SubsonicClient:
             code = int(error.get("code", 0))
             message = str(error.get("message", "unknown error"))
             if code == ERROR_WRONG_CREDENTIALS:
-                if password is None and self.on_invalid_credentials is not None:
-                    await self.on_invalid_credentials()
+                if password is None:
+                    self.set_credentials_rejected(True)
                 raise InvalidCredentialsError(code, message)
             raise SubsonicError(code, message)
+        if password is None:
+            self.set_credentials_rejected(False)
         return payload
 
     # --- endpoints -----------------------------------------------------------

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 from urllib.parse import quote, urlencode
 
@@ -36,6 +36,9 @@ class MediaBuilder:
     def __init__(self, config: StreamConfig, password_provider: PasswordProvider) -> None:
         self._config = config
         self._password_provider = password_provider
+
+    def configure(self, public_base_url: str, username: str) -> None:
+        self._config = replace(self._config, public_base_url=public_base_url, username=username)
 
     async def build(self, song: Song, force_fallback: bool = False) -> CastMedia:
         password = await self._password_provider()

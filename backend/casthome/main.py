@@ -12,12 +12,17 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from casthome.api import auth, home, library, player, playlists, stream, ws
+from casthome.api import auth, home, library, player, playlists, server, setup, stream, ws
 from casthome.api.deps import origin_allowed
 from casthome.config import Settings, get_settings
 from casthome.context import AppContext
 from casthome.playback.coordinator import PlaybackError
-from casthome.subsonic.client import NavidromeUnavailableError, NotAuthenticatedError, SubsonicError
+from casthome.subsonic.client import (
+    InvalidCredentialsError,
+    NavidromeUnavailableError,
+    NotAuthenticatedError,
+    SubsonicError,
+)
 
 log = logging.getLogger("casthome")
 
@@ -33,8 +38,11 @@ def create_app(settings: Settings | None = None, ctx: AppContext | None = None, 
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        await context.db.open()
+        await context.open()
         await context.sessions.purge_expired()
+        needs = await context.setup_needs()
+        if any(needs.values()):
+            log.warning("CastHome is not set up yet: open it in a browser to finish the setup")
         if start_services:
             await context.coordinator.start()
             await context.coordinator.restore()
@@ -67,8 +75,12 @@ def create_app(settings: Settings | None = None, ctx: AppContext | None = None, 
         return JSONResponse({"code": exc.code, "params": exc.params}, status_code=409)
 
     @app.exception_handler(NotAuthenticatedError)
-    async def not_authenticated(_request: Request, _exc: NotAuthenticatedError) -> JSONResponse:
-        return JSONResponse({"code": "not_signed_in"}, status_code=401)
+    async def not_configured(_request: Request, _exc: NotAuthenticatedError) -> JSONResponse:
+        return JSONResponse({"code": "navidrome_not_configured"}, status_code=503)
+
+    @app.exception_handler(InvalidCredentialsError)
+    async def credentials_rejected(_request: Request, _exc: InvalidCredentialsError) -> JSONResponse:
+        return JSONResponse({"code": "navidrome_credentials_rejected"}, status_code=502)
 
     @app.exception_handler(NavidromeUnavailableError)
     async def navidrome_down(_request: Request, exc: NavidromeUnavailableError) -> JSONResponse:
@@ -83,7 +95,7 @@ def create_app(settings: Settings | None = None, ctx: AppContext | None = None, 
     async def health() -> dict:
         return {"status": "ok", "devices": len(context.cast.devices), "clients": context.hub.client_count}
 
-    for module in (auth, home, player, library, playlists, stream, ws):
+    for module in (setup, auth, server, home, player, library, playlists, stream, ws):
         app.include_router(module.router)
 
     dist = settings.frontend_dist
@@ -113,11 +125,11 @@ def run() -> None:
     try:
         settings = get_settings()
     except ValidationError as exc:
-        print("CastHome cannot start: invalid or missing configuration.", file=sys.stderr)
+        print("CastHome cannot start: invalid environment variable.", file=sys.stderr)
         for error in exc.errors():
             name = str(error["loc"][0]).upper() if error["loc"] else "?"
             print(f"  {name}: {error['msg']}", file=sys.stderr)
-        print("Copy .env.example to .env at the repository root and fill it in.", file=sys.stderr)
+        print("Fix or remove it (in .env or the environment); see .env.example.", file=sys.stderr)
         raise SystemExit(2) from None
     uvicorn.run(create_app(settings), host=settings.host, port=settings.port, proxy_headers=True)
 

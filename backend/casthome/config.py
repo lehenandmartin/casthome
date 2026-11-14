@@ -14,16 +14,44 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+def normalize_url(value: str) -> str:
+    """An absolute http(s) URL, without trailing slash."""
+    value = value.strip()
+    parsed = urlparse(value)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("must be an absolute http(s) URL")
+    return value.rstrip("/")
+
+
+def check_cast_url(value: str) -> str:
+    """Cast devices fetch audio from this URL: it cannot point at this machine's loopback."""
+    host = urlparse(value).hostname or ""
+    if host == "localhost" or host.endswith(".localhost"):
+        raise ValueError("must be reachable from Cast devices; localhost is not")
+    try:
+        is_loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        is_loopback = False  # a host name, not an IP literal
+    if is_loopback:
+        raise ValueError("must be reachable from Cast devices; loopback is not")
+    return value
+
+
 class Settings(BaseSettings):
     # The repo-root .env is found whatever the working directory; a .env in the
     # working directory overrides it. Real environment variables win over both.
     model_config = SettingsConfigDict(env_file=(REPO_ROOT / ".env", ".env"), extra="ignore")
 
-    app_secret_key: str = Field(min_length=32)
+    # Everything below is optional: CastHome is configured from the browser on
+    # first use. A value set here wins over the one saved from the browser, and
+    # shows as locked there.
+    # Without APP_SECRET_KEY, a key is generated once into <data_dir>/secret.key.
+    app_secret_key: str | None = Field(default=None, min_length=32)
 
-    navidrome_url: str
-    navidrome_public_url_for_cast: str
-    navidrome_username: str
+    navidrome_url: str | None = None
+    navidrome_public_url_for_cast: str | None = None
+    navidrome_username: str | None = None
+    navidrome_password: str | None = None
 
     # Docker sets DATA_DIR=/data; running natively, data goes to <repo>/data.
     data_dir: Path = REPO_ROOT / "data"
@@ -51,32 +79,32 @@ class Settings(BaseSettings):
 
     @field_validator("app_secret_key")
     @classmethod
-    def _not_the_example(cls, value: str) -> str:
-        if value.startswith("change-me"):
-            raise ValueError("still the example value from .env.example; generate a real secret")
+    def _not_the_example(cls, value: str | None) -> str | None:
+        if value is not None and value.startswith("change-me"):
+            raise ValueError("still the example value from .env.example; generate a real secret or remove it")
         return value
 
-    @field_validator("navidrome_url", "navidrome_public_url_for_cast")
+    @field_validator(
+        "app_secret_key",
+        "navidrome_url",
+        "navidrome_public_url_for_cast",
+        "navidrome_username",
+        "navidrome_password",
+        mode="before",
+    )
     @classmethod
-    def _strip_slash(cls, value: str) -> str:
-        parsed = urlparse(value)
-        if parsed.scheme not in ("http", "https") or not parsed.hostname:
-            raise ValueError("must be an absolute http(s) URL")
-        return value.rstrip("/")
+    def _blank_is_unset(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
+
+    @field_validator("navidrome_url")
+    @classmethod
+    def _check_url(cls, value: str | None) -> str | None:
+        return normalize_url(value) if value else None
 
     @field_validator("navidrome_public_url_for_cast")
     @classmethod
-    def _reachable_from_cast(cls, value: str) -> str:
-        host = urlparse(value).hostname or ""
-        if host == "localhost" or host.endswith(".localhost"):
-            raise ValueError("must be reachable from Cast devices; localhost is not")
-        try:
-            is_loopback = ipaddress.ip_address(host).is_loopback
-        except ValueError:
-            is_loopback = False  # a host name, not an IP literal
-        if is_loopback:
-            raise ValueError("must be reachable from Cast devices; loopback is not")
-        return value
+    def _check_cast_url(cls, value: str | None) -> str | None:
+        return check_cast_url(normalize_url(value)) if value else None
 
     @property
     def known_hosts(self) -> list[str]:
@@ -85,6 +113,10 @@ class Settings(BaseSettings):
     @property
     def database_path(self) -> Path:
         return self.data_dir / "casthome.db"
+
+    @property
+    def secret_key_path(self) -> Path:
+        return self.data_dir / "secret.key"
 
 
 @lru_cache

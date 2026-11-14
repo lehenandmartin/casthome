@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { ApiError, api } from './lib/api';
   import { t } from './lib/i18n';
   import type { IconName } from './lib/icons';
   import type { MessageKey } from './lib/i18n/en';
@@ -25,6 +24,7 @@
   import QueuePanel from './components/QueuePanel.svelte';
   import Search from './components/Search.svelte';
   import Settings from './components/Settings.svelte';
+  import Setup from './components/Setup.svelte';
   import Toasts from './components/Toasts.svelte';
   import Tracks from './components/Tracks.svelte';
 
@@ -78,13 +78,9 @@
     store.queue.index !== null ? Math.max(0, store.queue.items.length - store.queue.index - 1) : store.queue.items.length,
   );
 
-  // Restore the session (cookie) on load.
-  // Only a 401 signs out: if the server is briefly unreachable, keep the cached
-  // state on screen and let the live connection retry.
-  api
-    .me()
-    .then(() => store.signedIn())
-    .catch((err) => (err instanceof ApiError && err.status === 401 ? store.signedOut() : store.signedIn()));
+  // On load: first-run setup, sign-in, or the app. If the server is briefly
+  // unreachable, the cached state stays on screen while the connection retries.
+  store.checkStatus();
 </script>
 
 <Toasts />
@@ -92,7 +88,9 @@
 <!-- Installed iOS app: the status bar is translucent; keep scrolled content from showing through it. -->
 <div class="statusbar-bg" aria-hidden="true"></div>
 
-{#if store.auth === 'signed-out'}
+{#if store.auth === 'setup'}
+  <Setup />
+{:else if store.auth === 'signed-out'}
   <Login />
 {:else if store.auth === 'signed-in'}
   <aside class="sidebar">
@@ -115,6 +113,12 @@
   </aside>
 
   <main class="content" class:with-queue={store.isDesktop && store.queuePanel}>
+    {#if store.navidromeRejected && route.name !== 'settings'}
+      <div class="banner" role="alert">
+        <span>{t('navidrome.rejected')}</span>
+        <a href="#/settings">{t('navidrome.rejectedLink')}</a>
+      </div>
+    {/if}
     {#if route.name === 'album'}
       <AlbumView id={route.id} />
     {:else if route.name === 'artist'}
@@ -178,6 +182,25 @@
     padding: calc(env(safe-area-inset-top) + 28px) 16px calc(var(--tabbar-h) + var(--player-h) + 24px);
     max-width: 1200px;
     margin: 0 auto;
+  }
+
+  .banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--danger);
+    color: var(--text);
+    background: var(--surface);
+  }
+  .banner a {
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   .badge {

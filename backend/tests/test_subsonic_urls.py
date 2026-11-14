@@ -76,26 +76,25 @@ async def _pw() -> str:
 
 
 @respx.mock
-async def test_client_maps_wrong_credentials_and_fires_callback():
-    respx.get(url__startswith="http://nd/rest/ping").mock(
+async def test_client_flags_rejected_credentials_until_a_call_succeeds():
+    route = respx.get(url__startswith="http://nd/rest/ping").mock(
         return_value=httpx.Response(
             200, json={"subsonic-response": {"status": "failed", "error": {"code": 40, "message": "Wrong"}}}
         )
     )
     client = SubsonicClient("http://nd", "me", _pw)
-    fired = []
-
-    async def on_invalid() -> None:
-        fired.append(True)
-
-    client.on_invalid_credentials = on_invalid
+    states: list[bool] = []
+    client.on_credentials_state = states.append
     with pytest.raises(InvalidCredentialsError):
         await client.ping()
-    assert fired == [True]
-    # An explicit password (login attempt) must not invalidate the stored one.
+    assert client.credentials_rejected and states == [True]
+    # An explicit password (a test from the settings) does not change the flag.
     with pytest.raises(InvalidCredentialsError):
         await client.ping(password="other")
-    assert fired == [True]
+    assert states == [True]
+    route.mock(return_value=httpx.Response(200, json={"subsonic-response": {"status": "ok"}}))
+    await client.ping()
+    assert not client.credentials_rejected and states == [True, False]
     await client.aclose()
 
 

@@ -1,5 +1,11 @@
 import type {
+  AccessForm,
   AddMode,
+  AppStatus,
+  Me,
+  NavidromeForm,
+  ServerSettings,
+  SetupInfo,
   Album,
   AlbumListType,
   Artist,
@@ -56,7 +62,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 401 && path !== '/auth/login') onUnauthorized();
+    if (response.status === 401 && path !== '/auth/login' && !path.startsWith('/setup')) onUnauthorized();
     throw new ApiError(response.status, data.code ?? 'unknown', data.params ?? {});
   }
   return data as T;
@@ -66,10 +72,19 @@ export const coverUrl = (id: string | null, size = 300): string | null =>
   id ? `/api/cover/${encodeURIComponent(id)}?size=${size}` : null;
 
 export const api = {
-  login: (password: string, remember: boolean) =>
-    request<{ username: string }>('POST', '/auth/login', { password, remember }),
+  status: () => request<AppStatus>('GET', '/status'),
+  setupInfo: () => request<SetupInfo>('GET', '/setup'),
+  setupTest: (navidrome: NavidromeForm) => request<{ ok: true }>('POST', '/setup/test', navidrome),
+  setup: (navidrome: NavidromeForm | null, access: AccessForm | null) =>
+    request<{ ok: true }>('POST', '/setup', { navidrome, access }),
+  settings: () => request<ServerSettings>('GET', '/settings'),
+  testNavidrome: (navidrome: NavidromeForm) => request<{ ok: true }>('POST', '/settings/navidrome/test', navidrome),
+  updateNavidrome: (navidrome: NavidromeForm) => request<{ ok: true }>('PUT', '/settings/navidrome', navidrome),
+  updateAccess: (access: AccessForm) => request<{ ok: true }>('PUT', '/settings/access', access),
+
+  login: (password: string, remember: boolean) => request<{ ok: true }>('POST', '/auth/login', { password, remember }),
   logout: () => request<void>('POST', '/auth/logout'),
-  me: () => request<{ username: string }>('GET', '/auth/me'),
+  me: () => request<Me>('GET', '/auth/me'),
   sessions: () => request<SessionInfo[]>('GET', '/sessions'),
   revokeSession: (id: string) => request<void>('DELETE', `/sessions/${encodeURIComponent(id)}`),
   revokeOtherSessions: () => request<void>('DELETE', '/sessions'),

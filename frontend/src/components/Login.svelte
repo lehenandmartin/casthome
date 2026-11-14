@@ -15,9 +15,9 @@
     try {
       await api.login(password, remember);
       password = '';
-      store.signedIn();
+      await store.checkStatus();
     } catch (err) {
-      error = err instanceof ApiError ? tCode(err.code, err.params) : tCode('navidrome_unavailable');
+      error = err instanceof ApiError ? tCode(err.code, err.params) : tCode('unknown');
     } finally {
       busy = false;
     }
@@ -27,7 +27,7 @@
 <main class="login">
   <form onsubmit={submit}>
     <h1>{t('app.name')}</h1>
-    <p class="muted">{t('login.subtitleNoUser')}</p>
+    <p class="muted">{t('login.subtitle')}</p>
     <label>
       <span>{t('login.password')}</span>
       <!-- svelte-ignore a11y_autofocus -->

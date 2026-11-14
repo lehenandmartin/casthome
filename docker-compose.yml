@@ -4,7 +4,8 @@ services:
     container_name: casthome
     # Required: mDNS discovery of Cast devices does not cross Docker's bridge network.
     network_mode: host
-    env_file: .env
+    # Optional: settings are entered in the browser. Uncomment to use a .env.
+    # env_file: .env
     volumes:
       - ./data:/data
     restart: unless-stopped

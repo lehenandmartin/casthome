@@ -154,3 +154,55 @@ export interface HomeData {
   /** Most recently edited first. */
   playlists: Playlist[];
 }
+
+export type AccessMode = 'password' | 'lan' | 'open';
+
+/** Public: what to show first. */
+export interface AppStatus {
+  setup_required: boolean;
+  setup: { navidrome: boolean; access: boolean };
+  signed_in: boolean;
+}
+
+export interface Me {
+  username: string | null;
+  session_id: string;
+  access_mode: AccessMode;
+  /** Let in without a password (open access, or the local network in LAN mode). */
+  open_session: boolean;
+}
+
+export interface NavidromeFields {
+  url: string;
+  public_url: string;
+  username: string;
+}
+
+/** Fields an environment variable sets (shown read-only). */
+export type LockedField = 'url' | 'public_url' | 'username' | 'password';
+
+export interface NavidromeForm extends NavidromeFields {
+  /** Blank keeps the saved password (same server and account only). */
+  password: string;
+}
+
+export interface SetupInfo {
+  setup: { navidrome: boolean; access: boolean };
+  navidrome: NavidromeFields;
+  locked: LockedField[];
+  client_is_local: boolean;
+}
+
+export interface ServerSettings {
+  navidrome: NavidromeFields & { has_password: boolean };
+  locked: LockedField[];
+  access: { mode: AccessMode; has_password: boolean };
+  client_is_local: boolean;
+}
+
+export interface AccessForm {
+  mode: AccessMode;
+  password?: string | null;
+  current_password?: string | null;
+  remember?: boolean;
+}

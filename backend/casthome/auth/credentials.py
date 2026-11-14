@@ -1,4 +1,7 @@
-"""The single Navidrome password, encrypted at rest, cached in memory."""
+"""The single Navidrome password, encrypted at rest, cached in memory.
+
+NAVIDROME_PASSWORD, when set, is used instead and nothing is stored.
+"""
 
 from __future__ import annotations
 
@@ -9,13 +12,16 @@ from casthome.db import Database
 
 
 class CredentialStore:
-    def __init__(self, db: Database, box: SecretBox) -> None:
+    def __init__(self, db: Database, box: SecretBox, env_password: str | None = None) -> None:
         self._db = db
         self._box = box
+        self._env_password = env_password
         self._cached: str | None = None
         self._loaded = False
 
     async def get_password(self) -> str | None:
+        if self._env_password:
+            return self._env_password
         if not self._loaded:
             async with self._db.conn.execute("SELECT password_enc FROM credentials WHERE id = 1") as cur:
                 row = await cur.fetchone()

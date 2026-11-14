@@ -1,8 +1,7 @@
-"""Sign-in, sign-out and session management."""
+"""Sign-in to CastHome (its own password, not Navidrome's) and sessions."""
 
 from __future__ import annotations
 
-import asyncio
 import time
 from collections import defaultdict, deque
 from typing import Annotated
@@ -10,9 +9,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
-from casthome.api.deps import COOKIE_NAME, get_ctx, is_secure, require_session, set_session_cookie
+from casthome.api.deps import COOKIE_NAME, OPEN_SESSION, client_host, get_ctx, require_session, start_session
 from casthome.auth.sessions import Session
-from casthome.subsonic.client import InvalidCredentialsError
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -26,7 +24,8 @@ class LoginBody(BaseModel):
     remember: bool = False
 
 
-def _throttle(ip: str) -> None:
+def throttle(ip: str) -> None:
+    """Limit password guesses per client address."""
     now = time.monotonic()
     window = _attempts[ip]
     while window and now - window[0] > LOGIN_WINDOW_S:
@@ -36,26 +35,40 @@ def _throttle(ip: str) -> None:
     window.append(now)
 
 
+def throttle_passed(ip: str) -> None:
+    _attempts.pop(ip, None)
+
+
+@router.get("/status")
+async def app_status(request: Request) -> dict:
+    """Public: what the browser should show first (setup, sign-in or the app)."""
+    ctx = get_ctx(request)
+    needs = await ctx.setup_needs()
+    signed_in = False
+    if not needs["access"]:
+        token = request.cookies.get(COOKIE_NAME)
+        signed_in = ctx.config.open_for(client_host(request)) or (
+            token is not None and await ctx.sessions.touch(token) is not None
+        )
+    return {
+        "setup_required": any(needs.values()),
+        "setup": needs,
+        "signed_in": signed_in,
+    }
+
+
 @router.post("/auth/login")
 async def login(body: LoginBody, request: Request, response: Response) -> dict:
     ctx = get_ctx(request)
-    ip = request.client.host if request.client else ""
-    _throttle(ip)
-    try:
-        await ctx.subsonic.ping(password=body.password)
-    except InvalidCredentialsError as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "invalid_credentials"}) from exc
-    _attempts.pop(ip, None)
-    had_credentials = await ctx.credentials.get_password() is not None
-    await ctx.credentials.set_password(body.password)
-    token, _session = await ctx.sessions.create(
-        persistent=body.remember, user_agent=request.headers.get("user-agent", ""), ip=ip
-    )
-    set_session_cookie(response, ctx, token, body.remember, is_secure(request, ctx))
-    if not had_credentials:
-        # First sign-in (or after a password change): load the Navidrome play queue now.
-        asyncio.create_task(ctx.coordinator.restore())
-    return {"username": ctx.settings.navidrome_username}
+    if ctx.config.access_mode is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "setup_required"})
+    ip = client_host(request) or ""
+    throttle(ip)
+    if not await ctx.config.check_password(body.password):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "invalid_credentials"})
+    throttle_passed(ip)
+    await start_session(request, response, body.remember)
+    return {"ok": True}
 
 
 @router.post("/auth/logout", status_code=204)
@@ -63,14 +76,23 @@ async def logout(
     request: Request, response: Response, session: Annotated[Session, Depends(require_session)]
 ) -> None:
     ctx = get_ctx(request)
-    await ctx.sessions.revoke(session.id)
-    await ctx.hub.close_sessions({session.id})
+    if session is not OPEN_SESSION:
+        await ctx.sessions.revoke(session.id)
+        await ctx.hub.close_sessions({session.id})
     response.delete_cookie(COOKIE_NAME, path="/")
 
 
 @router.get("/auth/me")
 async def me(request: Request, session: Annotated[Session, Depends(require_session)]) -> dict:
-    return {"username": get_ctx(request).settings.navidrome_username, "session_id": session.id}
+    ctx = get_ctx(request)
+    navidrome = ctx.config.navidrome
+    return {
+        "username": navidrome.username if navidrome else None,
+        "session_id": session.id,
+        "access_mode": ctx.config.access_mode,
+        # Let in without a password: nothing to sign out of.
+        "open_session": session is OPEN_SESSION,
+    }
 
 
 @router.get("/sessions")

@@ -1,6 +1,6 @@
 import { ApiError, api, setBeforePlayHook, setUnauthorizedHandler } from './api';
 import { browserPlayer } from './browserPlayer';
-import type { Device, Notification, PlayerState, QueueState } from './types';
+import type { AppStatus, Device, Me, Notification, PlayerState, QueueState } from './types';
 import { describeUserAgent } from './useragent';
 
 // Last known state, shown instantly when the app (re)starts so a reload never
@@ -47,10 +47,14 @@ function tabId(): string {
   }
 }
 
-type AuthState = 'unknown' | 'signed-out' | 'signed-in';
+type AuthState = 'unknown' | 'setup' | 'signed-out' | 'signed-in';
 
 class AppStore {
   auth = $state<AuthState>('unknown');
+  /** Who is signed in and how (set once signed in). */
+  me = $state<Me | null>(null);
+  /** Navidrome refused the saved password: ask to update it in Settings. */
+  navidromeRejected = $state(false);
   online = $state(false);
   /** True only after the live connection has been down for a while. */
   offlineNotice = $state(false);
@@ -85,14 +89,14 @@ class AppStore {
   constructor() {
     const cached = readCache();
     if (cached) {
-      // Optimistic: render right away; /auth/me confirms or signs out.
+      // Optimistic: render right away; /status confirms or signs out.
       this.auth = 'signed-in';
       this.player = cached.player;
       this.queue = cached.queue;
       this.devices = cached.devices;
       this.receivedAt = cached.savedAt;
     }
-    setUnauthorizedHandler(() => this.signedOut());
+    setUnauthorizedHandler(() => void this.checkStatus());
     setBeforePlayHook(() => this.#ensureDevice());
     setInterval(() => (this.now = Date.now() / 1000), 500);
     browserPlayer.connect((type, data) => this.send(type, data));
@@ -183,9 +187,41 @@ class AppStore {
     return p.duration ? Math.min(pos, p.duration) : pos;
   }
 
+  #statusCheck: Promise<void> | null = null;
+
+  /** Ask the server what to show: setup, sign-in or the app. */
+  checkStatus(): Promise<void> {
+    this.#statusCheck ??= this.#checkStatus().finally(() => (this.#statusCheck = null));
+    return this.#statusCheck;
+  }
+
+  async #checkStatus(): Promise<void> {
+    let status: AppStatus;
+    try {
+      status = await api.status();
+    } catch {
+      // Server briefly unreachable: keep the cached state and let the live connection retry.
+      if (this.auth !== 'signed-in') this.signedIn();
+      return;
+    }
+    // `setup.access`: no access rule yet, so the setup is open to this browser.
+    if (status.setup_required && (status.setup.access || status.signed_in)) this.#enterSetup();
+    else if (status.signed_in && !status.setup_required) this.signedIn();
+    else this.signedOut();
+  }
+
   signedIn(): void {
     this.auth = 'signed-in';
     this.connect();
+    api
+      .me()
+      .then((me) => (this.me = me))
+      .catch(() => {});
+  }
+
+  #enterSetup(): void {
+    this.signedOut();
+    this.auth = 'setup';
   }
 
   #saveCache(): void {
@@ -207,6 +243,7 @@ class AppStore {
 
   signedOut(): void {
     this.auth = 'signed-out';
+    this.me = null;
     this.offlineNotice = false;
     clearTimeout(this.#cacheTimer);
     try {
@@ -242,7 +279,8 @@ class AppStore {
       this.#ws = null;
       this.#armOfflineNotice();
       if (event.code === 4401) {
-        this.signedOut();
+        // Signed out, or the access rules changed: ask what to show now.
+        void this.checkStatus();
         return;
       }
       if (this.auth === 'signed-in') {
@@ -270,6 +308,7 @@ class AppStore {
         this.devices = msg.data.devices;
         this.queue = msg.data.queue;
         this.#setPlayer(msg.data.player);
+        this.navidromeRejected = Boolean(msg.data.server?.navidrome_rejected);
         // After a reload the server may still think this tab is playing.
         if (this.isThisBrowser && !browserPlayer.active) browserPlayer.reportIdle();
         break;
@@ -284,6 +323,9 @@ class AppStore {
         break;
       case 'devices':
         this.devices = msg.data;
+        break;
+      case 'server':
+        this.navidromeRejected = Boolean(msg.data.navidrome_rejected);
         break;
       case 'notification':
         this.notify(msg.data.code, msg.data.params, msg.data.level);

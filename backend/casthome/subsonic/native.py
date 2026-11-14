@@ -9,6 +9,7 @@ renewed when it expires.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -97,6 +98,13 @@ class NativeClient:
         self._http = http
         self._token: str | None = None
         self._lock = asyncio.Lock()
+        # Called when Navidrome refuses the password (see SubsonicClient).
+        self.on_rejected: Callable[[], None] | None = None
+
+    def configure(self, base_url: str, username: str) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.username = username
+        self._token = None
 
     async def _login(self) -> str:
         password = await self._password_provider()
@@ -109,6 +117,8 @@ class NativeClient:
         except httpx.HTTPError as exc:
             raise NavidromeUnavailableError(str(exc)) from exc
         if r.status_code == 401:
+            if self.on_rejected is not None:
+                self.on_rejected()
             raise InvalidCredentialsError(40, "Navidrome refused the stored password")
         if r.status_code >= 400:
             raise NavidromeUnavailableError(f"HTTP {r.status_code} from /auth/login")

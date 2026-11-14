@@ -15,7 +15,7 @@ Mobile-first, installable on the home screen.
   library, no indexing.
 
 > **LAN only.** CastHome is designed for a trusted home network. Do not expose
-> it to the Internet. The sign-in page keeps casual visitors out; it is not
+> it to the Internet. Its own password keeps casual visitors out; it is not
 > hardened for public exposure.
 
 ## Status
@@ -30,6 +30,9 @@ Mobile-first, installable on the home screen.
   *Favorites* filter on the Tracks, Albums and Artists pages); 5-star ratings; scrobbling to Navidrome ("now playing" when
   a track starts, a scrobble after half the track or 4 minutes of actual
   listening; seeking forward does not count).
+- Setup from the browser: no `.env` to write. The first visit asks for the
+  Navidrome connection and how to protect CastHome (its own password, open on
+  the local network only, or open). Both can be changed later in Settings.
 - Phase 4: installable PWA; Settings page (account; signed-in devices with
   per-device and "all other devices" sign-out, effective immediately);
   preloading of the next track to shorten gaps (`CAST_PRELOAD_NEXT`); the Navidrome
@@ -61,11 +64,12 @@ The Chromecast downloads audio **directly from Navidrome**, using a token URL
 `NAVIDROME_PUBLIC_URL_FOR_CAST`. A browser used as the device gets its audio
 through CastHome instead, so it never sees Navidrome credentials.
 
-Single-user design: one Navidrome account (`NAVIDROME_USERNAME`) and one
-queue, played on the device you pick. Signing in checks the password against
-Navidrome; the password is then stored **encrypted** (key derived from
-`APP_SECRET_KEY`) so the server can keep streaming without a browser. It is
-never sent to the frontend.
+Single-user design: one Navidrome account and one queue, played on the device
+you pick. The Navidrome connection is part of CastHome's configuration: its
+password is stored **encrypted** (key in `data/secret.key`, generated on first
+start) so the server can keep streaming without a browser, and it is never
+sent back to the frontend. Opening CastHome is protected separately, by a
+CastHome password (not the Navidrome one) or not at all, as you choose.
 
 ## Using CastHome
 
@@ -129,11 +133,15 @@ never sent to the frontend.
 ## Install (Docker, Linux host)
 
 ```bash
-cp .env.example .env   # then edit it
 docker compose up -d --build
 ```
 
-Open `http://<host-ip>:8080`.
+Open `http://<host-ip>:8080` and follow the setup: Navidrome URL, username
+and password (checked right away), then how to protect CastHome. Everything is
+saved under `./data`; no `.env` is needed.
+
+The setup is open to whoever opens CastHome first, so do it right after
+starting it.
 
 `network_mode: host` is **required**: Cast discovery uses mDNS multicast,
 which does not cross Docker's bridge network. Docker Desktop on macOS/Windows
@@ -141,20 +149,44 @@ does not support this reliably; run CastHome natively there (see Development).
 
 ## Configuration
 
-All settings are environment variables; see [`.env.example`](.env.example).
+The Navidrome connection and access are set in the browser (first-run setup,
+then **Settings**). Environment variables are optional, in `.env` or the
+container environment; see [`.env.example`](.env.example). A Navidrome value
+set there wins over the one saved from the browser and shows as locked in
+Settings (handy for scripted installs).
 
 | Variable | Purpose |
 |---|---|
-| `APP_SECRET_KEY` | Encrypts the stored password (≥ 32 chars). Changing it forces a new sign-in. |
 | `NAVIDROME_URL` | Navidrome URL used by the backend. |
-| `NAVIDROME_PUBLIC_URL_FOR_CAST` | Navidrome URL used by the Cast devices. LAN IP or LAN-resolvable name, never `localhost` or a container name. |
-| `NAVIDROME_USERNAME` | The Navidrome account to play with. |
+| `NAVIDROME_PUBLIC_URL_FOR_CAST` | Navidrome URL used by the Cast devices (defaults to `NAVIDROME_URL`). LAN IP or LAN-resolvable name, never `localhost` or a container name. |
+| `NAVIDROME_USERNAME`, `NAVIDROME_PASSWORD` | The Navidrome account to play with. |
+| `APP_SECRET_KEY` | Encryption key for the stored Navidrome password (≥ 32 chars). By default one is generated into `data/secret.key`; keep that file with the database. |
 | `COOKIE_SECURE` | `true` when CastHome is behind HTTPS. |
 | `SESSION_REMEMBER_DAYS` / `SESSION_SHORT_HOURS` | Session lifetimes (both sliding). |
 | `STREAM_FORMAT`, `STREAM_MAX_BITRATE` | `raw` (default) streams original files; otherwise a Navidrome transcoding format. |
 | `TRANSCODE_FALLBACK_FORMAT` | Format for files Cast cannot play, and retry format after a playback error (default `mp3`). |
 | `CAST_PRELOAD_NEXT` | On by default: hand the next track to the device 20 s before the end of the current one to shorten the gap. `false` disables it. |
 | `CAST_KNOWN_HOSTS` | Cast device IPs, when mDNS is blocked. |
+
+### Access
+
+Chosen during the setup, changed in **Settings → Access to CastHome** (the
+current CastHome password is asked first):
+
+- **Password** (recommended): a CastHome password on every device.
+- **Open at home**: no password from a private address (local network), the
+  password from anywhere else. Behind a reverse proxy every visitor may look
+  local; use **Password** then.
+- **No password**: anyone who can reach CastHome can use it.
+
+Setting a new password signs every other device out. Sign-in attempts are
+rate-limited per address.
+
+If Navidrome later refuses the saved password (it was changed there), you stay
+signed in to CastHome: a banner asks you to update it in **Settings →
+Navidrome**, where the connection can be tested before saving. The saved
+password is only ever sent to the server and account it was saved for;
+pointing CastHome at another one asks for the password again.
 
 ### Sessions
 
@@ -163,8 +195,8 @@ All settings are environment variables; see [`.env.example`](.env.example).
   and container restarts (sessions are stored in SQLite under `DATA_DIR`).
 - Unchecked: a browser-session cookie, also expiring after
   `SESSION_SHORT_HOURS` of inactivity.
-- If the Navidrome password changes, every session is signed out and you are
-  asked to sign in again.
+- Signed-in devices are listed in Settings, where each can be signed out
+  (not shown with **No password**).
 
 ### Playback rules
 
@@ -241,7 +273,7 @@ the next track itself.
 The Chromecast cannot reach `NAVIDROME_PUBLIC_URL_FOR_CAST`. From another LAN
 machine, open `<that URL>/rest/ping` and check you get a response (an auth
 error is fine). `localhost`, `127.0.0.1` and Docker service names are refused
-at startup for this reason.
+when saving the connection for this reason.
 
 **HTTPS.** Cast devices reject self-signed certificates. Use plain HTTP on the
 LAN, or a publicly trusted certificate (e.g. Let's Encrypt via DNS challenge)
@@ -269,9 +301,8 @@ python3.12 -m venv .venv
 cd frontend && npm install && cd ..
 ```
 
-Copy `.env.example` to `.env` at the repository root and fill it in. Then run
-the backend (it finds the root `.env` from any directory, stores its data in
-`./data` and serves the built frontend from `frontend/dist`, so run
+Run the backend (it stores its data in `./data`, reads an optional `.env` at
+the repository root from any directory, and serves the built frontend from `frontend/dist`, so run
 `npm run build` after frontend changes) and, for frontend work, the Vite dev
 server, which proxies `/api` to it:
 
@@ -297,16 +328,19 @@ cd frontend && npm run check && npm run build
 
 ```
 backend/casthome/
-  config.py            settings (env)
+  config.py            optional environment settings
+  appconfig.py         configuration saved from the browser, access modes,
+                       CastHome password hashing, encryption key file
   db.py                SQLite + migrations
-  auth/                sessions, encrypted credentials
+  auth/                sessions, encrypted Navidrome password
   subsonic/            Subsonic client, token URLs, Cast format policy
   cast/                discovery (zeroconf), pychromecast adapter,
                        browser.py: a browser tab driven like a Cast device
   queue/logic.py       pure queue logic (next/previous/shuffle/repeat/move)
   playback/            coordinator state machine, media payloads, persistence
   scrobble/            scrobbling rules
-  api/                 REST routers, WebSocket endpoint, stream.py (audio proxy)
+  api/                 REST routers (setup.py first-run setup, server.py
+                       settings), WebSocket endpoint, stream.py (audio proxy)
   ws/hub.py            WebSocket broadcast and per-tab messages
 frontend/src/
   lib/i18n/en.ts            every UI string (add a locale by copying this file)

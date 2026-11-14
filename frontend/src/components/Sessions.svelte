@@ -31,7 +31,7 @@
 
   async function signOut() {
     await store.run(api.logout);
-    store.signedOut();
+    await store.checkStatus();
   }
 
   const fmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });

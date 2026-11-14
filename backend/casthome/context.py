@@ -6,6 +6,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
+from casthome.appconfig import ConfigStore, NavidromeConfig, load_secret_key
 from casthome.auth.credentials import CredentialStore
 from casthome.auth.crypto import SecretBox
 from casthome.auth.sessions import SessionStore
@@ -31,6 +32,7 @@ log = logging.getLogger(__name__)
 class AppContext:
     settings: Settings
     db: Database
+    config: ConfigStore
     sessions: SessionStore
     credentials: CredentialStore
     subsonic: SubsonicClient
@@ -38,6 +40,7 @@ class AppContext:
     cast: CastManager
     coordinator: PlaybackCoordinator
     hub: Hub
+    media: MediaBuilder
 
     @classmethod
     def build(cls, settings: Settings) -> AppContext:
@@ -47,19 +50,26 @@ class AppContext:
             remember_seconds=settings.session_remember_days * 86400,
             short_seconds=settings.session_short_hours * 3600,
         )
-        credentials = CredentialStore(db, SecretBox(settings.app_secret_key))
-        subsonic = SubsonicClient(settings.navidrome_url, settings.navidrome_username, credentials.get_password)
-        native = NativeClient(settings.navidrome_url, settings.navidrome_username, credentials.get_password, subsonic.http)
+        config = ConfigStore(db, settings)
+        credentials = CredentialStore(db, SecretBox(load_secret_key(settings)), settings.navidrome_password)
+
+        async def password() -> str | None:
+            # No password until a server and an account are set up.
+            return await credentials.get_password() if config.navidrome else None
+
+        # Server and account are filled in by apply_navidrome() once the config is loaded.
+        subsonic = SubsonicClient("", "", password)
+        native = NativeClient("", "", password, subsonic.http)
         cast = CastManager(settings.known_hosts)
         media = MediaBuilder(
             StreamConfig(
-                public_base_url=settings.navidrome_public_url_for_cast,
-                username=settings.navidrome_username,
+                public_base_url="",
+                username="",
                 stream_format=settings.stream_format,
                 max_bitrate=settings.stream_max_bitrate,
                 fallback_format=settings.transcode_fallback_format,
             ),
-            credentials.get_password,
+            password,
         )
 
         hub = Hub()
@@ -91,7 +101,7 @@ class AppContext:
             preload_next=settings.cast_preload_next,
             radio_builder=make_radio_builder(subsonic),
         )
-        ctx = cls(settings, db, sessions, credentials, subsonic, native, cast, coordinator, hub)
+        ctx = cls(settings, db, config, sessions, credentials, subsonic, native, cast, coordinator, hub, media)
         coordinator.notifier = Notifier(
             player_changed=lambda: hub.publish("player", ctx.player_snapshot),
             queue_changed=lambda: hub.publish("queue", coordinator.queue_snapshot),
@@ -112,8 +122,36 @@ class AppContext:
                 target.sink(ConnectionEvent(connected=False))
 
         hub.on_client_gone = client_gone
-        subsonic.on_invalid_credentials = ctx.invalidate_credentials
+
+        def credentials_state(rejected: bool) -> None:
+            if rejected:
+                log.warning("Navidrome rejected the stored password; update it in Settings")
+            hub.publish("server", ctx.server_snapshot)
+
+        subsonic.on_credentials_state = credentials_state
+        native.on_rejected = lambda: subsonic.set_credentials_rejected(True)
         return ctx
+
+    async def open(self) -> None:
+        """Open the database and load the saved configuration."""
+        await self.db.open()
+        await self.config.load()
+        self.apply_navidrome()
+
+    def apply_navidrome(self) -> None:
+        """Use the current Navidrome server and account everywhere."""
+        cfg = self.config.navidrome or NavidromeConfig(url="", public_url="", username="")
+        self.subsonic.configure(cfg.url, cfg.username)
+        self.native.configure(cfg.url, cfg.username)
+        self.media.configure(cfg.public_url, cfg.username)
+
+    async def setup_needs(self) -> dict[str, bool]:
+        """What the first-run setup still has to ask."""
+        navidrome = self.config.navidrome is None or await self.credentials.get_password() is None
+        return {"navidrome": navidrome, "access": self.config.access_mode is None}
+
+    def server_snapshot(self) -> dict:
+        return {"navidrome_rejected": self.subsonic.credentials_rejected}
 
     def player_snapshot(self) -> dict:
         uuid = self.coordinator.device_uuid
@@ -143,12 +181,5 @@ class AppContext:
             "player": self.player_snapshot(),
             "queue": self.coordinator.queue_snapshot(),
             "devices": self.devices_snapshot(),
+            "server": self.server_snapshot(),
         }
-
-    async def invalidate_credentials(self) -> None:
-        """The Navidrome password changed: forget it and sign every browser out."""
-        log.warning("Navidrome rejected the stored password; signing out every session")
-        await self.credentials.clear()
-        await self.sessions.revoke_all()
-        await self.hub.send("auth_expired", {"reason": "navidrome_password_changed"})
-        await self.hub.close_all()
