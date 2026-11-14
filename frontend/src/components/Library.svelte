@@ -6,11 +6,10 @@
 
   const ENTRIES: { href: string; label: MessageKey; icon: IconName }[] = [
     { href: '#/playlists', label: 'nav.playlists', icon: 'playlist' },
-    { href: '#/favorites', label: 'nav.favorites', icon: 'star' },
     { href: '#/tracks', label: 'nav.tracks', icon: 'music' },
     { href: '#/artists', label: 'nav.artists', icon: 'artist' },
     { href: '#/genres', label: 'nav.genres', icon: 'tag' },
-    { href: '#/', label: 'nav.albums', icon: 'disc' },
+    { href: '#/albums', label: 'nav.albums', icon: 'disc' },
   ];
 </script>
 

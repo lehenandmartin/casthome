@@ -3,7 +3,10 @@
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Song, SongSort } from '../lib/types';
+  import FavoritesToggle from './FavoritesToggle.svelte';
   import SongList from './SongList.svelte';
+
+  let { fav = false }: { fav?: boolean } = $props();
 
   const PAGE = 100;
   const SORTS: SongSort[] = ['recent', 'title', 'artist', 'album', 'frequent', 'played'];
@@ -26,10 +29,11 @@
   async function load(reset: boolean) {
     loading = true;
     const requested = sort;
+    const requestedFav = fav;
     const offset = reset ? 0 : songs.length;
     await store.run(async () => {
-      const page = await api.songs(requested, offset, PAGE);
-      if (requested !== sort) return; // sort changed meanwhile
+      const page = await api.songs(requested, offset, PAGE, fav);
+      if (requested !== sort || requestedFav !== fav) return; // changed meanwhile
       songs = reset ? page.items : [...songs, ...page.items];
       total = page.total;
     });
@@ -48,6 +52,7 @@
 
   $effect(() => {
     void sort;
+    void fav;
     songs = [];
     total = null;
     load(true);
@@ -58,14 +63,15 @@
   // Tapping a track plays the loaded list from there (as an unnamed "Next up").
   function play(index: number) {
     const ids = songs.map((s) => s.id);
-    store.run(() => api.playSongs(ids, index, t('tracks.title')));
+    store.run(() => api.playSongs(ids, index, fav ? t('favorites.tracksContext') : t('tracks.title')));
   }
 </script>
 
 <section>
   <h2>{t('tracks.title')}</h2>
-  {#if total !== null}<p class="muted count">{t('tracks.count', { count: total })}</p>{/if}
+  {#if total !== null}<p class="muted count">{total === 1 ? t('tracks.one') : t('tracks.count', { count: total })}</p>{/if}
   <div class="tabs" role="tablist">
+    <FavoritesToggle active={fav} />
     {#each SORTS as kind (kind)}
       <button role="tab" aria-selected={sort === kind} class:active={sort === kind} onclick={() => choose(kind)}>
         {t(`tracks.sort.${kind}`)}
@@ -74,7 +80,7 @@
   </div>
 
   {#if !loading && total === 0}
-    <p class="muted">{t('tracks.empty')}</p>
+    <p class="muted">{fav ? t('favorites.noTracks') : t('tracks.empty')}</p>
   {/if}
 
   <SongList {songs} onplay={play} />

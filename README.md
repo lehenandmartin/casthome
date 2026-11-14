@@ -26,8 +26,8 @@ Mobile-first, installable on the home screen.
   search; play now / play next / add to queue for tracks, albums and artists;
   reorder the queue by drag and drop, remove items.
 - Phase 3: playlists (play, create, rename, add/remove tracks, delete, save
-  the queue as a playlist); favorites (☆ on tracks, albums, artists, plus a
-  Favorites page); 5-star ratings; scrobbling to Navidrome ("now playing" when
+  the queue as a playlist); favorites (☆ on tracks, albums, artists; a
+  *Favorites* filter on the Tracks, Albums and Artists pages); 5-star ratings; scrobbling to Navidrome ("now playing" when
   a track starts, a scrobble after half the track or 4 minutes of actual
   listening; seeking forward does not count).
 - Phase 4: installable PWA; "Account" page listing signed-in devices, with
@@ -76,6 +76,17 @@ never sent to the frontend.
   Swipe down or use Back to close it. The queue button under *repeat* slides
   the **queue up as a sheet** over the player; Back, the chevron or a swipe
   down on its header returns to the player.
+- **Favorites:** a ★ *Favorites* filter on the Tracks, Albums and Artists
+  pages shows only what you starred, with that page's sorts; it is kept in
+  the address (`?fav=1`), so links and Back keep it.
+- **Home:** quick-access tiles (favorite tracks, recently played albums,
+  recently edited playlists), then
+  rows: recently played, recently added, your favorite artists (or your most
+  played ones if none are starred), *On repeat* (your most played tracks
+  among those played in the last 30 days: Navidrome keeps a total play count
+  and the last play date per track, not a play history) and your playlists,
+  most recently edited first. Each row links to the full list; the complete
+  album grid is under Library > Albums.
 - **Desktop:** sidebar on the left, full player bar at the bottom. The queue
   button (player bar or sidebar) opens the **queue as a panel on the right**,
   next to the page you are browsing; it stays open across pages and is

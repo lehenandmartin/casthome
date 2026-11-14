@@ -9,6 +9,7 @@ renewed when it expires.
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 import httpx
@@ -20,7 +21,7 @@ from casthome.subsonic.client import (
     PasswordProvider,
 )
 from casthome.subsonic.formats import SUFFIX_MIME
-from casthome.subsonic.models import Song
+from casthome.subsonic.models import Album, Song
 
 SongSort = Literal["recent", "title", "artist", "album", "frequent", "played"]
 
@@ -33,6 +34,32 @@ SORTS: dict[str, tuple[str, str]] = {
     "frequent": ("playCount", "DESC"),
     "played": ("playDate", "DESC"),
 }
+
+
+# Album list types (as in Subsonic getAlbumList2) -> Navidrome sort for /api/album
+ALBUM_SORTS: dict[str, tuple[str, str]] = {
+    "newest": ("createdAt", "DESC"),
+    "recent": ("playDate", "DESC"),
+    "frequent": ("playCount", "DESC"),
+    "alphabeticalByName": ("name", "ASC"),
+    "random": ("random", "ASC"),
+}
+
+
+def album_from_native(d: dict[str, Any]) -> Album:
+    album_id = str(d["id"])
+    return Album(
+        id=album_id,
+        name=d.get("name", ""),
+        artist=d.get("albumArtist") or d.get("artist") or "",
+        artist_id=d.get("albumArtistId") or d.get("artistId"),
+        cover_art=f"al-{album_id}",
+        year=d.get("maxYear") or None,
+        song_count=int(d.get("songCount") or 0),
+        duration=float(d.get("duration") or 0),
+        starred=bool(d.get("starred")),
+        user_rating=int(d.get("rating") or 0),
+    )
 
 
 def song_from_native(d: dict[str, Any]) -> Song:
@@ -107,11 +134,64 @@ class NativeClient:
             return r
         raise NavidromeUnavailableError(f"Not authorized for {path}")
 
-    async def get_songs(self, sort: SongSort = "recent", offset: int = 0, size: int = 100) -> tuple[list[Song], int]:
+    async def get_albums(
+        self, list_type: str = "newest", offset: int = 0, size: int = 40, starred: bool = False
+    ) -> list[Album]:
+        """Albums with Navidrome's own filters (used for the favorites filter)."""
+        field, order = ALBUM_SORTS.get(list_type, ALBUM_SORTS["newest"])
+        params: dict[str, Any] = {"_start": offset, "_end": offset + size, "_sort": field, "_order": order}
+        if starred:
+            params["starred"] = "true"
+        r = await self._get("/api/album", params)
+        return [album_from_native(d) for d in r.json()]
+
+    async def get_on_repeat(self, days: int = 30, limit: int = 5, max_scan: int = 1000) -> list[Song]:
+        """Most played tracks among those played in the last `days` days.
+
+        Navidrome keeps a total play count and the last play date per track,
+        not a history: tracks are filtered on their last play date, then
+        ranked by their total count.
+        """
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        recent: list[dict[str, Any]] = []
+        start, page_size = 0, 200
+        while start < max_scan:
+            r = await self._get(
+                "/api/song", {"_start": start, "_end": start + page_size, "_sort": "playDate", "_order": "DESC"}
+            )
+            page = r.json()
+            if not page:
+                break
+            for row in page:
+                played = _parse_date(row.get("playDate"))
+                if played is None or played < cutoff:
+                    page = []  # sorted by play date: everything after is older
+                    break
+                recent.append(row)
+            if len(page) < page_size:
+                break
+            start += page_size
+        recent.sort(key=lambda row: int(row.get("playCount") or 0), reverse=True)
+        return [song_from_native(row) for row in recent[:limit]]
+
+    async def get_songs(
+        self, sort: SongSort = "recent", offset: int = 0, size: int = 100, starred: bool = False
+    ) -> tuple[list[Song], int]:
         field, order = SORTS[sort]
-        r = await self._get(
-            "/api/song", {"_start": offset, "_end": offset + size, "_sort": field, "_order": order, "missing": "false"}
-        )
+        params: dict[str, Any] = {"_start": offset, "_end": offset + size, "_sort": field, "_order": order, "missing": "false"}
+        if starred:
+            params["starred"] = "true"
+        r = await self._get("/api/song", params)
         items = [song_from_native(d) for d in r.json()]
         total = int(r.headers.get("x-total-count") or (offset + len(items)))
         return items, total
+
+
+def _parse_date(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)

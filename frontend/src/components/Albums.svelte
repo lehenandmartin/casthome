@@ -4,12 +4,13 @@
   import { store } from '../lib/store.svelte';
   import type { Album, AlbumListType } from '../lib/types';
   import AlbumGrid from './AlbumGrid.svelte';
+  import FavoritesToggle from './FavoritesToggle.svelte';
 
   const PAGE = 40;
   const TYPES = ['newest', 'recent', 'frequent', 'random', 'alphabeticalByName'] as const;
   type ListType = (typeof TYPES)[number];
 
-  let { type = 'newest', genre }: { type?: AlbumListType; genre?: string } = $props();
+  let { type = 'newest', genre, fav = false }: { type?: AlbumListType; genre?: string; fav?: boolean } = $props();
   let selected = $state<ListType>('newest');
   let albums = $state<Album[]>([]);
   let loading = $state(false);
@@ -22,7 +23,7 @@
     const offset = reset ? 0 : albums.length;
     const requested = listType;
     await store.run(async () => {
-      const page = await api.albums(requested, PAGE, offset, genre);
+      const page = await api.albums(requested, PAGE, offset, genre, fav && !genre);
       if (requested !== listType) return; // the user switched tabs meanwhile
       albums = reset ? page : [...albums, ...page];
       done = page.length < PAGE || requested === 'random';
@@ -47,6 +48,7 @@
   {#if !genre}
     <h2>{t('albums.title')}</h2>
     <div class="tabs" role="tablist">
+      <FavoritesToggle active={fav} />
       {#each TYPES as kind (kind)}
         <button role="tab" aria-selected={selected === kind} class:active={selected === kind} onclick={() => (selected = kind)}>
           {t(`albums.${kind}`)}
@@ -58,7 +60,7 @@
     </div>
   {/if}
   {#if !loading && albums.length === 0}
-    <p class="muted">{t('albums.empty')}</p>
+    <p class="muted">{fav ? t('favorites.noAlbums') : t('albums.empty')}</p>
   {/if}
   <AlbumGrid {albums} />
   {#if !done && albums.length > 0}

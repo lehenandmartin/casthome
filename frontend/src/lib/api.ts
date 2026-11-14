@@ -4,6 +4,7 @@ import type {
   AlbumListType,
   Artist,
   ArtistDetail,
+  HomeData,
   Genre,
   Playlist,
   SessionInfo,
@@ -73,11 +74,12 @@ export const api = {
   revokeSession: (id: string) => request<void>('DELETE', `/sessions/${encodeURIComponent(id)}`),
   revokeOtherSessions: () => request<void>('DELETE', '/sessions'),
 
-  albums: (type: AlbumListType = 'newest', size = 40, offset = 0, genre?: string) =>
+  albums: (type: AlbumListType = 'newest', size = 40, offset = 0, genre?: string, starred = false) =>
     request<Album[]>(
       'GET',
       `/library/albums?type=${type}&size=${size}&offset=${offset}` +
-        (genre ? `&genre=${encodeURIComponent(genre)}` : ''),
+        (genre ? `&genre=${encodeURIComponent(genre)}` : '') +
+        (starred ? '&starred=true' : ''),
     ),
   artists: () => request<Artist[]>('GET', '/library/artists'),
   artist: (id: string) => request<ArtistDetail>('GET', `/library/artists/${encodeURIComponent(id)}`),
@@ -125,9 +127,13 @@ export const api = {
     request<void>('POST', '/queue', { song_ids: songIds, mode: 'now', start_index: startIndex, context_name: contextName }),
   /** Endless radio: the track, then similar tracks, refilled as it plays. */
   startRadio: (songId: string) => request<{ source: string }>('POST', '/radio', { song_id: songId }),
+  home: () => request<HomeData>('GET', '/home'),
   /** Every track, paged; 'recent' = most recently added first. */
-  songs: (sort: SongSort = 'recent', offset = 0, size = 100) =>
-    request<SongPage>('GET', `/library/songs?sort=${sort}&offset=${offset}&size=${size}`),
+  songs: (sort: SongSort = 'recent', offset = 0, size = 100, starred = false) =>
+    request<SongPage>(
+      'GET',
+      `/library/songs?sort=${sort}&offset=${offset}&size=${size}` + (starred ? '&starred=true' : ''),
+    ),
   /** Insert songs without replacing the queue. */
   queueSongs: (songIds: string[], mode: AddMode) =>
     request<void>('POST', '/queue', { song_ids: songIds, mode, replace: false }),

@@ -141,3 +141,16 @@ export interface SongPage {
   items: Song[];
   total: number;
 }
+
+export interface HomeData {
+  recently_played: Album[];
+  recently_added: Album[];
+  favorite_artists: Artist[];
+  /** false: favorite_artists is a fallback (artists of the most played albums). */
+  artists_are_favorites: boolean;
+  favorite_song_count: number;
+  /** Most played tracks among those played in the last 30 days. */
+  on_repeat: Song[];
+  /** Most recently edited first. */
+  playlists: Playlist[];
+}

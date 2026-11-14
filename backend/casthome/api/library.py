@@ -22,10 +22,16 @@ async def albums(
     size: int = Query(40, ge=1, le=500),
     offset: int = Query(0, ge=0),
     genre: str | None = Query(None, max_length=200),
+    starred: bool = False,
 ) -> list[dict]:
     if type == "byGenre" and not genre:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "genre_required"})
-    items = await get_ctx(request).subsonic.get_album_list(type, size, offset, genre if type == "byGenre" else None)
+    ctx = get_ctx(request)
+    if starred:
+        # Favorites with the chosen sort: Subsonic's "starred" list cannot be sorted.
+        items = await ctx.native.get_albums(type, offset, size, starred=True)
+    else:
+        items = await ctx.subsonic.get_album_list(type, size, offset, genre if type == "byGenre" else None)
     return [a.model_dump(exclude={"songs"}) for a in items]
 
 
@@ -35,9 +41,10 @@ async def songs(
     sort: SongSort = "recent",
     offset: int = Query(0, ge=0),
     size: int = Query(100, ge=1, le=500),
+    starred: bool = False,
 ) -> dict:
-    """Every track, paged; "recent" = most recently added first."""
-    items, total = await get_ctx(request).native.get_songs(sort, offset, size)
+    """Every track (or only favorites), paged; "recent" = most recently added first."""
+    items, total = await get_ctx(request).native.get_songs(sort, offset, size, starred)
     return {"items": [s.model_dump() for s in items], "total": total}
 
 

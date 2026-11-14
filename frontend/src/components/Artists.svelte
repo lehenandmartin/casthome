@@ -3,6 +3,9 @@
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Artist } from '../lib/types';
+  import FavoritesToggle from './FavoritesToggle.svelte';
+
+  let { fav = false }: { fav?: boolean } = $props();
 
   let artists = $state<Artist[]>([]);
   let loaded = $state(false);
@@ -14,14 +17,19 @@
   });
 
   const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-  const visible = $derived(filter ? artists.filter((a) => normalize(a.name).includes(normalize(filter))) : artists);
+  const visible = $derived(
+    artists.filter((a) => (!fav || a.starred) && (!filter || normalize(a.name).includes(normalize(filter)))),
+  );
 </script>
 
 <section>
   <h2>{t('artists.title')}</h2>
-  <input type="search" placeholder={t('artists.filter')} aria-label={t('artists.filter')} bind:value={filter} />
+  <div class="filters">
+    <input type="search" placeholder={t('artists.filter')} aria-label={t('artists.filter')} bind:value={filter} />
+    <FavoritesToggle active={fav} />
+  </div>
   {#if loaded && visible.length === 0}
-    <p class="muted">{t('artists.empty')}</p>
+    <p class="muted">{fav ? t('favorites.noArtists') : t('artists.empty')}</p>
   {/if}
   <ul>
     {#each visible as artist (artist.id)}
@@ -36,9 +44,15 @@
 </section>
 
 <style>
-  input {
-    width: 100%;
+  .filters {
+    display: flex;
+    gap: 8px;
+    align-items: center;
     margin-bottom: 12px;
+  }
+  input {
+    flex: 1;
+    min-width: 0;
   }
   ul {
     list-style: none;
