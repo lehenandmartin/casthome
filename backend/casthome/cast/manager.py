@@ -62,6 +62,12 @@ class CastManager:
         await asyncio.to_thread(_start)
         log.info("Cast discovery started")
 
+    def set_known_hosts(self, hosts: list[str]) -> None:
+        """Poll these addresses too (for networks where mDNS is blocked)."""
+        self._known_hosts = hosts
+        if self._browser is not None:
+            self._browser.host_browser.update_hosts(hosts)
+
     async def stop(self) -> None:
         def _stop() -> None:
             if self._browser:

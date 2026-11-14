@@ -193,8 +193,19 @@ export interface SetupInfo {
   client_is_local: boolean;
 }
 
+export type StreamFormat = 'raw' | 'mp3' | 'aac' | 'opus';
+
+export interface PlaybackOptions {
+  stream_format: StreamFormat;
+  /** kbps when transcoding, 0 = no limit */
+  max_bitrate: number;
+  preload_next: boolean;
+  known_hosts: string[];
+}
+
 export interface ServerSettings {
   navidrome: NavidromeFields & { has_password: boolean };
+  playback: PlaybackOptions & { locked: (keyof PlaybackOptions)[] };
   locked: LockedField[];
   access: { mode: AccessMode; has_password: boolean };
   client_is_local: boolean;

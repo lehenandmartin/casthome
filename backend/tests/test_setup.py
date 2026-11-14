@@ -223,3 +223,38 @@ def test_password_hash_and_local_addresses() -> None:
         assert is_local_address(host), host
     for host in ("81.250.10.7", "8.8.8.8", None, "testclient"):
         assert not is_local_address(host), host
+
+
+async def test_playback_options_are_saved_and_applied(app_factory) -> None:  # type: ignore[no-untyped-def]
+    app = await app_factory()
+    ctx = app.state.ctx
+    async with Client(app) as http:
+        await finish_setup(http)
+        playback = (await http.get("/api/settings")).json()["playback"]
+        assert playback == {
+            "stream_format": "raw", "max_bitrate": 0, "preload_next": True, "known_hosts": [], "locked": []
+        }
+        body = {"stream_format": "mp3", "max_bitrate": 192, "preload_next": False, "known_hosts": [" 192.168.1.20 ", "tv.lan"]}
+        assert (await http.put("/api/settings/playback", json=body)).json() == {"ok": True}
+        assert ctx.media._config.stream_format == "mp3" and ctx.media._config.max_bitrate == 192
+        assert ctx.coordinator.preload_enabled is False
+        assert ctx.cast._known_hosts == ["192.168.1.20", "tv.lan"]
+        bad = {**body, "known_hosts": ["not a host!"]}
+        assert (await http.put("/api/settings/playback", json=bad)).json()["code"] == "invalid_host"
+        assert (await http.put("/api/settings/playback", json={**body, "stream_format": "wav"})).status_code == 400
+    # Saved: a restart keeps them.
+    await ctx.db.close()
+    again = await app_factory()
+    assert again.state.ctx.config.playback.stream_format == "mp3"
+    assert again.state.ctx.coordinator.preload_enabled is False
+
+
+async def test_playback_options_set_in_the_environment_are_locked(app_factory) -> None:  # type: ignore[no-untyped-def]
+    app = await app_factory(stream_format="opus")
+    ctx = app.state.ctx
+    assert ctx.config.playback_locked == ["stream_format"]
+    async with Client(app) as http:
+        await finish_setup(http)
+        body = {"stream_format": "mp3", "max_bitrate": 128, "preload_next": True, "known_hosts": []}
+        assert (await http.put("/api/settings/playback", json=body)).status_code == 200
+    assert ctx.config.playback.stream_format == "opus" and ctx.config.playback.max_bitrate == 128

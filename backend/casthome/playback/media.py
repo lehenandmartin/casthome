@@ -40,6 +40,9 @@ class MediaBuilder:
     def configure(self, public_base_url: str, username: str) -> None:
         self._config = replace(self._config, public_base_url=public_base_url, username=username)
 
+    def configure_stream(self, stream_format: str, max_bitrate: int) -> None:
+        self._config = replace(self._config, stream_format=stream_format, max_bitrate=max_bitrate)
+
     async def build(self, song: Song, force_fallback: bool = False) -> CastMedia:
         password = await self._password_provider()
         if password is None:

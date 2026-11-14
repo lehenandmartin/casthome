@@ -137,6 +137,14 @@ class AppContext:
         await self.db.open()
         await self.config.load()
         self.apply_navidrome()
+        self.apply_playback()
+
+    def apply_playback(self) -> None:
+        """Use the current playback options; they apply from the next track."""
+        cfg = self.config.playback
+        self.media.configure_stream(cfg.stream_format, cfg.max_bitrate)
+        self.coordinator.preload_enabled = cfg.preload_next
+        self.cast.set_known_hosts(list(cfg.known_hosts))
 
     def apply_navidrome(self) -> None:
         """Use the current Navidrome server and account everywhere."""

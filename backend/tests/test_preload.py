@@ -13,7 +13,7 @@ from tests.test_coordinator import Harness, playing_id, songs, uid_of
 @pytest.fixture
 async def h():
     harness = Harness()
-    harness.c._preload_enabled = True
+    harness.c.preload_enabled = True
     await harness.c.start()
     await harness.c.select_device("dev1")
     await harness.c.play_songs(songs(3), 0)  # 200 s tracks

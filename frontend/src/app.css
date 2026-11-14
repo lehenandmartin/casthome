@@ -175,8 +175,23 @@ input[type='search']:focus {
   border-color: var(--accent);
 }
 
-input:disabled {
+input:disabled,
+select:disabled {
   opacity: 0.6;
+}
+
+select {
+  font: inherit;
+  font-size: 16px; /* avoids zoom-on-focus on iOS */
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+select:focus {
+  border-color: var(--accent);
 }
 
 /* Range inputs (seek, volume) */

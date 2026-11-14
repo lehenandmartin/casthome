@@ -110,7 +110,7 @@ class PlaybackCoordinator:
         self._radio_refilling = False
         self._connector = connector
         self._scrobbler = scrobbler
-        self._preload_enabled = preload_next
+        self.preload_enabled = preload_next
         self._preload: _Preload | None = None
         self._preload_attempted = False
         self._preload_wait: asyncio.Task[None] | None = None
@@ -688,7 +688,7 @@ class PlaybackCoordinator:
             self._preload_wait = None
 
     async def _maybe_preload(self, ev: MediaEvent) -> None:
-        if not self._preload_enabled or self._preload_attempted or self.target is None:
+        if not self.preload_enabled or self._preload_attempted or self.target is None:
             return
         if not getattr(self.target, "supports_preload", True):
             return

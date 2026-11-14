@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 
 NAVIDROME_KEY = "config.navidrome"
 ACCESS_KEY = "config.access"
+PLAYBACK_KEY = "config.playback"
 
 
 class AccessMode(StrEnum):
@@ -42,6 +43,23 @@ class NavidromeConfig:
 
 # Fields an environment variable can lock.
 NAVIDROME_FIELDS = ("url", "public_url", "username", "password")
+
+
+@dataclass(frozen=True)
+class PlaybackConfig:
+    stream_format: str  # "raw" (original files) or a Navidrome transcoding format
+    max_bitrate: int  # kbps when transcoding, 0 = no limit
+    preload_next: bool
+    known_hosts: tuple[str, ...]  # Cast device addresses, when mDNS is blocked
+
+
+# Playback field -> environment setting (see config.py).
+PLAYBACK_ENV = {
+    "stream_format": "stream_format",
+    "max_bitrate": "stream_max_bitrate",
+    "preload_next": "cast_preload_next",
+    "known_hosts": "cast_known_hosts",
+}
 
 
 def load_secret_key(settings: Settings) -> str:
@@ -112,6 +130,7 @@ class ConfigStore:
         self._saved_navidrome: dict[str, str] = {}
         self.access_mode: AccessMode | None = None
         self._password_hash: str | None = None
+        self._saved_playback: dict[str, object] = {}
 
     async def load(self) -> None:
         self._saved_navidrome = dict(await self._db.get_state(NAVIDROME_KEY, {}) or {})
@@ -121,6 +140,7 @@ class ConfigStore:
         except ValueError:
             self.access_mode = None
         self._password_hash = access.get("password_hash")
+        self._saved_playback = dict(await self._db.get_state(PLAYBACK_KEY, {}) or {})
         await self._import_environment()
 
     async def _import_environment(self) -> None:
@@ -169,6 +189,40 @@ class ConfigStore:
     async def save_navidrome(self, config: NavidromeConfig) -> None:
         self._saved_navidrome = asdict(config)
         await self._db.set_state(NAVIDROME_KEY, self._saved_navidrome)
+
+    # --- playback ------------------------------------------------------------
+
+    @property
+    def playback_locked(self) -> list[str]:
+        """Playback fields set by environment variables."""
+        explicit = self._settings.model_fields_set
+        return [field for field, env in PLAYBACK_ENV.items() if env in explicit]
+
+    @property
+    def playback(self) -> PlaybackConfig:
+        s = self._settings
+        env = {
+            "stream_format": s.stream_format,
+            "max_bitrate": s.stream_max_bitrate,
+            "preload_next": s.cast_preload_next,
+            "known_hosts": tuple(s.known_hosts),
+        }
+        locked = set(self.playback_locked)
+        values = {}
+        for field, default in env.items():
+            saved = self._saved_playback.get(field)
+            values[field] = default if field in locked or saved is None else saved
+        values["known_hosts"] = tuple(values["known_hosts"])  # type: ignore[arg-type]
+        return PlaybackConfig(**values)  # type: ignore[arg-type]
+
+    async def save_playback(self, config: PlaybackConfig) -> None:
+        saved = asdict(config)
+        saved["known_hosts"] = list(config.known_hosts)
+        # Locked fields keep following the environment.
+        for field in self.playback_locked:
+            saved.pop(field, None)
+        self._saved_playback = saved
+        await self._db.set_state(PLAYBACK_KEY, saved)
 
     # --- access ----------------------------------------------------------------
 

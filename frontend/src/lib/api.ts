@@ -4,6 +4,7 @@ import type {
   AppStatus,
   Me,
   NavidromeForm,
+  PlaybackOptions,
   ServerSettings,
   SetupInfo,
   Album,
@@ -80,6 +81,7 @@ export const api = {
   settings: () => request<ServerSettings>('GET', '/settings'),
   testNavidrome: (navidrome: NavidromeForm) => request<{ ok: true }>('POST', '/settings/navidrome/test', navidrome),
   updateNavidrome: (navidrome: NavidromeForm) => request<{ ok: true }>('PUT', '/settings/navidrome', navidrome),
+  updatePlayback: (playback: PlaybackOptions) => request<{ ok: true }>('PUT', '/settings/playback', playback),
   updateAccess: (access: AccessForm) => request<{ ok: true }>('PUT', '/settings/access', access),
 
   login: (password: string, remember: boolean) => request<{ ok: true }>('POST', '/auth/login', { password, remember }),

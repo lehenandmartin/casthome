@@ -7,6 +7,7 @@
   import AccessFields from './AccessFields.svelte';
   import Icon from './Icon.svelte';
   import NavidromeFields from './NavidromeFields.svelte';
+  import PlaybackSettings from './PlaybackSettings.svelte';
   import Sessions from './Sessions.svelte';
 
   let settings = $state<ServerSettings | null>(null);
@@ -157,6 +158,13 @@
       </div>
     {/if}
   </section>
+
+  {#if settings}
+    <section class="block">
+      <h3>{t('playback.title')}</h3>
+      <PlaybackSettings initial={settings.playback} locked={settings.playback.locked} onsaved={load} />
+    </section>
+  {/if}
 
   <section class="block">
     <h3>{t('settings.access')}</h3>

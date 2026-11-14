@@ -150,7 +150,10 @@ does not support this reliably; run CastHome natively there (see Development).
 ## Configuration
 
 The Navidrome connection and access are set in the browser (first-run setup,
-then **Settings**). Environment variables are optional, in `.env` or the
+then **Settings**), and so are the playback options in **Settings → Playback**:
+streaming quality and maximum bitrate, preloading of the next track, and Cast
+device addresses for networks where discovery does not find them. They apply
+from the next track, without a restart. Environment variables are optional, in `.env` or the
 container environment; see [`.env.example`](.env.example). A Navidrome value
 set there wins over the one saved from the browser and shows as locked in
 Settings (handy for scripted installs).
@@ -163,10 +166,10 @@ Settings (handy for scripted installs).
 | `APP_SECRET_KEY` | Encryption key for the stored Navidrome password (≥ 32 chars). By default one is generated into `data/secret.key`; keep that file with the database. |
 | `COOKIE_SECURE` | `true` when CastHome is behind HTTPS. |
 | `SESSION_REMEMBER_DAYS` / `SESSION_SHORT_HOURS` | Session lifetimes (both sliding). |
-| `STREAM_FORMAT`, `STREAM_MAX_BITRATE` | `raw` (default) streams original files; otherwise a Navidrome transcoding format. |
+| `STREAM_FORMAT`, `STREAM_MAX_BITRATE` | `raw` (default) streams original files; otherwise a Navidrome transcoding format (`mp3`, `aac`, `opus`) and a limit in kbps. Also in Settings. |
 | `TRANSCODE_FALLBACK_FORMAT` | Format for files Cast cannot play, and retry format after a playback error (default `mp3`). |
-| `CAST_PRELOAD_NEXT` | On by default: hand the next track to the device 20 s before the end of the current one to shorten the gap. `false` disables it. |
-| `CAST_KNOWN_HOSTS` | Cast device IPs, when mDNS is blocked. |
+| `CAST_PRELOAD_NEXT` | On by default: hand the next track to the device 20 s before the end of the current one to shorten the gap. `false` disables it. Also in Settings. |
+| `CAST_KNOWN_HOSTS` | Cast device IPs, when mDNS is blocked. Also in Settings. |
 
 ### Access
 
@@ -267,7 +270,8 @@ the next track itself.
 - The host must be on the same subnet/VLAN as the devices, or mDNS must be
   relayed (Avahi reflector, router "mDNS repeater").
 - Firewall: allow UDP 5353 (mDNS) and outgoing TCP 8009 (Cast).
-- Workaround: list device IPs in `CAST_KNOWN_HOSTS`.
+- Workaround: list device IPs in **Settings → Playback → Cast device addresses**
+  (or `CAST_KNOWN_HOSTS`).
 
 **The device shows the track, then nothing plays / error notices.**
 The Chromecast cannot reach `NAVIDROME_PUBLIC_URL_FOR_CAST`. From another LAN
