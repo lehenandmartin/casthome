@@ -1,7 +1,7 @@
 <script lang="ts">
   // Settings: one section per topic. Add new sections here as cards.
   import { ApiError, api } from '../lib/api';
-  import { t, tCode } from '../lib/i18n';
+  import { LANGUAGES, browserLanguage, languageState, setLanguage, t, tCode, type LanguagePref } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { AccessMode, NavidromeForm, ServerSettings } from '../lib/types';
   import AccessFields from './AccessFields.svelte';
@@ -116,6 +116,9 @@
     await store.checkStatus();
   }
 
+  // What "Automatic" picks: this browser's language.
+  const autoLanguage = browserLanguage();
+
   const MODE_LABEL = { password: 'access.password', lan: 'access.lan', open: 'access.open' } as const;
   const MODE_DETAIL = { password: 'access.passwordDetail', lan: 'access.lanDetail', open: 'access.openDetail' } as const;
 
@@ -165,6 +168,21 @@
       <PlaybackSettings initial={settings.playback} locked={settings.playback.locked} onsaved={load} />
     </section>
   {/if}
+
+  <section class="block">
+    <h3>{t('settings.language')}</h3>
+    <div class="card language">
+      <select
+        value={languageState.pref}
+        onchange={(e) => setLanguage(e.currentTarget.value as LanguagePref)}
+        aria-label={t('settings.language')}
+      >
+        <option value="auto">{t('settings.languageAuto', { language: t(`language.${autoLanguage}`) })}</option>
+        {#each LANGUAGES as lang (lang)}<option value={lang}>{t(`language.${lang}`)}</option>{/each}
+      </select>
+      <small class="muted">{t('settings.languageHint')}</small>
+    </div>
+  </section>
 
   <section class="block">
     <h3>{t('settings.access')}</h3>
@@ -323,5 +341,10 @@
   .ok {
     color: var(--accent);
     margin: 0;
+  }
+  .card.language {
+    display: grid;
+    gap: 8px;
+    justify-items: start;
   }
 </style>

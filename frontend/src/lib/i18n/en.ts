@@ -1,5 +1,6 @@
-// Every user-facing string lives here. To add a language, copy this file
-// (e.g. fr.ts), translate the values and register it in ./index.ts.
+// Every user-facing string lives here, in English (the default). To add a
+// language, copy fr.ts, translate the values, and register it in ./index.ts
+// and in LANGUAGES (./lang.svelte.ts).
 export const en = {
   'app.name': 'CastHome',
 
@@ -35,6 +36,12 @@ export const en = {
   'settings.newPasswordKeep': 'New password (leave blank to keep the current one)',
   'settings.passwordChangeNote': 'A new password signs every other device out.',
   'settings.signedInOpen': 'Opened without a password',
+  'settings.language': 'Language',
+  'settings.languageAuto': 'Automatic ({language})',
+  'settings.languageHint': 'Automatic follows this browser’s language. Saved on this device.',
+  // Language names stay in their own language.
+  'language.en': 'English',
+  'language.fr': 'Français',
 
   'playback.title': 'Playback',
   'playback.format': 'Streaming quality',

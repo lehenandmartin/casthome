@@ -1,6 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api';
-  import { t } from '../lib/i18n';
+  import { currentLanguage, t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { SessionInfo } from '../lib/types';
   import { describeUserAgent } from '../lib/useragent';
@@ -34,7 +34,7 @@
     await store.checkStatus();
   }
 
-  const fmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const fmt = $derived(new Intl.DateTimeFormat(currentLanguage(), { dateStyle: 'medium', timeStyle: 'short' }));
   const others = $derived(sessions.filter((s) => !s.current).length);
 
   load();

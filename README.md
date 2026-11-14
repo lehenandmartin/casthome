@@ -43,7 +43,9 @@ Mobile-first, installable on the home screen.
   Navidrome connection and how to protect CastHome (its own password, open on
   the local network only, or open). **Settings** then covers the Navidrome
   connection, playback options (streaming quality, preloading, Cast device
-  addresses), access and signed-in devices.
+  addresses), language, access and signed-in devices.
+- Languages: English (default) and French. *Automatic* picks the first of the
+  browser's preferred languages that CastHome has, else English.
 
 ## How it works
 
@@ -86,6 +88,8 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
     saving.
   - *Playback*: streaming quality and maximum bitrate, preloading, scrobbling,
     Cast device addresses.
+  - *Language*: automatic (this browser's language), English or French; saved
+    on the device, applied at once.
   - *Access to CastHome*: password, open at home, or no password; this
     device's sign-out.
   - *Signed-in devices*: every browser signed in, each can be signed out.
@@ -359,7 +363,9 @@ backend/casthome/
                        settings), WebSocket endpoint, stream.py (audio proxy)
   ws/hub.py            WebSocket broadcast and per-tab messages
 frontend/src/
-  lib/i18n/en.ts            every UI string (add a locale by copying this file)
+  lib/i18n/en.ts            every UI string, in English (the default)
+  lib/i18n/fr.ts            French translation (same keys, checked by the compiler)
+  lib/i18n/lang.svelte.ts   language choice (automatic or per device)
   lib/store.svelte.ts       app state, WebSocket client, startup cache
   lib/router.svelte.ts      hash routing without page loads
   lib/browserPlayer.ts      <audio> player for "This browser", Media Session
