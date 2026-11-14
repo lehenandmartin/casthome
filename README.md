@@ -23,26 +23,27 @@ Mobile-first, installable on the home screen.
 - Phase 1 (MVP): sign-in with optional "keep me signed in", Cast discovery,
   play an album on a device, server-side auto-advance, live state.
 - Phase 2: browse albums (recent, most played, random, A–Z), artists, genres;
-  search; play now / play next / add to queue for tracks, albums and artists;
+  search; play now / add to queue for tracks, albums and artists;
   reorder the queue by drag and drop, remove items.
 - Phase 3: playlists (play, create, rename, add/remove tracks, delete, save
   the queue as a playlist); favorites (☆ on tracks, albums, artists; a
   *Favorites* filter on the Tracks, Albums and Artists pages); 5-star ratings; scrobbling to Navidrome ("now playing" when
   a track starts, a scrobble after half the track or 4 minutes of actual
   listening; seeking forward does not count).
-- Setup from the browser: no `.env` to write. The first visit asks for the
-  Navidrome connection and how to protect CastHome (its own password, open on
-  the local network only, or open). Both can be changed later in Settings.
-- Phase 4: installable PWA; Settings page (account; signed-in devices with
-  per-device and "all other devices" sign-out, effective immediately);
-  preloading of the next track to shorten gaps (`CAST_PRELOAD_NEXT`); the Navidrome
-  play queue is re-read every minute while idle, so a queue saved by another
-  Subsonic client is picked up.
+- Phase 4: installable PWA; signed-in devices with per-device and "all other
+  devices" sign-out, effective immediately; preloading of the next track to
+  shorten gaps; the Navidrome play queue is re-read every minute while idle,
+  so a queue saved by another Subsonic client is picked up.
 - Interface redesign: mobile tab bar and mini player, full-screen Now Playing,
   queue in three parts, device picker grouped by type, track actions as a
   bottom sheet, desktop sidebar; in-browser playback ("This browser"); fixes
   for installed iOS web apps (no reload on navigation, instant startup, safe
   areas).
+- Setup from the browser: no `.env` to write. The first visit asks for the
+  Navidrome connection and how to protect CastHome (its own password, open on
+  the local network only, or open). **Settings** then covers the Navidrome
+  connection, playback options (streaming quality, preloading, Cast device
+  addresses), access and signed-in devices.
 
 ## How it works
 
@@ -80,6 +81,14 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   Swipe down or use Back to close it. The queue button under *repeat* slides
   the **queue up as a sheet** over the player; Back, the chevron or a swipe
   down on its header returns to the player.
+- **Settings** (sidebar bottom on desktop, in Library on mobile):
+  - *Navidrome*: server, account and Cast URL, with a connection test before
+    saving.
+  - *Playback*: streaming quality and maximum bitrate, preloading, Cast device
+    addresses.
+  - *Access to CastHome*: password, open at home, or no password; this
+    device's sign-out.
+  - *Signed-in devices*: every browser signed in, each can be signed out.
 - **Favorites:** a ★ *Favorites* filter on the Tracks, Albums and Artists
   pages shows only what you starred, with that page's sorts; it is kept in
   the address (`?fav=1`), so links and Back keep it.
@@ -255,7 +264,8 @@ Details that matter for the installed iOS app:
 
 ### Preloading
 
-By default (`CAST_PRELOAD_NEXT=true`), the next track is queued on the receiver
+By default (switch in **Settings → Playback**, or `CAST_PRELOAD_NEXT`), the next
+track is queued on the receiver
 (`QUEUE_INSERT`) about 20 seconds before the current one ends, so the device
 buffers it and switches with a shorter gap. CastHome stays in charge: when the
 device switches, CastHome checks that it is still the right track (the queue
