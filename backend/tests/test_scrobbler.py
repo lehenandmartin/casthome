@@ -68,7 +68,7 @@ async def test_seek_forward_does_not_count():
 
 
 async def test_pause_gap_does_not_count():
-    s, clock, calls = make()
+    s, clock, _calls = make()
     s.track_loaded("a", 200)
     await play(s, clock, "a", 0, 10)
     s.stopped()
@@ -78,7 +78,7 @@ async def test_pause_gap_does_not_count():
 
 
 async def test_progress_for_other_song_is_ignored():
-    s, clock, calls = make()
+    s, _clock, calls = make()
     s.track_loaded("a", 200)
     await s.progress("b", 0)
     assert calls == []

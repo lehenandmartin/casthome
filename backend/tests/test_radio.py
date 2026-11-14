@@ -57,7 +57,7 @@ async def test_uses_track_similarity_first_and_labels_audiomuse():
 
 
 async def test_without_sonic_extension_label_is_generic():
-    songs, label = await make_radio_builder(FakeSource(similar=tracks("s", 2), ext=()))(SEED, set())
+    _songs, label = await make_radio_builder(FakeSource(similar=tracks("s", 2), ext=()))(SEED, set())
     assert label == "similar"
 
 
@@ -175,7 +175,7 @@ async def test_artist_radio_keeps_the_artist_to_a_third_spread_through_the_batch
     songs, _ = await make_artist_radio_builder(source, count=30, rng=random.Random(2))("ar1", "Artist", set())
     own = [i for i, s in enumerate(songs) if s.artist_id == "ar1" or s.id == "f"]  # a feature counts as the artist
     assert len(songs) == 30 and len(own) == 10 and own[0] == 0
-    assert all(b - a > 1 for a, b in zip(own, own[1:]))  # never two in a row
+    assert all(b - a > 1 for a, b in zip(own, own[1:], strict=False))  # never two in a row
 
 
 async def test_artist_radio_with_only_the_artist_left_hands_over_on_refill():

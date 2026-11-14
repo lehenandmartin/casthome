@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass
 
@@ -10,6 +9,7 @@ from casthome.appconfig import ConfigStore, NavidromeConfig, load_secret_key
 from casthome.auth.credentials import CredentialStore
 from casthome.auth.crypto import SecretBox
 from casthome.auth.sessions import SessionStore
+from casthome.background import spawn
 from casthome.cast.browser import BrowserTarget, client_id_of
 from casthome.cast.manager import CastManager
 from casthome.cast.types import ConnectionEvent
@@ -93,7 +93,7 @@ class AppContext:
                 except Exception as exc:  # noqa: BLE001
                     log.warning("Scrobble failed for %s: %s", song_id, exc)
 
-            asyncio.create_task(send())
+            spawn(send(), name='scrobble')
 
         coordinator = PlaybackCoordinator(
             connector,

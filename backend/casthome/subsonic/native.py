@@ -60,7 +60,6 @@ def album_from_native(d: dict[str, Any]) -> Album:
         duration=float(d.get("duration") or 0),
         starred=bool(d.get("starred")),
         user_rating=int(d.get("rating") or 0),
-        play_count=int(d.get("playCount") or 0),
     )
 
 

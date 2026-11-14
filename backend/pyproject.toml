@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "respx>=0.21"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "respx>=0.21", "pytest-cov>=5", "ruff>=0.6", "mypy>=1.11"]
 
 [build-system]
 requires = ["setuptools>=69"]
@@ -31,3 +31,19 @@ include = ["casthome*"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Errors, likely bugs (B), asyncio pitfalls (ASYNC, RUF006: tasks that can be
+# garbage-collected), over-broad excepts (BLE, explained with a noqa) and stale noqa.
+select = ["E", "F", "W", "B", "ASYNC", "BLE", "RUF"]
+# Formatting and style-only rules; RUF100: the `noqa` comments also carry the
+# reason an exception is caught broadly, keep them even where ruff is silent.
+ignore = ["E501", "RUF005", "RUF007", "RUF100"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true

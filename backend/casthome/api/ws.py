@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from casthome.api.deps import websocket_session
+from casthome.background import spawn
 from casthome.context import AppContext
 
 router = APIRouter()
@@ -30,7 +30,7 @@ async def websocket(ws: WebSocket) -> None:
     client_name = (ws.query_params.get("name") or "")[:80]
     ctx.hub.add(ws, session.id, client_id, client_name)
     # A client opening the app is a good moment to pick up a queue saved elsewhere.
-    asyncio.create_task(ctx.coordinator.refresh_from_navidrome())
+    spawn(ctx.coordinator.refresh_from_navidrome(), name='refresh queue')
     try:
         while True:
             message = await ws.receive_text()

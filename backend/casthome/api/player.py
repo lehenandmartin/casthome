@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, model_validator

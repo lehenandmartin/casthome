@@ -1,8 +1,11 @@
 import { mount } from 'svelte';
 import App from './App.svelte';
 import './app.css';
+import { reportErrors } from './lib/errorReport';
 import { watchIntent } from './lib/intent';
 import { fadeInCovers } from './lib/fade';
+
+reportErrors();
 
 // Missing cover art: swap in a neutral disc instead of the browser's broken-image icon.
 const PLACEHOLDER =

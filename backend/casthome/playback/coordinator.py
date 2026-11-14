@@ -23,6 +23,7 @@ from enum import StrEnum
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from casthome.background import spawn
 from casthome.cast.types import (
     DEFAULT_MEDIA_RECEIVER_APP_ID,
     CastEvent,
@@ -215,7 +216,7 @@ class PlaybackCoordinator:
     def on_devices_changed(self, available: set[str]) -> None:
         """Connect to the selected device as soon as it is discovered."""
         if self.device_uuid in available and self.target is None and not self._connecting:
-            asyncio.create_task(self._connect_selected())
+            spawn(self._connect_selected(), name='connect device')
 
     async def _connect_selected(self) -> None:
         async with self._lock:
@@ -350,7 +351,7 @@ class PlaybackCoordinator:
             and self.queue.upcoming_context < RADIO_REFILL_AT
         ):
             self._radio_refilling = True
-            asyncio.create_task(self._refill_radio())
+            spawn(self._refill_radio(), name='refill radio')
 
     async def _refill_radio(self) -> None:
         """Endless radio: add tracks from the artist (artist radio), else tracks

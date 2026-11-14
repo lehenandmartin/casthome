@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import ipaddress
 import os
 import re
@@ -17,6 +16,7 @@ from casthome.api.auth import throttle, throttle_passed
 from casthome.api.deps import OPEN_SESSION, client_host, client_info, get_ctx, require_session, start_session
 from casthome.appconfig import AccessMode, NavidromeConfig, PlaybackConfig
 from casthome.auth.sessions import Session
+from casthome.background import spawn
 from casthome.config import check_cast_url, normalize_url
 from casthome.context import AppContext
 from casthome.subsonic.client import (
@@ -126,7 +126,7 @@ async def save_navidrome(ctx: AppContext, config: NavidromeConfig, password: str
     ctx.hub.publish("server", ctx.server_snapshot)
     if reload_queue or previous is None or (previous.url, previous.username) != (config.url, config.username):
         # Another library: load its play queue.
-        asyncio.create_task(ctx.coordinator.restore())
+        spawn(ctx.coordinator.restore(), name='restore queue')
 
 
 def validate_new_access(ctx: AppContext, body: AccessBody) -> None:

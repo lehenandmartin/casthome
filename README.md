@@ -466,15 +466,20 @@ server, which proxies `/api` to it:
 cd frontend && npm run dev
 ```
 
-Tests and checks:
+Tests and checks (backend: tests, lint with ruff, types with mypy; add
+`--cov=casthome` to pytest for a coverage report):
 
 ```bash
-cd backend && ../.venv/bin/python -m pytest
+cd backend && ../.venv/bin/python -m pytest && ../.venv/bin/ruff check casthome tests && ../.venv/bin/mypy casthome
 ```
 
 ```bash
-cd frontend && npm run check && npm run build
+cd frontend && npm test && npm run check && npm run build
 ```
+
+Errors in the interface (uncaught exceptions, rejected promises) are sent to
+the server and written to its log as `casthome.client` warnings, with the
+page and the browser: useful to see what went wrong on a phone.
 
 UI text never goes in components: add each string to `lib/i18n/en.ts` and its
 French version to `lib/i18n/fr.ts` (`npm run check` fails if one is missing).

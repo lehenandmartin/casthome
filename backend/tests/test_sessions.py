@@ -53,7 +53,7 @@ async def test_token_is_not_stored_in_clear(store, db):
 
 
 async def test_sliding_expiry_keeps_active_session_alive(store, clock):
-    token, session = await store.create(persistent=True)
+    token, _session = await store.create(persistent=True)
     # Use the session every 300 days: it never expires although the lifetime is 365 days.
     for _ in range(5):
         clock.now += 300 * DAY
