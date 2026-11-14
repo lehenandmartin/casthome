@@ -13,6 +13,8 @@
   // Kept for the whole visit: coming back to Home shows the last data at once,
   // then refreshes it in the background.
   let data = $state<HomeData | null>(homeCache.value);
+  // First visit: the rows arrive in a light cascade (later visits show at once).
+  const arrive = homeCache.value === null;
 
   async function refresh() {
     const fresh = await api.home();
@@ -95,7 +97,7 @@
   const homeCache: { value: Cached | null } = { value: null };
 </script>
 
-<section class="home">
+<section class="home" class:arrive>
   {#if !data}
     <div aria-busy="true" aria-hidden="true">
       <div class="tiles">

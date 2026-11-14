@@ -82,6 +82,12 @@
     store.queue.index !== null ? Math.max(0, store.queue.items.length - store.queue.index - 1) : store.queue.items.length,
   );
 
+  // Full-screen overlays freeze the page behind them (no scrollbar moving under them).
+  $effect(() => {
+    const locked = store.nowPlayingOpen || (store.queueVisible && !store.isDesktop) || store.devicePickerOpen;
+    document.documentElement.classList.toggle('locked', locked);
+  });
+
   // On load: first-run setup, sign-in, or the app. If the server is briefly
   // unreachable, the cached state stays on screen while the connection retries.
   store.checkStatus();
@@ -124,33 +130,38 @@
         <a href="#/settings">{t('navidrome.rejectedLink')}</a>
       </div>
     {/if}
-    {#if route.name === 'album'}
-      <AlbumView id={route.id} />
-    {:else if route.name === 'artist'}
-      <ArtistView id={route.id} />
-    {:else if route.name === 'genre'}
-      {#key route.id}<GenreView name={route.id} />{/key}
-    {:else if route.name === 'playlist'}
-      <PlaylistView id={route.id} />
-    {:else if route.name === 'settings'}
-      <Settings />
-    {:else if route.name === 'library'}
-      <Library />
-    {:else if route.name === 'playlists'}
-      <Playlists />
-    {:else if route.name === 'tracks'}
-      <Tracks fav={favOnly} artist={tracksArtist} artistName={tracksArtistName} />
-    {:else if route.name === 'artists'}
-      <Artists fav={favOnly} />
-    {:else if route.name === 'genres'}
-      <Genres />
-    {:else if route.name === 'search'}
-      <Search />
-    {:else if route.name === 'albums'}
-      {#key `${albumsType}-${favOnly}`}<Albums type={albumsType} fav={favOnly} />{/key}
-    {:else}
-      <Home />
-    {/if}
+    <!-- Each page fades in when the route changes (app.css: .page). -->
+    {#key hash}
+      <div class="page">
+        {#if route.name === 'album'}
+          <AlbumView id={route.id} />
+        {:else if route.name === 'artist'}
+          <ArtistView id={route.id} />
+        {:else if route.name === 'genre'}
+          {#key route.id}<GenreView name={route.id} />{/key}
+        {:else if route.name === 'playlist'}
+          <PlaylistView id={route.id} />
+        {:else if route.name === 'settings'}
+          <Settings />
+        {:else if route.name === 'library'}
+          <Library />
+        {:else if route.name === 'playlists'}
+          <Playlists />
+        {:else if route.name === 'tracks'}
+          <Tracks fav={favOnly} artist={tracksArtist} artistName={tracksArtistName} />
+        {:else if route.name === 'artists'}
+          <Artists fav={favOnly} />
+        {:else if route.name === 'genres'}
+          <Genres />
+        {:else if route.name === 'search'}
+          <Search />
+        {:else if route.name === 'albums'}
+          {#key `${albumsType}-${favOnly}`}<Albums type={albumsType} fav={favOnly} />{/key}
+        {:else}
+          <Home />
+        {/if}
+      </div>
+    {/key}
   </main>
 
   <PlayerBar />

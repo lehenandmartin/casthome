@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api } from '../lib/api';
+  import { api, cached } from '../lib/api';
   import { menu } from '../lib/contextMenu.svelte';
   import { artistMenu } from '../lib/menus';
   import { t } from '../lib/i18n';
@@ -10,8 +10,9 @@
 
   let { fav = false }: { fav?: boolean } = $props();
 
-  let artists = $state<Artist[]>([]);
-  let loaded = $state(false);
+  let artists = $state<Artist[]>(cached.artists() ?? []);
+  let loaded = $state(cached.artists() !== undefined);
+  const arrive = cached.artists() === undefined;
   let filter = $state('');
 
   store.run(async () => {
@@ -25,7 +26,7 @@
   );
 </script>
 
-<section>
+<section class:arrive>
   <h2>{t('artists.title')}</h2>
   <div class="filters">
     <input type="search" placeholder={t('artists.filter')} aria-label={t('artists.filter')} bind:value={filter} />
@@ -37,7 +38,7 @@
   {#if loaded && visible.length === 0}
     <p class="muted">{fav ? t('favorites.noArtists') : t('artists.empty')}</p>
   {/if}
-  <ul>
+  <ul class="rows">
     {#each visible as artist (artist.id)}
       <li>
         <a href={`#/artist/${encodeURIComponent(artist.id)}`} use:menu={() => artistMenu(artist)}>

@@ -1,14 +1,15 @@
 <script lang="ts">
+  import { fadeIn, fadeOut } from '../lib/motion';
   import { t, tCode } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
 </script>
 
 <div class="toasts" aria-live="polite">
   {#if store.auth === 'signed-in' && store.offlineNotice}
-    <div class="toast warning">{t('connection.offline')}</div>
+    <div class="toast warning" in:fadeIn out:fadeOut>{t('connection.offline')}</div>
   {/if}
   {#each store.notifications as n (n.id)}
-    <button class="toast {n.level}" onclick={() => store.dismiss(n.id)}>{tCode(n.code, n.params)}</button>
+    <button class="toast {n.level}" in:fadeIn out:fadeOut onclick={() => store.dismiss(n.id)}>{tCode(n.code, n.params)}</button>
   {/each}
 </div>
 

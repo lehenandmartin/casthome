@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fadeIn } from '../lib/motion';
   import { coverUrl } from '../lib/api';
   import { contextMenu, menu } from '../lib/contextMenu.svelte';
   import { currentSongMenu } from '../lib/menus';
@@ -75,7 +76,7 @@
   <div class="body">
     <div class="art" use:menu={() => (song ? currentSongMenu(song) : null)}>
       {#if cover}
-        <img src={cover} alt="" />
+        {#key cover}<img src={cover} alt="" in:fadeIn={{ duration: 220 }} />{/key}
       {:else}
         <div class="art-placeholder"><Icon name="disc" size={72} /></div>
       {/if}
@@ -83,7 +84,7 @@
 
     <div class="info">
       <div class="titles" use:menu={() => (song ? currentSongMenu(song) : null)}>
-        <h2 class="ellipsis">{song?.title ?? t('player.nothing')}</h2>
+        {#key song?.id}<h2 class="ellipsis" in:fadeIn>{song?.title ?? t('player.nothing')}</h2>{/key}
         {#if song}
           <p class="ellipsis">
             {#if song.artist_id}
@@ -140,12 +141,11 @@
     background: var(--bg);
     overflow: hidden auto;
     padding: calc(env(safe-area-inset-top) + 10px) 0 env(safe-area-inset-bottom);
-    animation: rise 0.22s ease-out;
     transition: transform 0.05s;
+    animation: rise 0.22s ease-out;
   }
   @keyframes rise {
     from {
-      transform: translateY(8%);
       opacity: 0;
     }
   }

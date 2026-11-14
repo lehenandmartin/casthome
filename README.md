@@ -52,6 +52,12 @@ Mobile-first, installable on the home screen.
   albums on album pages; loading placeholders instead of empty pages;
   playlists sorted by last change, created with a *New playlist* button;
   untrusted reverse proxies detected for *Open at home*.
+- Smoother navigation: pages already seen open at once from memory and
+  refresh in the background; album and artist pages start from what the
+  tapped card knew; links are preloaded on touch or hover; Back returns to
+  the same scroll position; pages, slow covers and sheets fade in and out;
+  loading placeholders only show when loading lasts; long lists load their
+  next page before the bottom; play/pause and queue removals react at once.
 
 ## How it works
 

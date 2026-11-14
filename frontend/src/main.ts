@@ -1,6 +1,8 @@
 import { mount } from 'svelte';
 import App from './App.svelte';
 import './app.css';
+import { watchIntent } from './lib/intent';
+import { fadeInCovers } from './lib/fade';
 
 // Missing cover art: swap in a neutral disc instead of the browser's broken-image icon.
 const PLACEHOLDER =
@@ -18,6 +20,9 @@ document.addEventListener(
 );
 
 export default mount(App, { target: document.getElementById('app')! });
+
+watchIntent();
+fadeInCovers();
 
 // Installable PWA. Service workers need HTTPS (or localhost); on plain-HTTP LAN
 // access this is skipped and "Add to Home Screen" still works on iOS.

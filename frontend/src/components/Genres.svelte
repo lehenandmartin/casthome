@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { api } from '../lib/api';
+  import { api, cached } from '../lib/api';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Genre } from '../lib/types';
 
-  let genres = $state<Genre[]>([]);
-  let loaded = $state(false);
+  let genres = $state<Genre[]>(cached.genres() ?? []);
+  let loaded = $state(cached.genres() !== undefined);
+  const arrive = cached.genres() === undefined;
 
   store.run(async () => {
     genres = await api.genres();
@@ -13,7 +14,7 @@
   });
 </script>
 
-<section>
+<section class:arrive>
   <h2>{t('genres.title')}</h2>
   {#if !loaded}
     <ul aria-hidden="true">
@@ -23,7 +24,7 @@
   {#if loaded && genres.length === 0}
     <p class="muted">{t('genres.empty')}</p>
   {/if}
-  <ul>
+  <ul class="rows">
     {#each genres as genre (genre.name)}
       <li>
         <a href={`#/genre/${encodeURIComponent(genre.name)}`}>

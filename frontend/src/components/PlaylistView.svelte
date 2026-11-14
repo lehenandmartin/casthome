@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, coverUrl } from '../lib/api';
+  import { api, cached, coverUrl } from '../lib/api';
   import { dialogs } from '../lib/dialog.svelte';
   import { router } from '../lib/router.svelte';
   import { formatTime } from '../lib/format';
@@ -12,16 +12,21 @@
   let { id }: { id: string } = $props();
   let playlist = $state<Playlist | null>(null);
   let renaming = $state(false);
+  // Content coming from the network (not from memory) arrives in a light cascade.
+  let arrive = $state(false);
   let newName = $state('');
 
   async function load(playlistId: string) {
     await store.run(async () => {
-      playlist = await api.playlist(playlistId);
+      const loaded = await api.playlist(playlistId);
+      if (playlistId === id) playlist = loaded;
     });
   }
 
+  // Shown at once from memory when this playlist was seen before.
   $effect(() => {
-    playlist = null;
+    playlist = cached.playlist(id) ?? null;
+    arrive = !cached.playlist(id);
     load(id);
   });
 
@@ -73,7 +78,7 @@
 </script>
 
 {#if playlist}
-  <section>
+  <section class:arrive>
     <header>
       {#if playlist.cover_art}<img src={coverUrl(playlist.cover_art, 600)} alt="" />{/if}
       <div>

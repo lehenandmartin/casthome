@@ -18,7 +18,7 @@
 
   async function run(q: string) {
     const trimmed = q.trim();
-    history.replaceState(null, '', trimmed ? `#/search?q=${encodeURIComponent(trimmed)}` : '#/search');
+    history.replaceState(history.state, '', trimmed ? `#/search?q=${encodeURIComponent(trimmed)}` : '#/search');
     if (!trimmed) {
       result = null;
       searched = '';

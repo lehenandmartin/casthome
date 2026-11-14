@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { riseOut, slideOutRight } from '../lib/motion';
   // The queue as a layer, never a page:
   // - mobile: a sheet that slides up over the page or Now Playing; Back, the
   //   chevron or a swipe down on its header closes it and returns there;
@@ -32,7 +33,7 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && !e.defaultPrevented && !contextMenu.current && !store.isDesktop && store.closeQueue()} />
 
 {#if store.isDesktop}
-  <aside class="side" aria-label={t('queue.title')}>
+  <aside class="side" out:slideOutRight|global aria-label={t('queue.title')}>
     <div class="side-head">
       <h2>{t('queue.title')}</h2>
       <button class="icon-btn" aria-label={t('queue.close')} title={t('queue.close')} onclick={() => store.closeQueue()}>
@@ -44,6 +45,7 @@
 {:else}
   <div
     class="sheet-layer"
+    out:riseOut|global
     role="dialog"
     aria-modal="true"
     aria-label={t('queue.title')}

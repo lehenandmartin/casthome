@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fadeIn, fadeOut } from '../lib/motion';
   import { dialogs } from '../lib/dialog.svelte';
   import { t } from '../lib/i18n';
 
@@ -31,8 +32,8 @@
 
 {#if dialogs.current}
   {@const request = dialogs.current}
-  <div class="backdrop" role="presentation" onclick={() => dialogs.close(null)}></div>
-  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+  <div class="backdrop" role="presentation" onclick={() => dialogs.close(null)} in:fadeIn out:fadeOut></div>
+  <div class="dialog" in:fadeIn out:fadeOut role="dialog" aria-modal="true" aria-labelledby="dialog-title">
     <form onsubmit={submit}>
       <h3 id="dialog-title">{request.title}</h3>
       {#if request.message}<p class="muted">{request.message}</p>{/if}

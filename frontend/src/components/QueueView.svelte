@@ -21,7 +21,9 @@
   const index = $derived(store.queue.index);
   const current = $derived(index !== null ? (items[index] ?? null) : null);
   const firstUpcoming = $derived(index === null ? 0 : index + 1);
-  const history = $derived(index === null ? [] : items.slice(0, index));
+  // Rows removed by the user disappear at once, before the server confirms.
+  let hidden = $state(new Set<number>());
+  const history = $derived(index === null ? [] : items.slice(0, index).filter((item) => !hidden.has(item.uid)));
   const p = $derived(store.player);
   const playing = $derived(p?.status === 'playing');
 
@@ -37,7 +39,10 @@
   let menuOpen = $state(false);
 
   $effect(() => {
-    const rows = items.slice(firstUpcoming).map((item) => ({ ...item, song_id: item.id, id: item.uid }));
+    const rows = items
+      .slice(firstUpcoming)
+      .filter((item) => !hidden.has(item.uid))
+      .map((item) => ({ ...item, song_id: item.id, id: item.uid }));
     if (!dragging) {
       queuedRows = rows.filter((r) => r.queued);
       contextRows = rows.filter((r) => !r.queued);
@@ -84,8 +89,24 @@
     queueItemMenu({ ...row, id: row.song_id }, zone === 'context' ? () => toNextInQueue(row.uid) : undefined);
 
   function remove(uid: number) {
-    store.run(() => api.removeItem(uid));
+    hidden = new Set([...hidden, uid]);
+    store.run(async () => {
+      try {
+        await api.removeItem(uid);
+      } catch (error) {
+        // Not removed: show it again.
+        hidden = new Set([...hidden].filter((h) => h !== uid));
+        throw error;
+      }
+    });
   }
+
+  // Forget hidden rows once the server's queue no longer has them.
+  $effect(() => {
+    const present = new Set(items.map((item) => item.uid));
+    const kept = [...hidden].filter((uid) => present.has(uid));
+    if (kept.length !== hidden.size) hidden = new Set(kept);
+  });
 
   // Swipe right on an album/playlist track: move it to the end of "Next in queue".
   function toNextInQueue(uid: number) {
@@ -248,7 +269,7 @@
             class="icon-btn remove"
             aria-label={t('queue.remove')}
             title={t('queue.remove')}
-            onclick={() => store.run(() => api.removeItem(item.uid))}><Icon name="close" size={18} /></button
+            onclick={() => remove(item.uid)}><Icon name="close" size={18} /></button
           >
           </SwipeRow>
         </li>
@@ -309,7 +330,7 @@
               class="icon-btn remove"
               aria-label={t('queue.remove')}
               title={t('queue.remove')}
-              onclick={() => store.run(() => api.removeItem(item.uid))}><Icon name="close" size={18} /></button
+              onclick={() => remove(item.uid)}><Icon name="close" size={18} /></button
             >
             </SwipeRow>
           </li>

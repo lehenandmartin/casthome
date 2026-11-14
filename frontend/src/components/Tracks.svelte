@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api';
+  import { nearEnd } from '../lib/nearEnd';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Song, SongSort } from '../lib/types';
@@ -32,20 +33,44 @@
   let songs = $state<Song[]>([]);
   let total = $state<number | null>(null);
   let loading = $state(false);
+  // Pages coming from the network (not from memory) arrive in a light cascade.
+  let arrive = $state(false);
+
+  const keyOf = () => `${sort}|${fav}|${artist ?? ''}`;
 
   async function load(reset: boolean) {
     loading = true;
+    arrive = true;
     const requested = sort;
     const requestedFav = fav;
     const requestedArtist = artist;
+    const key = keyOf();
     const offset = reset ? 0 : songs.length;
     await store.run(async () => {
       const page = await api.songs(requested, offset, PAGE, fav, artist ?? undefined);
       if (requested !== sort || requestedFav !== fav || requestedArtist !== artist) return; // changed meanwhile
       songs = reset ? page.items : [...songs, ...page.items];
       total = page.total;
+      lists.set(key, { songs, total, at: Date.now() });
     });
     loading = false;
+  }
+
+  // Coming back to a list: its pages show at once (so Back lands where it was),
+  // and the first page is checked in the background.
+  async function refreshFirst(key: string) {
+    try {
+      const page = await api.songs(sort, 0, PAGE, fav, artist ?? undefined);
+      if (keyOf() !== key) return;
+      const same = page.total === total && page.items.every((s, i) => songs[i]?.id === s.id);
+      if (!same) {
+        songs = page.items;
+        total = page.total;
+        lists.set(key, { songs, total, at: Date.now() });
+      }
+    } catch {
+      /* keep what is shown */
+    }
   }
 
   function choose(next: SongSort) {
@@ -62,6 +87,15 @@
     void sort;
     void fav;
     void artist;
+    const key = keyOf();
+    const saved = lists.get(key);
+    if (saved && Date.now() - saved.at < KEEP_MS) {
+      songs = saved.songs;
+      total = saved.total;
+      arrive = false;
+      refreshFirst(key);
+      return;
+    }
     songs = [];
     total = null;
     load(true);
@@ -84,7 +118,14 @@
   );
 </script>
 
-<section>
+<script lang="ts" module>
+  import type { Song as Remembered } from '../lib/types';
+  // Lists already browsed during this visit, with every page loaded so far.
+  const KEEP_MS = 10 * 60_000;
+  const lists = new Map<string, { songs: Remembered[]; total: number | null; at: number }>();
+</script>
+
+<section class:arrive>
   <h2>{title}</h2>
   {#if total !== null}<p class="muted count">{total === 1 ? t('tracks.one') : t('tracks.count', { count: total })}</p>{/if}
   <div class="tabs" role="tablist">
@@ -106,7 +147,7 @@
   <SongList {songs} onplay={play} />
 
   {#if more}
-    <button class="more" onclick={() => load(false)} disabled={loading}>
+    <button class="more" use:nearEnd={() => !loading && load(false)} onclick={() => load(false)} disabled={loading}>
       {loading ? t('player.loading') : t('albums.loadMore')}
     </button>
   {/if}

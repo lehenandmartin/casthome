@@ -48,6 +48,14 @@
    page instead of the bottom of the screen, leaving a band under the tab bar. */
 html {
   height: 100%;
+  /* Hiding the scrollbar (full-screen overlays) never shifts the layout. */
+  scrollbar-gutter: stable;
+}
+
+/* A full-screen overlay is open (Now Playing, the queue sheet, a sheet): the
+   page behind stays still, without its own scrollbar. */
+html.locked {
+  overflow: hidden;
 }
 
 body {
@@ -243,11 +251,20 @@ input[type='range']:disabled {
 
 /* Bottom sheet (mobile) / centered panel (desktop) */
 /* Placeholder shapes while content loads (SkeletonGrid, SkeletonList, page headers). */
+/* Placeholders appear only if loading lasts more than a moment: a fast load
+   goes straight from nothing to the content, without a flash of grey. */
 .skeleton {
   display: block;
   background: var(--surface-3);
   border-radius: 6px;
-  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  animation:
+    skeleton-in 200ms ease-out 150ms both,
+    skeleton-pulse 1.4s ease-in-out 350ms infinite;
+}
+@keyframes skeleton-in {
+  from {
+    opacity: 0;
+  }
 }
 .skeleton.text {
   height: 0.9em;
@@ -349,6 +366,60 @@ input[type='range']:disabled {
     opacity: 0;
   }
 }
+
+/* ---------- Page changes ----------
+   The new page fades in (App.svelte keys it on the route). Done by us rather
+   than by the browser's view transitions, whose snapshot of a scrolled page
+   showed its top for a moment on iOS. */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.page {
+  animation: page-in 200ms ease-out;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Press feedback: cards, tiles and rows sink a little under the finger, like buttons. */
+:is(.grid > li > a, .track > a, .tiles .tile-link, .songs .row, .rows a, .card) {
+  transition: transform 0.12s ease-out;
+}
+:is(.grid > li > a, .track > a, .tiles .tile-link, .songs .row, .rows a, .card):active {
+  transform: scale(0.97);
+}
+
+/* Slow covers fade in when they arrive (lib/fade.ts). */
+img.fade-in {
+  animation: cover-in 220ms ease-out;
+}
+@keyframes cover-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Content that replaces a loading placeholder fades in, in a light cascade:
+   a page sets .arrive on its container when its data came from the network.
+   Only the first rows wait a little; later ones (next pages) just fade in. */
+.arrive :is(.songs > li, .grid > li, .track > *, .tiles > *, .rows > li) {
+  animation: arrive 260ms var(--ease-out) both;
+}
+.arrive :is(.songs, .grid, .track, .tiles, .rows) > :nth-child(2) { animation-delay: 25ms; }
+.arrive :is(.songs, .grid, .track, .tiles, .rows) > :nth-child(3) { animation-delay: 50ms; }
+.arrive :is(.songs, .grid, .track, .tiles, .rows) > :nth-child(4) { animation-delay: 75ms; }
+.arrive :is(.songs, .grid, .track, .tiles, .rows) > :nth-child(5) { animation-delay: 100ms; }
+.arrive :is(.songs, .grid, .track, .tiles, .rows) > :nth-child(6) { animation-delay: 125ms; }
+.arrive :is(.songs, .grid, .track, .tiles, .rows) > :nth-child(7) { animation-delay: 150ms; }
+.arrive :is(.songs, .grid, .track, .tiles, .rows) > :nth-child(8) { animation-delay: 175ms; }
+@keyframes arrive {
+  from {
+    opacity: 0;
+  }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   *,

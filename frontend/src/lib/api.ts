@@ -24,6 +24,8 @@ import type {
   StarKind,
 } from './types';
 
+import * as cache from './cache';
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -70,8 +72,66 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+/** A GET remembered in the cache (see cache.ts), keyed by its path. */
+function get<T>(path: string, maxAge?: number): Promise<T> {
+  return cache.remember(path, () => request<T>('GET', path), maxAge);
+}
+
+// Paths of the remembered requests, shared with `cached` below.
+const paths = {
+  albums: (type: AlbumListType, size: number, offset: number, genre?: string, starred = false) =>
+    `/library/albums?type=${type}&size=${size}&offset=${offset}` +
+    (genre ? `&genre=${encodeURIComponent(genre)}` : '') +
+    (starred ? '&starred=true' : ''),
+  artists: () => '/library/artists',
+  artist: (id: string) => `/library/artists/${encodeURIComponent(id)}`,
+  similarArtists: (id: string) => `/library/artists/${encodeURIComponent(id)}/similar`,
+  artistHighlights: (id: string) => `/library/artists/${encodeURIComponent(id)}/highlights`,
+  genres: () => '/library/genres',
+  album: (id: string) => `/library/albums/${encodeURIComponent(id)}`,
+  playlists: () => '/playlists',
+  playlist: (id: string) => `/playlists/${encodeURIComponent(id)}`,
+  songs: (sort: SongSort, offset: number, size: number, starred: boolean, artistId?: string) =>
+    `/library/songs?sort=${sort}&offset=${offset}&size=${size}` +
+    (starred ? '&starred=true' : '') +
+    (artistId ? `&artist_id=${encodeURIComponent(artistId)}` : ''),
+};
+
+/** The last response of a request, without asking the server (undefined if never loaded). */
+export const cached = {
+  artists: () => cache.peek<Artist[]>(paths.artists()),
+  artist: (id: string) => cache.peek<ArtistDetail>(paths.artist(id)),
+  similarArtists: (id: string) => cache.peek<Artist[]>(paths.similarArtists(id)),
+  artistHighlights: (id: string) => cache.peek<ArtistHighlights>(paths.artistHighlights(id)),
+  genres: () => cache.peek<Genre[]>(paths.genres()),
+  album: (id: string) => cache.peek<Album>(paths.album(id)),
+  playlists: () => cache.peek<Playlist[]>(paths.playlists()),
+  playlist: (id: string) => cache.peek<Playlist>(paths.playlist(id)),
+  /** What a list showed about this album or artist (name, cover...), before its page loads. */
+  albumSummary: cache.albumSummary,
+  artistSummary: cache.artistSummary,
+};
+
+/** Start loading a page's data ahead of time (e.g. when a link is touched). */
+export function prefetch(href: string): void {
+  const match = href.match(/^#\/(album|artist|playlist)\/(.+)$/);
+  if (!match) return;
+  const id = decodeURIComponent(match[2]);
+  const ignore = () => {};
+  if (match[1] === 'album') api.album(id).catch(ignore);
+  else if (match[1] === 'artist') api.artist(id).catch(ignore);
+  else api.playlist(id).catch(ignore);
+}
+
 export const coverUrl = (id: string | null, size = 300): string | null =>
   id ? `/api/cover/${encodeURIComponent(id)}?size=${size}` : null;
+
+const { rememberAlbums, rememberArtists } = cache;
+const withAlbums = (list: Album[]) => (rememberAlbums(list), list);
+const withArtists = (list: Artist[]) => (rememberArtists(list), list);
+const expirePlaylists = () => cache.expire('/playlists');
+// Favourites and ratings show in many pages: they all refresh on their next visit.
+const expireLibrary = () => cache.expire('/');
 
 export const api = {
   status: () => request<AppStatus>('GET', '/status'),
@@ -93,36 +153,44 @@ export const api = {
   revokeOtherSessions: () => request<void>('DELETE', '/sessions'),
 
   albums: (type: AlbumListType = 'newest', size = 40, offset = 0, genre?: string, starred = false) =>
-    request<Album[]>(
-      'GET',
-      `/library/albums?type=${type}&size=${size}&offset=${offset}` +
-        (genre ? `&genre=${encodeURIComponent(genre)}` : '') +
-        (starred ? '&starred=true' : ''),
-    ),
-  artists: () => request<Artist[]>('GET', '/library/artists'),
-  artist: (id: string) => request<ArtistDetail>('GET', `/library/artists/${encodeURIComponent(id)}`),
+    // Random lists are new on every request, as before.
+    (type === 'random'
+      ? request<Album[]>('GET', paths.albums(type, size, offset, genre, starred))
+      : get<Album[]>(paths.albums(type, size, offset, genre, starred))
+    ).then(withAlbums),
+  artists: () => get<Artist[]>(paths.artists()).then(withArtists),
+  artist: (id: string) =>
+    get<ArtistDetail>(paths.artist(id)).then((a) => {
+      rememberAlbums(a.albums);
+      return a;
+    }),
   /** Similar artists in the library (Last.fm, then similar tracks), for the artist page. */
-  similarArtists: (id: string) => request<Artist[]>('GET', `/library/artists/${encodeURIComponent(id)}/similar`),
-  artistHighlights: (id: string) =>
-    request<ArtistHighlights>('GET', `/library/artists/${encodeURIComponent(id)}/highlights`),
-  genres: () => request<Genre[]>('GET', '/library/genres'),
+  similarArtists: (id: string) => get<Artist[]>(paths.similarArtists(id), 300_000).then(withArtists),
+  artistHighlights: (id: string) => get<ArtistHighlights>(paths.artistHighlights(id), 300_000),
+  genres: () => get<Genre[]>(paths.genres()),
   genreSongs: (genre: string, count = 200) =>
     request<Song[]>('GET', `/library/genres/${encodeURIComponent(genre)}/songs?count=${count}`),
   search: (q: string, limit = 20) =>
-    request<SearchResult>('GET', `/library/search?q=${encodeURIComponent(q)}&limit=${limit}`),
-  album: (id: string) => request<Album>('GET', `/library/albums/${encodeURIComponent(id)}`),
+    request<SearchResult>('GET', `/library/search?q=${encodeURIComponent(q)}&limit=${limit}`).then((r) => {
+      rememberAlbums(r.albums);
+      rememberArtists(r.artists);
+      return r;
+    }),
+  album: (id: string) => get<Album>(paths.album(id)),
   starred: () => request<SearchResult>('GET', '/library/starred'),
   setStarred: (kind: StarKind, id: string, starred: boolean) =>
-    request<void>('PUT', '/library/star', { kind, id, starred }),
-  setRating: (id: string, rating: number) => request<void>('PUT', '/library/rating', { id, rating }),
+    request<void>('PUT', '/library/star', { kind, id, starred }).finally(expireLibrary),
+  setRating: (id: string, rating: number) =>
+    request<void>('PUT', '/library/rating', { id, rating }).finally(expireLibrary),
 
-  playlists: () => request<Playlist[]>('GET', '/playlists'),
-  playlist: (id: string) => request<Playlist>('GET', `/playlists/${encodeURIComponent(id)}`),
+  playlists: () => get<Playlist[]>(paths.playlists()),
+  playlist: (id: string) => get<Playlist>(paths.playlist(id)),
   createPlaylist: (name: string, songIds: string[] = [], fromQueue = false) =>
-    request<Playlist>('POST', '/playlists', { name, song_ids: songIds, from_queue: fromQueue }),
+    request<Playlist>('POST', '/playlists', { name, song_ids: songIds, from_queue: fromQueue }).finally(expirePlaylists),
   updatePlaylist: (id: string, changes: { name?: string; add_song_ids?: string[]; remove_indexes?: number[] }) =>
-    request<void>('PATCH', `/playlists/${encodeURIComponent(id)}`, changes),
-  deletePlaylist: (id: string) => request<void>('DELETE', `/playlists/${encodeURIComponent(id)}`),
+    request<void>('PATCH', `/playlists/${encodeURIComponent(id)}`, changes).finally(expirePlaylists),
+  deletePlaylist: (id: string) =>
+    request<void>('DELETE', `/playlists/${encodeURIComponent(id)}`).finally(expirePlaylists),
   playPlaylist: (id: string, startIndex = 0) =>
     request<void>('POST', '/queue', { playlist_id: id, mode: 'now', start_index: startIndex }),
   queuePlaylist: (id: string) =>
@@ -151,15 +219,15 @@ export const api = {
   startRadio: (songId: string) => request<{ source: string }>('POST', '/radio', { song_id: songId }),
   /** Artist radio: the artist and similar artists, shuffled, refilled from the artist. */
   startArtistRadio: (artistId: string) => request<{ source: string }>('POST', '/radio', { artist_id: artistId }),
-  home: () => request<HomeData>('GET', '/home'),
+  home: () =>
+    request<HomeData>('GET', '/home').then((h) => {
+      rememberAlbums([...h.recently_played, ...h.recently_added]);
+      rememberArtists(h.favorite_artists);
+      return h;
+    }),
   /** Every track, paged; 'recent' = most recently added first. `artistId`: that artist's only. */
   songs: (sort: SongSort = 'recent', offset = 0, size = 100, starred = false, artistId?: string) =>
-    request<SongPage>(
-      'GET',
-      `/library/songs?sort=${sort}&offset=${offset}&size=${size}` +
-        (starred ? '&starred=true' : '') +
-        (artistId ? `&artist_id=${encodeURIComponent(artistId)}` : ''),
-    ),
+    get<SongPage>(paths.songs(sort, offset, size, starred, artistId)),
   /** Insert songs without replacing the queue. */
   queueSongs: (songIds: string[], mode: AddMode) =>
     request<void>('POST', '/queue', { song_ids: songIds, mode, replace: false }),

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fadeOut, sheetOut } from '../lib/motion';
   import { api } from '../lib/api';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
@@ -37,8 +38,8 @@
   }
 </script>
 
-<div class="sheet-backdrop" role="presentation" onclick={onclose}></div>
-<div class="sheet" role="dialog" aria-modal="true" aria-label={t('playlist.pickTitle')}>
+<div class="sheet-backdrop" role="presentation" onclick={onclose} out:fadeOut|global></div>
+<div class="sheet" out:sheetOut|global role="dialog" aria-modal="true" aria-label={t('playlist.pickTitle')}>
   <h3>{t('playlist.pickTitle')}</h3>
   <form onsubmit={create}>
     <input type="text" bind:value={name} placeholder={t('playlists.namePlaceholder')} aria-label={t('playlists.new')} />

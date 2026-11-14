@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, coverUrl } from '../lib/api';
+  import { api, cached, coverUrl } from '../lib/api';
   import { menu } from '../lib/contextMenu.svelte';
   import { dialogs } from '../lib/dialog.svelte';
   import { playlistMenu } from '../lib/menus';
@@ -11,8 +11,10 @@
   import Icon from './Icon.svelte';
   import SkeletonList from './SkeletonList.svelte';
 
-  let playlists = $state<Playlist[]>([]);
-  let loaded = $state(false);
+  // Shown at once from memory, then refreshed.
+  let playlists = $state<Playlist[]>(cached.playlists() ?? []);
+  let loaded = $state(cached.playlists() !== undefined);
+  const arrive = cached.playlists() === undefined;
 
   // Most recently changed first (sorted by the server).
   async function load() {
@@ -40,7 +42,7 @@
   load();
 </script>
 
-<section>
+<section class:arrive>
   <div class="head">
     <h2>{t('playlists.title')}</h2>
     <button class="primary new" onclick={create}><Icon name="plus" size={18} />{t('playlists.new')}</button>
@@ -51,7 +53,7 @@
   {#if loaded && playlists.length === 0}
     <p class="muted">{t('playlists.empty')}</p>
   {/if}
-  <ul>
+  <ul class="rows">
     {#each playlists as playlist (playlist.id)}
       <li>
         <a href={`#/playlist/${encodeURIComponent(playlist.id)}`} use:menu={() => playlistMenu(playlist, load)}>

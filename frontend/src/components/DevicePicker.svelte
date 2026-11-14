@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fadeOut, sheetOut } from '../lib/motion';
   import { api } from '../lib/api';
   import { deviceIcon } from '../lib/devices';
   import { t } from '../lib/i18n';
@@ -115,8 +116,8 @@
   </li>
 {/snippet}
 
-<div class="sheet-backdrop" role="presentation" onclick={close}></div>
-<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="device-title">
+<div class="sheet-backdrop" role="presentation" onclick={close} out:fadeOut|global></div>
+<div class="sheet" out:sheetOut|global role="dialog" aria-modal="true" aria-labelledby="device-title">
   <div class="head">
     <h3 id="device-title">{t('devices.title')}</h3>
     <button class="icon-btn" aria-label={t('playlist.cancel')} onclick={close}><Icon name="close" size={20} /></button>

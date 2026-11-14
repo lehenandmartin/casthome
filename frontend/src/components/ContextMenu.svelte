@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fadeOut, sheetOut } from '../lib/motion';
   // The app's single action menu (see lib/contextMenu.svelte.ts), and the
   // playlist picker its "Add to playlist…" entries open.
   import { tick } from 'svelte';
@@ -91,10 +92,11 @@
 />
 
 {#if open}
-  <div class="sheet-backdrop" class:clear={open.at} role="presentation" onclick={backdropClick} oncontextmenu={reopenUnder}></div>
+  <div class="sheet-backdrop" class:clear={open.at} role="presentation" onclick={backdropClick} oncontextmenu={reopenUnder} out:fadeOut></div>
   <div
     class="sheet"
     class:popover={open.at}
+    out:sheetOut={{ popover: Boolean(open.at) }}
     bind:this={menuEl}
     role="dialog"
     aria-modal="true"

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, coverUrl } from '../lib/api';
+  import { api, cached, coverUrl } from '../lib/api';
   import { t } from '../lib/i18n';
   import { preloadImages } from '../lib/preload';
   import { startArtistRadio } from '../lib/radio';
@@ -14,22 +14,31 @@
   import StarButton from './StarButton.svelte';
 
   let { id }: { id: string } = $props();
-  let artist = $state<ArtistDetail | null>(null);
+  // Before its own request returns, the artist may be only what a list knew
+  // (no albums yet: placeholders show).
+  let artist = $state<ArtistDetail | (Artist & { albums?: undefined }) | null>(null);
   let highlights = $state<ArtistHighlights | null>(null);
   // null while loading (a placeholder is shown).
   let similar = $state<Artist[] | null>(null);
   let expanded = $state(false);
+  // Content coming from the network (not from memory) arrives in a light cascade.
+  let arrive = $state(false);
 
   const FOLDED = 5;
 
+  // Shown at once from memory when this artist was seen before.
   $effect(() => {
-    artist = null;
-    highlights = null;
-    similar = null;
-    expanded = false;
     const artistId = id;
+    artist = cached.artist(artistId) ?? cached.artistSummary(artistId) ?? null;
+    arrive = !cached.artist(artistId);
+    highlights = cached.artistHighlights(artistId) ?? null;
+    const knownSimilar = cached.similarArtists(artistId) ?? null;
+    const similarKnown = knownSimilar !== null;
+    similar = knownSimilar;
+    expanded = false;
     store.run(async () => {
-      artist = await api.artist(artistId);
+      const loaded = await api.artist(artistId);
+      if (artistId === id) artist = loaded;
     });
     // Separate request: popular tracks come from Last.fm and may be slower.
     api
@@ -42,11 +51,11 @@
     api
       .similarArtists(artistId)
       .then(async (list) => {
-        await preloadImages(list.map((a) => coverUrl(a.cover_art)));
+        if (!similarKnown) await preloadImages(list.map((a) => coverUrl(a.cover_art)));
         if (artistId === id) similar = list;
       })
       .catch(() => {
-        if (artistId === id) similar = [];
+        if (artistId === id && !similarKnown) similar = [];
       });
   });
 
@@ -81,9 +90,9 @@
 </script>
 
 {#if artist}
-  <section>
+  <section class:arrive>
     <h2>{artist.name} <StarButton kind="artist" id={artist.id} bind:starred={artist.starred} /></h2>
-    <p class="muted">{t('album.count', { count: artist.albums.length })}</p>
+    <p class="muted">{t('album.count', { count: artist.albums?.length ?? artist.album_count })}</p>
     <div class="actions">
       <button class="primary" onclick={playAll}>{t('artist.playAll')}</button>
       <button onclick={queue}>{t('album.addToQueue')}</button>
@@ -122,7 +131,11 @@
     {/if}
 
     <h3>{t('artist.albums')}</h3>
-    <AlbumGrid albums={artist.albums} showArtist={false} />
+    {#if artist.albums}
+      <AlbumGrid albums={artist.albums} showArtist={false} />
+    {:else}
+      <SkeletonGrid rows={1} />
+    {/if}
 
     {#if similar === null}
       <h3>{t('artist.similar')}</h3>

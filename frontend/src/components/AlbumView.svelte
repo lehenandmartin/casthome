@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, coverUrl } from '../lib/api';
+  import { api, cached, coverUrl } from '../lib/api';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { preloadImages } from '../lib/preload';
@@ -19,13 +19,23 @@
   let picking = $state(false);
   // The artist's other albums, shown under the tracks (null while loading).
   let more = $state<Album[] | null>(null);
+  // Content coming from the network (not from memory) arrives in a light cascade.
+  let arrive = $state(false);
 
+  // Shown at once: the album as last loaded, else what the tapped card knew
+  // (name, artist, cover; the tracks then show placeholders).
   $effect(() => {
-    album = null;
-    more = null;
     const albumId = id;
+    // A local first: reading `album` back here would make this effect depend on it.
+    const known = cached.album(albumId) ?? cached.albumSummary(albumId) ?? null;
+    album = known;
+    arrive = !known?.songs;
+    const knownOthers = othersFrom(known?.artist_id ? cached.artist(known.artist_id) : undefined, albumId);
+    const shownAtOnce = knownOthers !== null;
+    more = knownOthers;
     store.run(async () => {
       const loaded = await api.album(albumId);
+      if (albumId !== id) return;
       album = loaded;
       if (!loaded.artist_id) {
         more = [];
@@ -34,15 +44,20 @@
       api
         .artist(loaded.artist_id)
         .then(async (artist) => {
-          const others = artist.albums.filter((a) => a.id !== albumId);
-          await preloadImages(others.slice(0, 12).map((a) => coverUrl(a.cover_art))); // shown all at once
+          const others = othersFrom(artist, albumId) ?? [];
+          // Shown all at once, when their pictures are loaded (unless already shown).
+          if (!shownAtOnce) await preloadImages(others.slice(0, 12).map((a) => coverUrl(a.cover_art)));
           if (albumId === id) more = others;
         })
         .catch(() => {
-          if (albumId === id) more = [];
+          if (albumId === id && !shownAtOnce) more = [];
         });
     });
   });
+
+  function othersFrom(artist: { albums: Album[] } | undefined, albumId: string): Album[] | null {
+    return artist ? artist.albums.filter((a) => a.id !== albumId) : null;
+  }
 
   async function queue() {
     if (!album) return;
@@ -55,11 +70,16 @@
 </script>
 
 {#if album}
-  <section>
+  <section class:arrive>
     <header>
       <div class="cover">
         {#if album.cover_art}
-          <img src={coverUrl(album.cover_art, 600)} alt="" />
+          <!-- The smaller cover the lists use is usually cached: it shows while the large one loads. -->
+          <img
+            src={coverUrl(album.cover_art, 600)}
+            alt=""
+            style:background={`center / cover url("${coverUrl(album.cover_art, 300)}")`}
+          />
         {:else}
           <span class="placeholder"><Icon name="disc" size={64} /></span>
         {/if}
@@ -92,7 +112,11 @@
         </div>
       </div>
     </header>
-    <SongList songs={album.songs ?? []} numbered showAlbum={false} onplay={(i) => store.run(() => api.playAlbum(album!.id, i))} />
+    {#if album.songs}
+      <SongList songs={album.songs} numbered showAlbum={false} onplay={(i) => store.run(() => api.playAlbum(album!.id, i))} />
+    {:else}
+      <SkeletonList count={Math.min(album.song_count || 8, 12)} />
+    {/if}
 
     {#if more === null}
       <h3 class="more-title">{t('album.moreBy', { artist: album.artist })}</h3>

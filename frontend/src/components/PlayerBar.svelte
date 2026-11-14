@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fadeIn } from '../lib/motion';
   import { coverUrl } from '../lib/api';
   import { menu } from '../lib/contextMenu.svelte';
   import { currentSongMenu } from '../lib/menus';
@@ -23,17 +24,20 @@
   <div class="mini">
     <div class="mini-progress" style:width={`${progress}%`}></div>
     <button class="mini-main" use:menu={songMenu} disabled={!song} onclick={() => store.openNowPlaying()} aria-label={t('nowPlaying.open')}>
-      {#if song?.cover_art}
-        <img src={coverUrl(song.cover_art, 96)} alt="" />
-      {:else}
-        <span class="thumb"><Icon name="disc" size={20} /></span>
-      {/if}
-      <span class="text">
-        <span class="title ellipsis">{song?.title ?? t('player.nothing')}</span>
-        <span class="sub ellipsis" class:casting>
-          {#if casting}{t('player.onDevice', { device: store.player?.device_name ?? '' })}{:else if song}{song.artist}{/if}
+      <!-- A new track: its cover and title fade in. -->
+      {#key song?.id}
+        {#if song?.cover_art}
+          <img src={coverUrl(song.cover_art, 96)} alt="" in:fadeIn />
+        {:else}
+          <span class="thumb"><Icon name="disc" size={20} /></span>
+        {/if}
+        <span class="text" in:fadeIn>
+          <span class="title ellipsis">{song?.title ?? t('player.nothing')}</span>
+          <span class="sub ellipsis" class:casting>
+            {#if casting}{t('player.onDevice', { device: store.player?.device_name ?? '' })}{:else if song}{song.artist}{/if}
+          </span>
         </span>
-      </span>
+      {/key}
     </button>
     <DeviceButton compact />
     <PlayerControls modes={false} />
@@ -43,20 +47,24 @@
   <div class="full">
     <div class="now" use:menu={songMenu}>
       <button class="cover" disabled={!song} onclick={() => store.openNowPlaying()} aria-label={t('nowPlaying.open')}>
-        {#if song?.cover_art}
-          <img src={coverUrl(song.cover_art, 128)} alt="" />
-        {:else}
-          <span class="thumb"><Icon name="disc" size={22} /></span>
-        {/if}
+        {#key song?.id}
+          {#if song?.cover_art}
+            <img src={coverUrl(song.cover_art, 128)} alt="" in:fadeIn />
+          {:else}
+            <span class="thumb"><Icon name="disc" size={22} /></span>
+          {/if}
+        {/key}
       </button>
-      <div class="text">
-        <span class="title ellipsis">{song?.title ?? t('player.nothing')}</span>
-        {#if song}
-          <span class="sub ellipsis">
-            {#if song.artist_id}<a href={`#/artist/${encodeURIComponent(song.artist_id)}`}>{song.artist}</a>{:else}{song.artist}{/if}
-          </span>
-        {/if}
-      </div>
+      {#key song?.id}
+        <div class="text" in:fadeIn>
+          <span class="title ellipsis">{song?.title ?? t('player.nothing')}</span>
+          {#if song}
+            <span class="sub ellipsis">
+              {#if song.artist_id}<a href={`#/artist/${encodeURIComponent(song.artist_id)}`}>{song.artist}</a>{:else}{song.artist}{/if}
+            </span>
+          {/if}
+        </div>
+      {/key}
       {#if song}
         {#key song.id}<StarButton kind="song" id={song.id} starred={song.starred} />{/key}
       {/if}

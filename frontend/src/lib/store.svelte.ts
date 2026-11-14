@@ -3,6 +3,7 @@ import { browserPlayer } from './browserPlayer';
 import type { AppStatus, Device, Me, Notification, PlayerState, QueueState } from './types';
 import { describeUserAgent } from './useragent';
 
+
 // Last known state, shown instantly when the app (re)starts so a reload never
 // flashes an empty player. Only a per-device convenience: the server's
 // snapshot replaces it as soon as the live connection opens.
@@ -116,7 +117,7 @@ class AppStore {
 
   openNowPlaying(): void {
     if (this.nowPlayingOpen) return;
-    history.pushState({ nowPlaying: true }, '');
+    history.pushState({ ...(history.state ?? {}), nowPlaying: true }, '');
     this.nowPlayingOpen = true;
   }
 
