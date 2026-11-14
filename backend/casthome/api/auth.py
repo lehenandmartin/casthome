@@ -92,6 +92,8 @@ async def me(request: Request, session: Annotated[Session, Depends(require_sessi
         "access_mode": ctx.config.access_mode,
         # Let in without a password: nothing to sign out of.
         "open_session": session is OPEN_SESSION,
+        # Interface options set in Settings, the same on every device.
+        "show_ratings": ctx.config.playback.show_ratings,
     }
 
 

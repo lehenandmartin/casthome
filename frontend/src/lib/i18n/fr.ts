@@ -60,6 +60,8 @@ export const fr: Record<MessageKey, string> = {
   'playback.preloadHint': 'Transmet le titre suivant à l’appareil Cast 20 s avant la fin, pour des blancs plus courts.',
   'playback.scrobble': 'Scrobbler vers Navidrome',
   'playback.scrobbleHint': 'Signale ce que vous écoutez (lecture en cours, nombre d’écoutes, écoutes récentes). Navidrome le transmet à Last.fm ou ListenBrainz s’ils y sont configurés.',
+  'playback.showRatings': 'Afficher les notes',
+  'playback.showRatingsHint': 'Les notes sur 5 étoiles des pages d’album et des menus d’actions, sur tous les appareils.',
   'playback.hosts': 'Adresses des appareils Cast',
   'playback.hostsHint': 'Seulement si une enceinte ou une TV n’est pas trouvée automatiquement : ses adresses IP, séparées par des virgules.',
   'playback.appliesNext': 'Les changements s’appliquent à partir du titre suivant.',

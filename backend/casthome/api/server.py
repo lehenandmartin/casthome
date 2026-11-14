@@ -51,6 +51,7 @@ class PlaybackBody(BaseModel):
     preload_next: bool = True
     known_hosts: list[str] = Field(default_factory=list, max_length=32)
     scrobble: bool = True
+    show_ratings: bool = True
 
 
 class AccessBody(BaseModel):
@@ -232,6 +233,7 @@ async def update_playback(
             preload_next=body.preload_next,
             known_hosts=tuple(hosts),
             scrobble=body.scrobble,
+            show_ratings=body.show_ratings,
         )
     )
     ctx.apply_playback()

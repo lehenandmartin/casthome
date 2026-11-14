@@ -2,6 +2,7 @@
   // Settings → Playback: streaming quality, preloading, Cast addresses.
   import { ApiError, api } from '../lib/api';
   import { t, tCode } from '../lib/i18n';
+  import { display } from '../lib/display.svelte';
   import { store } from '../lib/store.svelte';
   import type { PlaybackOptions, StreamFormat } from '../lib/types';
 
@@ -28,6 +29,8 @@
   let hosts = $state(initial.known_hosts.join(', '));
   // svelte-ignore state_referenced_locally
   let scrobble = $state(initial.scrobble);
+  // svelte-ignore state_referenced_locally
+  let showRatings = $state(initial.show_ratings);
   let busy = $state(false);
   let error = $state<string | null>(null);
 
@@ -43,6 +46,7 @@
       bitrate !== initial.max_bitrate ||
       preload !== initial.preload_next ||
       scrobble !== initial.scrobble ||
+      showRatings !== initial.show_ratings ||
       hostList.join(',') !== initial.known_hosts.join(','),
   );
 
@@ -57,8 +61,10 @@
         preload_next: preload,
         known_hosts: hostList,
         scrobble,
+        show_ratings: showRatings,
       });
       hosts = hostList.join(', ');
+      display.ratings = isLocked('show_ratings') ? initial.show_ratings : showRatings;
       store.notify('settings_saved', {}, 'info');
       onsaved();
     } catch (err) {
@@ -105,6 +111,14 @@
     <span class="text">
       <strong>{t('playback.scrobble')}</strong>
       <small class="muted">{isLocked('scrobble') ? t('navidrome.locked') : t('playback.scrobbleHint')}</small>
+    </span>
+  </label>
+
+  <label class="check">
+    <input type="checkbox" bind:checked={showRatings} disabled={isLocked('show_ratings')} />
+    <span class="text">
+      <strong>{t('playback.showRatings')}</strong>
+      <small class="muted">{isLocked('show_ratings') ? t('navidrome.locked') : t('playback.showRatingsHint')}</small>
     </span>
   </label>
 

@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     # Report plays to Navidrome ("now playing", then a scrobble).
     scrobble: bool = True
 
+    # Show the 5-star ratings in the interface (album pages, action menus).
+    show_ratings: bool = True
+
     # Comma-separated IPs of Cast devices, for networks where mDNS is filtered.
     cast_known_hosts: str = ""
 

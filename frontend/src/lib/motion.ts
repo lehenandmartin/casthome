@@ -21,9 +21,13 @@ export function fadeIn(_node: Element, { duration = 160 }: { duration?: number }
  * A sheet going away: back down on phones (it rose from the bottom), a fade
  * for the centred panel on wide screens and for menus opened at the pointer.
  */
-export function sheetOut(node: Element, { popover = false }: { popover?: boolean } = {}): TransitionConfig {
+export function sheetOut(node: Element): TransitionConfig {
   if (reduced()) return { duration: 0 };
-  if (popover || matchMedia('(min-width: 720px)').matches) return fadeOut(node, { duration: 120 });
+  // A menu opened at the pointer has the `popover` class (read from the node:
+  // the menu's data is already gone when it closes).
+  if (node.classList.contains('popover') || matchMedia('(min-width: 720px)').matches) {
+    return fadeOut(node, { duration: 120 });
+  }
   return {
     duration: 180,
     easing: easeIn,

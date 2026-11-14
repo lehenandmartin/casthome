@@ -271,6 +271,7 @@ async def test_playback_options_are_saved_and_applied(app_factory) -> None:  # t
             "preload_next": True,
             "known_hosts": [],
             "scrobble": True,
+            "show_ratings": True,
             "locked": [],
         }
         body = {"stream_format": "mp3", "max_bitrate": 192, "preload_next": False, "known_hosts": [" 192.168.1.20 ", "tv.lan"]}
@@ -319,3 +320,25 @@ async def test_scrobbling_can_be_turned_off(app_factory) -> None:  # type: ignor
         await sink("s2", True, None)
         await asyncio.sleep(0)
         assert sent == ["s1"]
+
+
+async def test_ratings_can_be_hidden_for_every_device(app_factory) -> None:  # type: ignore[no-untyped-def]
+    app = await app_factory()
+    async with Client(app) as http:
+        await finish_setup(http)
+        assert (await http.get("/api/auth/me")).json()["show_ratings"] is True
+        body = {"stream_format": "raw", "max_bitrate": 0, "preload_next": True, "known_hosts": [], "show_ratings": False}
+        assert (await http.put("/api/settings/playback", json=body)).status_code == 200
+        assert (await http.get("/api/auth/me")).json()["show_ratings"] is False
+        assert (await http.get("/api/settings")).json()["playback"]["show_ratings"] is False
+
+
+async def test_ratings_set_in_the_environment_are_locked(app_factory) -> None:  # type: ignore[no-untyped-def]
+    app = await app_factory(show_ratings=False)
+    ctx = app.state.ctx
+    assert ctx.config.playback_locked == ["show_ratings"]
+    async with Client(app) as http:
+        await finish_setup(http)
+        body = {"stream_format": "raw", "max_bitrate": 0, "preload_next": True, "known_hosts": [], "show_ratings": True}
+        assert (await http.put("/api/settings/playback", json=body)).status_code == 200
+        assert (await http.get("/api/auth/me")).json()["show_ratings"] is False

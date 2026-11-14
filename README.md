@@ -99,7 +99,9 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   - *Navidrome*: server, account and Cast URL, with a connection test before
     saving.
   - *Playback*: streaming quality and maximum bitrate, preloading, scrobbling,
-    Cast device addresses.
+    Cast device addresses, and showing the 5-star ratings (album pages,
+    action menus; hidden for those who never rate). These apply to every
+    device.
   - *Language*: automatic (this browser's language), English or French; saved
     on the device, applied at once.
   - *Access to CastHome*: password, open at home, or no password; this
@@ -284,6 +286,7 @@ Settings (handy for scripted installs).
 | `CAST_PRELOAD_NEXT` | On by default: hand the next track to the device 20 s before the end of the current one to shorten the gap. `false` disables it. Also in Settings. |
 | `CAST_KNOWN_HOSTS` | Cast device IPs, when mDNS is blocked. Also in Settings. |
 | `SCROBBLE` | On by default: report plays to Navidrome ("now playing" and scrobbles). `false` disables it. Also in Settings. |
+| `SHOW_RATINGS` | On by default: show the 5-star ratings (album pages, action menus) on every device. `false` hides them. Also in Settings. |
 
 ### Access
 

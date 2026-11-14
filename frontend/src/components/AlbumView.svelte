@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, cached, coverUrl } from '../lib/api';
+  import { display } from '../lib/display.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { preloadImages } from '../lib/preload';
@@ -97,7 +98,7 @@
             .filter(Boolean)
             .join(' · ')}
         </p>
-        <RatingStars id={album.id} bind:rating={album.user_rating} />
+        {#if display.ratings}<RatingStars id={album.id} bind:rating={album.user_rating} />{/if}
         <div class="actions">
           <button class="primary play" onclick={() => store.run(() => api.playAlbum(album!.id))}>
             <Icon name="play" size={18} />{t('album.play')}

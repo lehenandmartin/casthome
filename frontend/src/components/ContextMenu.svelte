@@ -7,6 +7,7 @@
   import Icon from './Icon.svelte';
   import PlaylistPicker from './PlaylistPicker.svelte';
   import RatingStars from './RatingStars.svelte';
+  import { display } from '../lib/display.svelte';
 
   const open = $derived(contextMenu.current);
   const items = $derived((open?.spec.items ?? []).filter((item): item is MenuAction => Boolean(item)));
@@ -96,7 +97,7 @@
   <div
     class="sheet"
     class:popover={open.at}
-    out:sheetOut={{ popover: Boolean(open.at) }}
+    out:sheetOut
     bind:this={menuEl}
     role="dialog"
     aria-modal="true"
@@ -109,7 +110,7 @@
         <strong class="ellipsis">{open.spec.title}</strong>
         {#if open.spec.subtitle}<span class="muted ellipsis">{open.spec.subtitle}</span>{/if}
       </span>
-      {#if open.spec.rating}
+      {#if open.spec.rating && display.ratings}
         {@const rating = open.spec.rating}
         <RatingStars
           id={rating.id}

@@ -52,6 +52,7 @@ class PlaybackConfig:
     preload_next: bool
     known_hosts: tuple[str, ...]  # Cast device addresses, when mDNS is blocked
     scrobble: bool = True  # report plays to Navidrome
+    show_ratings: bool = True  # show the 5-star ratings in the interface (every device)
 
 
 # Playback field -> environment setting (see config.py).
@@ -61,6 +62,7 @@ PLAYBACK_ENV = {
     "preload_next": "cast_preload_next",
     "known_hosts": "cast_known_hosts",
     "scrobble": "scrobble",
+    "show_ratings": "show_ratings",
 }
 
 
@@ -209,6 +211,7 @@ class ConfigStore:
             "preload_next": s.cast_preload_next,
             "known_hosts": tuple(s.known_hosts),
             "scrobble": s.scrobble,
+            "show_ratings": s.show_ratings,
         }
         locked = set(self.playback_locked)
         values = {}

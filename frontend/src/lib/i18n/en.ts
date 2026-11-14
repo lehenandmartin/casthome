@@ -60,6 +60,8 @@ export const en = {
   'playback.preloadHint': 'Hands the next track to the Cast device 20 s before the end, for shorter gaps.',
   'playback.scrobble': 'Scrobble to Navidrome',
   'playback.scrobbleHint': 'Reports what you play (now playing, play counts, recently played). Navidrome forwards it to Last.fm or ListenBrainz if set up there.',
+  'playback.showRatings': 'Show ratings',
+  'playback.showRatingsHint': 'The 5-star ratings on album pages and in action menus, on every device.',
   'playback.hosts': 'Cast device addresses',
   'playback.hostsHint': 'Only if a speaker or TV is not found automatically: its IP addresses, separated by commas.',
   'playback.appliesNext': 'Changes apply from the next track.',

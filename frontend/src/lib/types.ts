@@ -179,6 +179,8 @@ export interface Me {
   access_mode: AccessMode;
   /** Let in without a password (open access, or the local network in LAN mode). */
   open_session: boolean;
+  /** Show the 5-star ratings (set in Settings, the same on every device). */
+  show_ratings: boolean;
 }
 
 export interface NavidromeFields {
@@ -220,6 +222,7 @@ export interface PlaybackOptions {
   known_hosts: string[];
   /** Report plays to Navidrome. */
   scrobble: boolean;
+  show_ratings: boolean;
 }
 
 export interface ServerSettings extends ClientInfo {
