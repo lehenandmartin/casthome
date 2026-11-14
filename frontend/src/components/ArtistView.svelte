@@ -3,8 +3,9 @@
   import { t } from '../lib/i18n';
   import { startArtistRadio } from '../lib/radio';
   import { store } from '../lib/store.svelte';
-  import type { ArtistDetail, ArtistHighlights } from '../lib/types';
+  import type { Artist, ArtistDetail, ArtistHighlights } from '../lib/types';
   import AlbumGrid from './AlbumGrid.svelte';
+  import ArtistGrid from './ArtistGrid.svelte';
   import Icon from './Icon.svelte';
   import SongList from './SongList.svelte';
   import StarButton from './StarButton.svelte';
@@ -12,6 +13,7 @@
   let { id }: { id: string } = $props();
   let artist = $state<ArtistDetail | null>(null);
   let highlights = $state<ArtistHighlights | null>(null);
+  let similar = $state<Artist[]>([]);
   let expanded = $state(false);
 
   const FOLDED = 5;
@@ -19,6 +21,7 @@
   $effect(() => {
     artist = null;
     highlights = null;
+    similar = [];
     expanded = false;
     const artistId = id;
     store.run(async () => {
@@ -29,6 +32,13 @@
       .artistHighlights(artistId)
       .then((h) => {
         if (artistId === id) highlights = h;
+      })
+      .catch(() => {});
+    // Similar artists: optional, shown when they arrive.
+    api
+      .similarArtists(artistId)
+      .then((list) => {
+        if (artistId === id) similar = list;
       })
       .catch(() => {});
   });
@@ -103,6 +113,11 @@
 
     <h3>{t('artist.albums')}</h3>
     <AlbumGrid albums={artist.albums} showArtist={false} />
+
+    {#if similar.length > 0}
+      <h3>{t('artist.similar')}</h3>
+      <ArtistGrid artists={similar} />
+    {/if}
   </section>
 {/if}
 

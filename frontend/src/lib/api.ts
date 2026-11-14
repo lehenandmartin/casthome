@@ -101,6 +101,8 @@ export const api = {
     ),
   artists: () => request<Artist[]>('GET', '/library/artists'),
   artist: (id: string) => request<ArtistDetail>('GET', `/library/artists/${encodeURIComponent(id)}`),
+  /** Similar artists in the library (Last.fm, then similar tracks), for the artist page. */
+  similarArtists: (id: string) => request<Artist[]>('GET', `/library/artists/${encodeURIComponent(id)}/similar`),
   artistHighlights: (id: string) =>
     request<ArtistHighlights>('GET', `/library/artists/${encodeURIComponent(id)}/highlights`),
   genres: () => request<Genre[]>('GET', '/library/genres'),

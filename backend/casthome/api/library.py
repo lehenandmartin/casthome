@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import re
+from collections import Counter
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 
 from casthome.api.deps import get_ctx, require_session
-from casthome.subsonic.client import SubsonicError
+from casthome.subsonic.client import NavidromeUnavailableError, SubsonicError
+from casthome.subsonic.models import Artist, Song
 from casthome.subsonic.native import SongSort
 
 router = APIRouter(prefix="/api", tags=["library"], dependencies=[Depends(require_session)])
@@ -95,6 +98,63 @@ async def artist_highlights(artist_id: str, request: Request) -> dict:
         popular(), ctx.native.get_songs("recent", 0, 1, starred=True, artist_id=artist_id)
     )
     return {"top_source": source, "top": [s.model_dump() for s in top], "liked_count": liked_count}
+
+
+SIMILAR_ARTISTS = 12
+
+
+def includes_artist(name: str, candidate: str) -> bool:
+    """`candidate` names the artist, alone or with others ("Madonna & Charli xcx")."""
+    return re.search(rf"(?<!\w){re.escape(name)}(?!\w)", candidate, re.IGNORECASE) is not None
+
+
+def pick_similar_artists(
+    artist: Artist,
+    lastfm: list[Artist],
+    similar_songs: list[Song],
+    library: dict[str, Artist],
+    limit: int = SIMILAR_ARTISTS,
+) -> list[Artist]:
+    """Last.fm's similar artists first, then the artists most present among
+    similar tracks. Never the artist again, a duo with them, or an artist
+    without albums in the library (an empty page)."""
+    by_count = Counter(s.artist_id for s in similar_songs if s.artist_id)
+    from_songs = [library[i] for i, _n in by_count.most_common() if i in library]
+    picked: list[Artist] = []
+    seen = {artist.id}
+    for candidate in [*lastfm, *from_songs]:
+        if (
+            candidate.id in seen
+            or candidate.album_count == 0
+            or includes_artist(artist.name, candidate.name)
+        ):
+            continue
+        seen.add(candidate.id)
+        picked.append(library.get(candidate.id, candidate))
+        if len(picked) == limit:
+            break
+    return picked
+
+
+@router.get("/library/artists/{artist_id}/similar")
+async def similar_artists(artist_id: str, request: Request) -> list[dict]:
+    """Similar artists in the library, for the bottom of the artist page."""
+    ctx = get_ctx(request)
+
+    async def optional(call):  # type: ignore[no-untyped-def]
+        try:
+            return await call
+        except (SubsonicError, NavidromeUnavailableError):
+            return []
+
+    (info, _albums), lastfm, songs, library = await asyncio.gather(
+        ctx.subsonic.get_artist(artist_id),
+        optional(ctx.subsonic.get_similar_artists(artist_id)),
+        optional(ctx.subsonic.get_similar_songs2(artist_id, 100)),
+        ctx.subsonic.get_artists(),
+    )
+    picked = pick_similar_artists(info, lastfm, songs, {a.id: a for a in library})
+    return [a.model_dump() for a in picked]
 
 
 @router.get("/library/genres")

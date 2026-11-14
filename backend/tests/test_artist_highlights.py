@@ -57,3 +57,35 @@ async def test_without_popularity_falls_back_to_your_most_played() -> None:
     result = await artist_highlights("a1", request_for(subsonic, native))  # type: ignore[arg-type]
     assert result["top_source"] == "most_played"
     assert [s["id"] for s in result["top"]] == ["s3"]  # never played: left out
+
+
+# --- similar artists (bottom of the artist page) -----------------------------
+
+from casthome.api.library import includes_artist, pick_similar_artists  # noqa: E402
+
+
+def artist(i: str, name: str, albums: int = 1) -> Artist:
+    return Artist(id=i, name=name, album_count=albums)
+
+
+def test_similar_artists_skip_the_artist_duos_and_empty_pages() -> None:
+    madonna = artist("m", "Madonna", 19)
+    library = {a.id: a for a in [madonna, artist("r", "RAYE", 4), artist("j", "Jungle", 4), artist("k", "Kylie"),
+                                  artist("d", "Madonna & Charli xcx"), artist("z", "3OH!3", 0)]}
+    lastfm = [library["r"], library["d"], library["z"], library["m"]]
+    songs = [Song(id=f"s{i}", title="t", artist_id=a) for i, a in enumerate(["j", "m", "k", "j", "r", "d", "x"])]
+    picked = pick_similar_artists(madonna, lastfm, songs, library)
+    # Last.fm order first, then by presence among similar tracks; unknown ids ("x") dropped.
+    assert [a.name for a in picked] == ["RAYE", "Jungle", "Kylie"]
+
+
+def test_similar_artists_are_limited() -> None:
+    library = {str(i): artist(str(i), f"A{i}") for i in range(30)}
+    picked = pick_similar_artists(artist("me", "Me"), list(library.values()), [], library, limit=12)
+    assert len(picked) == 12
+
+
+def test_includes_artist_matches_whole_names_only() -> None:
+    assert includes_artist("Madonna", "Britney Spears feat. Madonna")
+    assert includes_artist("Charli xcx", "Madonna & Charli XCX")
+    assert not includes_artist("Kesha", "Keshawn")

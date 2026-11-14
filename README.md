@@ -99,6 +99,12 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   (features included) with the Tracks page sorts; *Popular* lists their most
   popular tracks in your library (Last.fm popularity through Navidrome's
   `getTopSongs`; without it, your most played), 5 shown, 10 with *See more*.
+  At the bottom, *Similar artists*: Last.fm's similar artists in your library
+  (`getArtistInfo2`), then the artists most present among similar tracks;
+  never the artist again, a duo with them ("Madonna & Charli xcx" on
+  Madonna's page) or an artist without albums.
+- **Album page:** at the bottom, *More by <artist>*: the artist's other
+  albums (hidden when there are none).
 - **Favorites:** a ★ *Favorites* filter on the Tracks, Albums and Artists
   pages shows only what you starred, with that page's sorts; it is kept in
   the address (`?fav=1`), so links and Back keep it.

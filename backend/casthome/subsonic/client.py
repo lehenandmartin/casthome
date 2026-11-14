@@ -157,6 +157,11 @@ class SubsonicClient:
         raw = data["artist"]
         return Artist.from_api(raw), [Album.from_api(a) for a in raw.get("album", [])]
 
+    async def get_similar_artists(self, artist_id: str, count: int = 50) -> list[Artist]:
+        """Similar artists in the library (Last.fm through Navidrome's agents), closest first."""
+        data = await self.call("getArtistInfo2", {"id": artist_id, "count": count, "includeNotPresent": "false"})
+        return [Artist.from_api(a) for a in (data.get("artistInfo2") or {}).get("similarArtist", [])]
+
     async def get_genres(self) -> list[Genre]:
         data = await self.call("getGenres")
         return [Genre.from_api(g) for g in (data.get("genres") or {}).get("genre", [])]

@@ -4,6 +4,7 @@
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Album } from '../lib/types';
+  import AlbumGrid from './AlbumGrid.svelte';
   import Icon from './Icon.svelte';
   import PlaylistPicker from './PlaylistPicker.svelte';
   import RatingStars from './RatingStars.svelte';
@@ -13,12 +14,23 @@
   let { id }: { id: string } = $props();
   let album = $state<Album | null>(null);
   let picking = $state(false);
+  // The artist's other albums, shown under the tracks.
+  let more = $state<Album[]>([]);
 
   $effect(() => {
     album = null;
+    more = [];
     const albumId = id;
     store.run(async () => {
-      album = await api.album(albumId);
+      const loaded = await api.album(albumId);
+      album = loaded;
+      if (!loaded.artist_id) return;
+      api
+        .artist(loaded.artist_id)
+        .then((artist) => {
+          if (albumId === id) more = artist.albums.filter((a) => a.id !== albumId);
+        })
+        .catch(() => {});
     });
   });
 
@@ -71,6 +83,11 @@
       </div>
     </header>
     <SongList songs={album.songs ?? []} numbered showAlbum={false} onplay={(i) => store.run(() => api.playAlbum(album!.id, i))} />
+
+    {#if more.length > 0}
+      <h3 class="more-title">{t('album.moreBy', { artist: album.artist })}</h3>
+      <AlbumGrid albums={more} showArtist={false} />
+    {/if}
   </section>
   {#if picking}
     <PlaylistPicker songIds={(album.songs ?? []).map((s) => s.id)} onclose={() => (picking = false)} />
@@ -78,6 +95,10 @@
 {/if}
 
 <style>
+  .more-title {
+    margin: 28px 0 10px;
+    font-size: 1.15rem;
+  }
   header {
     display: grid;
     gap: 16px;
