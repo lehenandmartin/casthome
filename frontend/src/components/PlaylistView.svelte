@@ -6,6 +6,7 @@
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Playlist } from '../lib/types';
+  import SkeletonList from './SkeletonList.svelte';
   import SongList from './SongList.svelte';
 
   let { id }: { id: string } = $props();
@@ -114,9 +115,38 @@
       />
     {/if}
   </section>
+{:else}
+  <section aria-busy="true">
+    <header aria-hidden="true">
+      <span class="skeleton sk-cover"></span>
+      <div>
+        <span class="skeleton text sk-title"></span>
+        <span class="skeleton text" style:width="140px"></span>
+        <div class="actions"><span class="skeleton sk-pill"></span><span class="skeleton sk-pill"></span></div>
+      </div>
+    </header>
+    <SkeletonList count={8} />
+  </section>
 {/if}
 
 <style>
+  /* Placeholders while the playlist loads. */
+  .sk-cover {
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 1;
+    border-radius: 8px;
+  }
+  .sk-title {
+    width: min(280px, 70%);
+    height: 1.6rem;
+    margin-bottom: 10px;
+  }
+  .sk-pill {
+    width: 100px;
+    height: 38px;
+    border-radius: 999px;
+  }
   header {
     display: grid;
     gap: 16px;

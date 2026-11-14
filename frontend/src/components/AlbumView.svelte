@@ -2,35 +2,45 @@
   import { api, coverUrl } from '../lib/api';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
+  import { preloadImages } from '../lib/preload';
   import { store } from '../lib/store.svelte';
   import type { Album } from '../lib/types';
   import AlbumGrid from './AlbumGrid.svelte';
   import Icon from './Icon.svelte';
   import PlaylistPicker from './PlaylistPicker.svelte';
   import RatingStars from './RatingStars.svelte';
+  import SkeletonGrid from './SkeletonGrid.svelte';
+  import SkeletonList from './SkeletonList.svelte';
   import SongList from './SongList.svelte';
   import StarButton from './StarButton.svelte';
 
   let { id }: { id: string } = $props();
   let album = $state<Album | null>(null);
   let picking = $state(false);
-  // The artist's other albums, shown under the tracks.
-  let more = $state<Album[]>([]);
+  // The artist's other albums, shown under the tracks (null while loading).
+  let more = $state<Album[] | null>(null);
 
   $effect(() => {
     album = null;
-    more = [];
+    more = null;
     const albumId = id;
     store.run(async () => {
       const loaded = await api.album(albumId);
       album = loaded;
-      if (!loaded.artist_id) return;
+      if (!loaded.artist_id) {
+        more = [];
+        return;
+      }
       api
         .artist(loaded.artist_id)
-        .then((artist) => {
-          if (albumId === id) more = artist.albums.filter((a) => a.id !== albumId);
+        .then(async (artist) => {
+          const others = artist.albums.filter((a) => a.id !== albumId);
+          await preloadImages(others.slice(0, 12).map((a) => coverUrl(a.cover_art))); // shown all at once
+          if (albumId === id) more = others;
         })
-        .catch(() => {});
+        .catch(() => {
+          if (albumId === id) more = [];
+        });
     });
   });
 
@@ -84,17 +94,53 @@
     </header>
     <SongList songs={album.songs ?? []} numbered showAlbum={false} onplay={(i) => store.run(() => api.playAlbum(album!.id, i))} />
 
-    {#if more.length > 0}
+    {#if more === null}
       <h3 class="more-title">{t('album.moreBy', { artist: album.artist })}</h3>
-      <AlbumGrid albums={more} showArtist={false} />
+      <SkeletonGrid rows={1} />
+    {:else if more.length > 0}
+      <h3 class="more-title">{t('album.moreBy', { artist: album.artist })}</h3>
+      <AlbumGrid albums={more} showArtist={false} rowsOnly />
     {/if}
   </section>
   {#if picking}
     <PlaylistPicker songIds={(album.songs ?? []).map((s) => s.id)} onclose={() => (picking = false)} />
   {/if}
+{:else}
+  <section aria-busy="true">
+    <header aria-hidden="true">
+      <div class="cover"><span class="skeleton sk-cover"></span></div>
+      <div class="meta sk-meta">
+        <span class="skeleton text" style:width="60px"></span>
+        <span class="skeleton text sk-title"></span>
+        <span class="skeleton text" style:width="120px"></span>
+        <span class="skeleton text" style:width="160px"></span>
+        <div class="actions"><span class="skeleton sk-pill"></span></div>
+      </div>
+    </header>
+    <SkeletonList count={8} />
+  </section>
 {/if}
 
 <style>
+  /* Placeholders while the album loads. */
+  .sk-cover {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+  }
+  .sk-meta {
+    width: 100%;
+    gap: 10px;
+  }
+  .sk-title {
+    width: min(320px, 70%);
+    height: 1.8rem;
+  }
+  .sk-pill {
+    width: 120px;
+    height: 42px;
+    border-radius: 999px;
+  }
   .more-title {
     margin: 28px 0 10px;
     font-size: 1.15rem;

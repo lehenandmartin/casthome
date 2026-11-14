@@ -1,17 +1,20 @@
 <script lang="ts">
   import { api, coverUrl } from '../lib/api';
   import { menu } from '../lib/contextMenu.svelte';
+  import { dialogs } from '../lib/dialog.svelte';
   import { playlistMenu } from '../lib/menus';
   import { router } from '../lib/router.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Playlist } from '../lib/types';
+  import Icon from './Icon.svelte';
+  import SkeletonList from './SkeletonList.svelte';
 
   let playlists = $state<Playlist[]>([]);
   let loaded = $state(false);
-  let name = $state('');
 
+  // Most recently changed first (sorted by the server).
   async function load() {
     await store.run(async () => {
       playlists = await api.playlists();
@@ -19,13 +22,17 @@
     });
   }
 
-  async function create(event: SubmitEvent) {
-    event.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) return;
+  async function create() {
+    const name = (
+      await dialogs.prompt({
+        title: t('playlists.new'),
+        placeholder: t('playlists.namePlaceholder'),
+        confirmLabel: t('playlists.create'),
+      })
+    )?.trim();
+    if (!name) return;
     await store.run(async () => {
-      const playlist = await api.createPlaylist(trimmed);
-      name = '';
+      const playlist = await api.createPlaylist(name);
       router.navigate(`#/playlist/${encodeURIComponent(playlist.id)}`);
     });
   }
@@ -34,11 +41,13 @@
 </script>
 
 <section>
-  <h2>{t('playlists.title')}</h2>
-  <form onsubmit={create}>
-    <input type="text" bind:value={name} placeholder={t('playlists.namePlaceholder')} aria-label={t('playlists.new')} />
-    <button class="primary" type="submit" disabled={!name.trim()}>{t('playlists.create')}</button>
-  </form>
+  <div class="head">
+    <h2>{t('playlists.title')}</h2>
+    <button class="primary new" onclick={create}><Icon name="plus" size={18} />{t('playlists.new')}</button>
+  </div>
+  {#if !loaded}
+    <SkeletonList count={8} thumb />
+  {/if}
   {#if loaded && playlists.length === 0}
     <p class="muted">{t('playlists.empty')}</p>
   {/if}
@@ -64,14 +73,21 @@
 </section>
 
 <style>
-  form {
+  .head {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 12px;
   }
-  form input {
-    flex: 1;
-    min-width: 0;
+  .head h2 {
+    margin: 0;
+  }
+  .new {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
   }
   ul {
     list-style: none;

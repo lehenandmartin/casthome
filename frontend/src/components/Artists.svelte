@@ -6,6 +6,7 @@
   import { store } from '../lib/store.svelte';
   import type { Artist } from '../lib/types';
   import FavoritesToggle from './FavoritesToggle.svelte';
+  import SkeletonList from './SkeletonList.svelte';
 
   let { fav = false }: { fav?: boolean } = $props();
 
@@ -30,6 +31,9 @@
     <input type="search" placeholder={t('artists.filter')} aria-label={t('artists.filter')} bind:value={filter} />
     <FavoritesToggle active={fav} />
   </div>
+  {#if !loaded}
+    <SkeletonList count={14} sub={false} />
+  {/if}
   {#if loaded && visible.length === 0}
     <p class="muted">{fav ? t('favorites.noArtists') : t('artists.empty')}</p>
   {/if}

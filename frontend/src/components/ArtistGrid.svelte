@@ -2,15 +2,30 @@
   // A grid of artists (round pictures), like AlbumGrid for albums.
   import { coverUrl } from '../lib/api';
   import { menu } from '../lib/contextMenu.svelte';
+  import { fullRows, observeColumns } from '../lib/grid';
   import { artistMenu } from '../lib/menus';
   import type { Artist } from '../lib/types';
   import Icon from './Icon.svelte';
 
-  let { artists }: { artists: Artist[] } = $props();
+  let {
+    artists,
+    rowsOnly = false,
+  }: {
+    artists: Artist[];
+    /** Show only full rows for the current width (all of them if less than a row). */
+    rowsOnly?: boolean;
+  } = $props();
+
+  let grid = $state<HTMLElement | null>(null);
+  let columns = $state(0);
+  $effect(() => {
+    if (rowsOnly && grid) return observeColumns(grid, (n) => (columns = n));
+  });
+  const shown = $derived(rowsOnly ? fullRows(artists, columns) : artists);
 </script>
 
-<ul class="grid">
-  {#each artists as artist (artist.id)}
+<ul class="grid" bind:this={grid}>
+  {#each shown as artist (artist.id)}
     <li>
       <a href={`#/artist/${encodeURIComponent(artist.id)}`} use:menu={() => artistMenu(artist)}>
         {#if artist.cover_art}

@@ -472,16 +472,27 @@
     font-weight: 700;
     color: var(--accent);
   }
+  /* Each part of the queue is one block, rounded at its top and bottom only. */
   .list {
     list-style: none;
     margin: 0;
     padding: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg);
   }
   .list li {
     display: flex;
     align-items: center;
-    border-radius: 10px;
     background: var(--bg);
+  }
+  .list :global(.swipe) {
+    border-radius: 0;
+  }
+  /* The right-click/long-press highlight, drawn inside (the block clips outside). */
+  .list li:global(.context-target) {
+    border-radius: 0;
+    outline-offset: -2px;
   }
   .list li:hover {
     background: var(--surface-2);

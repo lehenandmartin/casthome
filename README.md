@@ -46,6 +46,12 @@ Mobile-first, installable on the home screen.
   addresses), language, access and signed-in devices.
 - Languages: English (default) and French. *Automatic* picks the first of the
   browser's preferred languages that CastHome has, else English.
+- 0.2: action menus on right-click (desktop) and long-press (touch screens)
+  for tracks, queue rows, albums, playlists, artists and the current track;
+  artist radio; similar artists on artist pages and the artist's other
+  albums on album pages; loading placeholders instead of empty pages;
+  playlists sorted by last change, created with a *New playlist* button;
+  untrusted reverse proxies detected for *Open at home*.
 
 ## How it works
 
@@ -99,12 +105,18 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   (features included) with the Tracks page sorts; *Popular* lists their most
   popular tracks in your library (Last.fm popularity through Navidrome's
   `getTopSongs`; without it, your most played), 5 shown, 10 with *See more*.
-  At the bottom, *Similar artists*: Last.fm's similar artists in your library
-  (`getArtistInfo2`), then the artists most present among similar tracks;
-  never the artist again, a duo with them ("Madonna & Charli xcx" on
-  Madonna's page) or an artist without albums.
+  At the bottom, *Similar artists* (up to 18): Last.fm's similar artists in
+  your library (`getArtistInfo2`), then the artists most present among
+  similar tracks; never the artist again, a duo with them ("Madonna &
+  Charli xcx" on Madonna's page) or an artist without albums. They appear
+  all at once, once their pictures are loaded, and only in full rows for the
+  screen width (all of them when there is less than a row).
+- **Playlists:** most recently changed first; *New playlist* asks for a
+  name and opens the new (empty) playlist.
 - **Album page:** at the bottom, *More by <artist>*: the artist's other
-  albums (hidden when there are none).
+  albums, in full rows like *Similar artists* (hidden when there are none).
+- **Loading:** pages and lists show grey placeholder shapes while they load
+  (no animation when the system asks for reduced motion).
 - **Favorites:** a ★ *Favorites* filter on the Tracks, Albums and Artists
   pages shows only what you starred, with that page's sorts; it is kept in
   the address (`?fav=1`), so links and Back keep it.

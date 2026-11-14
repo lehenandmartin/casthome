@@ -6,6 +6,7 @@
   import { store } from '../lib/store.svelte';
   import type { SearchResult } from '../lib/types';
   import AlbumGrid from './AlbumGrid.svelte';
+  import SkeletonList from './SkeletonList.svelte';
   import SongList from './SongList.svelte';
 
   // Kept in the URL (#/search?q=...) so Back returns to the results.
@@ -39,6 +40,10 @@
     return () => clearTimeout(timer);
   });
 
+  // First search of the visit: a placeholder until results arrive (later
+  // searches keep the previous results on screen while typing).
+  const pending = $derived(result === null && query.trim() !== '' && query.trim() !== searched);
+
   const empty = $derived(
     result !== null && result.artists.length + result.albums.length + result.songs.length === 0,
   );
@@ -53,6 +58,10 @@
     bind:value={query}
     autofocus
   />
+
+  {#if pending}
+    <div class="pending"><SkeletonList count={6} thumb /></div>
+  {/if}
 
   {#if empty}
     <p class="muted">{t('search.noResults', { query: searched })}</p>
@@ -82,6 +91,9 @@
 </section>
 
 <style>
+  .pending {
+    margin-top: 16px;
+  }
   input {
     width: 100%;
     font-size: 1.05rem;

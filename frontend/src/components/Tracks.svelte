@@ -4,6 +4,7 @@
   import { store } from '../lib/store.svelte';
   import type { Song, SongSort } from '../lib/types';
   import FavoritesToggle from './FavoritesToggle.svelte';
+  import SkeletonList from './SkeletonList.svelte';
   import SongList from './SongList.svelte';
 
   // `artist` (an id, with its `artistName`): only that artist's tracks, e.g.
@@ -99,6 +100,9 @@
     <p class="muted">{fav ? t('favorites.noTracks') : t('tracks.empty')}</p>
   {/if}
 
+  {#if loading && songs.length === 0}
+    <SkeletonList count={12} />
+  {/if}
   <SongList {songs} onplay={play} />
 
   {#if more}

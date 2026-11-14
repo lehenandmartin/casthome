@@ -15,6 +15,11 @@
 
 <section>
   <h2>{t('genres.title')}</h2>
+  {#if !loaded}
+    <ul aria-hidden="true">
+      {#each { length: 12 } as _, i (i)}<li><span class="skeleton sk-genre"></span></li>{/each}
+    </ul>
+  {/if}
   {#if loaded && genres.length === 0}
     <p class="muted">{t('genres.empty')}</p>
   {/if}
@@ -31,6 +36,10 @@
 </section>
 
 <style>
+  .sk-genre {
+    height: 64px;
+    border-radius: 8px;
+  }
   ul {
     list-style: none;
     padding: 0;

@@ -100,7 +100,7 @@ async def artist_highlights(artist_id: str, request: Request) -> dict:
     return {"top_source": source, "top": [s.model_dump() for s in top], "liked_count": liked_count}
 
 
-SIMILAR_ARTISTS = 12
+SIMILAR_ARTISTS = 18
 
 
 def includes_artist(name: str, candidate: str) -> bool:

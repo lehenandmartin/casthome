@@ -4,6 +4,7 @@
   import { store } from '../lib/store.svelte';
   import type { Album, AlbumListType } from '../lib/types';
   import AlbumGrid from './AlbumGrid.svelte';
+  import SkeletonGrid from './SkeletonGrid.svelte';
   import FavoritesToggle from './FavoritesToggle.svelte';
 
   const PAGE = 40;
@@ -61,6 +62,9 @@
   {/if}
   {#if !loading && albums.length === 0}
     <p class="muted">{fav ? t('favorites.noAlbums') : t('albums.empty')}</p>
+  {/if}
+  {#if loading && albums.length === 0}
+    <SkeletonGrid count={12} />
   {/if}
   <AlbumGrid {albums} />
   {#if !done && albums.length > 0}

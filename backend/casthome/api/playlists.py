@@ -30,7 +30,9 @@ class UpdateBody(BaseModel):
 
 @router.get("/playlists")
 async def list_playlists(request: Request) -> list[dict]:
+    """Every playlist, most recently changed first."""
     items = await get_ctx(request).subsonic.get_playlists()
+    items.sort(key=lambda p: p.changed or "", reverse=True)
     return [p.model_dump(exclude={"songs"}) for p in items]
 
 

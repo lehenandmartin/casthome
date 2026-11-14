@@ -96,6 +96,26 @@
 </script>
 
 <section class="home">
+  {#if !data}
+    <div aria-busy="true" aria-hidden="true">
+      <div class="tiles">
+        {#each { length: 6 } as _, i (i)}<span class="skeleton sk-tile"></span>{/each}
+      </div>
+      {#each { length: 2 } as _, row (row)}
+        <span class="skeleton text sk-heading"></span>
+        <div class="sk-row">
+          {#each { length: 8 } as _, i (i)}
+            <div class="card">
+              <span class="skeleton sk-cover"></span>
+              <span class="skeleton text" style:width="80%"></span>
+              <span class="skeleton text" style:width="50%"></span>
+            </div>
+          {/each}
+        </div>
+      {/each}
+    </div>
+  {/if}
+
   {#if tiles.length > 0}
     <div class="tiles">
       {#each tiles as tile (tile.href)}
@@ -195,6 +215,29 @@
 </section>
 
 <style>
+  /* Placeholders on the first visit (later visits show the last data at once). */
+  .sk-tile {
+    height: 56px;
+    border-radius: 8px;
+  }
+  .sk-heading {
+    width: 180px;
+    height: 1.15rem;
+    margin: 30px 0 12px;
+  }
+  .sk-row {
+    display: flex;
+    gap: 14px;
+    overflow: hidden;
+  }
+  .sk-row .card {
+    flex: none;
+  }
+  .sk-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 8px;
+  }
   .home {
     padding-top: 4px;
   }

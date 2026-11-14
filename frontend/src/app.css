@@ -242,6 +242,31 @@ input[type='range']:disabled {
 }
 
 /* Bottom sheet (mobile) / centered panel (desktop) */
+/* Placeholder shapes while content loads (SkeletonGrid, SkeletonList, page headers). */
+.skeleton {
+  display: block;
+  background: var(--surface-3);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+.skeleton.text {
+  height: 0.9em;
+  border-radius: 4px;
+}
+.skeleton.round {
+  border-radius: 50%;
+}
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
 /* Elements with a long-press menu: on touch screens, the long-press is ours
    (no link preview, no text selection). */
 @media (hover: none) {
