@@ -156,6 +156,19 @@ saved under `./data`; no `.env` is needed.
 The setup is open to whoever opens CastHome first, so do it right after
 starting it.
 
+The container starts as root only to give `./data` to the user CastHome runs
+as (`PUID`:`PGID`, default `1000:1000`), then drops to that user. On a NAS, set
+`PUID`/`PGID` in `docker-compose.yml` to the owner you want for the folder.
+
+To use another port than 8080, set `PORT` under `environment:` in
+`docker-compose.yml` (a `ports:` mapping has no effect with
+`network_mode: host`):
+
+```yaml
+    environment:
+      PORT: "8090"
+```
+
 `network_mode: host` is **required**: Cast discovery uses mDNS multicast,
 which does not cross Docker's bridge network. Docker Desktop on macOS/Windows
 does not support this reliably; run CastHome natively there (see Development).
@@ -280,6 +293,11 @@ otherwise. If the device does not switch within a few seconds, CastHome loads
 the next track itself.
 
 ## Troubleshooting
+
+**`Permission denied: '/data/…'` at start.** CastHome cannot write to its data
+folder. With the provided image this is fixed at start; if you run it with
+`user:` or a custom image, give the folder to that user
+(`chown -R 1000:1000 ./data`) or set `PUID`/`PGID`.
 
 **No Cast device found.**
 - Docker: check `network_mode: host`, and run on Linux.

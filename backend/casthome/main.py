@@ -116,6 +116,28 @@ def create_app(settings: Settings | None = None, ctx: AppContext | None = None, 
     return app
 
 
+def _check_data_dir(settings: Settings) -> None:
+    """Stop with a clear message when the data folder is not writable."""
+    import os
+    import sys
+
+    data_dir = settings.data_dir
+    probe = data_dir / ".write-test"
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+        probe.write_text("ok")
+        probe.unlink()
+    except OSError as exc:
+        print(f"CastHome cannot write to its data folder {data_dir}: {exc.strerror}.", file=sys.stderr)
+        uid = os.getuid() if hasattr(os, "getuid") else "?"
+        print(
+            f"It runs as user {uid}. Give it the folder (on the host: chown -R {uid} <folder>),"
+            " or with Docker set PUID/PGID to the folder's owner.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2) from None
+
+
 def run() -> None:
     import sys
 
@@ -131,6 +153,7 @@ def run() -> None:
             print(f"  {name}: {error['msg']}", file=sys.stderr)
         print("Fix or remove it (in .env or the environment); see .env.example.", file=sys.stderr)
         raise SystemExit(2) from None
+    _check_data_dir(settings)
     uvicorn.run(create_app(settings), host=settings.host, port=settings.port, proxy_headers=True)
 
 

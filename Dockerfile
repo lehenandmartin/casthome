@@ -15,9 +15,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app/backend
 COPY backend/pyproject.toml ./
 COPY backend/casthome ./casthome
-RUN pip install --no-cache-dir . && useradd --system --uid 1000 casthome && mkdir -p /data && chown casthome /data
+RUN pip install --no-cache-dir . && mkdir -p /data
 COPY --from=frontend /src/frontend/dist /app/frontend/dist
-USER casthome
+COPY docker/entrypoint.sh /usr/local/bin/casthome-entrypoint
+# The entrypoint fixes the owner of /data (a mounted folder is often root's),
+# then drops to PUID:PGID (default 1000:1000) to run CastHome.
+ENV PUID=1000 PGID=1000
 VOLUME ["/data"]
 EXPOSE 8080
+ENTRYPOINT ["casthome-entrypoint"]
 CMD ["python", "-m", "casthome.main"]

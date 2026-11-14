@@ -6,6 +6,14 @@ services:
     network_mode: host
     # Optional: settings are entered in the browser. Uncomment to use a .env.
     # env_file: .env
+    # Optional settings (uncomment the block and the lines you need):
+    # environment:
+    #   # Port CastHome listens on (default 8080). With network_mode: host,
+    #   # a "ports:" mapping is ignored: set the port here instead.
+    #   PORT: "8080"
+    #   # Owner of ./data on the host (the container fixes it at start).
+    #   PUID: "1000"
+    #   PGID: "1000"
     volumes:
       - ./data:/data
     restart: unless-stopped
