@@ -24,7 +24,27 @@
     cover: string | null;
     icon: 'starFilled' | 'disc' | 'playlist';
     play?: () => Promise<void>;
+    albumId?: string;
+    playlistId?: string;
   }
+
+  // Recently played row, without what is already on screen: the albums in the
+  // quick-access tiles and in Recently added.
+  const recentRow = $derived.by(() => {
+    if (!data) return [];
+    const shown = new Set([
+      ...tiles.map((tile) => tile.albumId).filter(Boolean),
+      ...data.recently_added.map((a) => a.id),
+    ]);
+    return data.recently_played.filter((a) => !shown.has(a.id)).slice(0, 12);
+  });
+
+  // Playlists row, without the ones already in the quick-access tiles.
+  const playlistRow = $derived.by(() => {
+    if (!data) return [];
+    const shown = new Set(tiles.map((tile) => tile.playlistId).filter(Boolean));
+    return data.playlists.filter((p) => !shown.has(p.id)).slice(0, 12);
+  });
 
   // Quick access: favourite tracks, then recently played albums and recently
   // edited playlists, interleaved, up to six tiles.
@@ -40,6 +60,7 @@
         label: a.name,
         cover: a.cover_art,
         icon: 'disc',
+        albumId: a.id,
         play: () => api.playAlbum(a.id),
       }),
     );
@@ -49,6 +70,7 @@
         label: p.name,
         cover: p.cover_art,
         icon: 'playlist',
+        playlistId: p.id,
         play: () => api.playPlaylist(p.id),
       }),
     );
@@ -89,9 +111,9 @@
     </div>
   {/if}
 
-  {#if data && data.recently_played.length > 0}
+  {#if recentRow.length > 0}
     <HomeRow title={t('home.recentlyPlayed')} seeAll="#/albums?type=recent">
-      {#each data.recently_played as album (album.id)}
+      {#each recentRow as album (album.id)}
         <a class="card" href={`#/album/${encodeURIComponent(album.id)}`}>
           <img src={coverUrl(album.cover_art, 300)} alt="" loading="lazy" />
           <strong class="ellipsis">{album.name}</strong>
@@ -144,9 +166,9 @@
     </section>
   {/if}
 
-  {#if data && data.playlists.length > 0}
+  {#if playlistRow.length > 0}
     <HomeRow title={t('home.yourPlaylists')} seeAll="#/playlists">
-      {#each data.playlists as playlist (playlist.id)}
+      {#each playlistRow as playlist (playlist.id)}
         <a class="card" href={`#/playlist/${encodeURIComponent(playlist.id)}`}>
           {#if playlist.cover_art}
             <img src={coverUrl(playlist.cover_art, 300)} alt="" loading="lazy" />

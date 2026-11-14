@@ -20,6 +20,9 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["home"], dependencies=[Depends(require_session)])
 
 ROW = 12
+# Recently played is fetched deeper: the page drops albums already shown in the
+# quick-access tiles and in Recently added, and still wants a full row.
+RECENT_POOL = 36
 T = TypeVar("T")
 
 
@@ -49,7 +52,7 @@ async def home(request: Request) -> dict[str, Any]:
     ctx = get_ctx(request)
     sub = ctx.subsonic
     recent_played, recent_added, starred, on_repeat, playlists, frequent = await asyncio.gather(
-        _safe("recently played", sub.get_album_list("recent", ROW), []),
+        _safe("recently played", sub.get_album_list("recent", RECENT_POOL), []),
         _safe("recently added", sub.get_album_list("newest", ROW), []),
         _safe("favorites", sub.get_starred(), None),
         _safe("on repeat", ctx.native.get_on_repeat(days=30, limit=5), []),
@@ -62,7 +65,8 @@ async def home(request: Request) -> dict[str, Any]:
     artists_are_favorites = bool(favorite_artists)
     if not favorite_artists:
         favorite_artists = artists_from_albums(frequent, ROW)
-    recent_playlists = sorted(playlists, key=lambda p: p.changed or "", reverse=True)[:ROW]
+    # A few more than a row: the page drops the ones already in the quick-access tiles.
+    recent_playlists = sorted(playlists, key=lambda p: p.changed or "", reverse=True)[: ROW + 6]
     return {
         "recently_played": [a.model_dump(exclude={"songs"}) for a in recent_played],
         "recently_added": [a.model_dump(exclude={"songs"}) for a in recent_added],
