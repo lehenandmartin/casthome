@@ -51,6 +51,7 @@ class PlaybackConfig:
     max_bitrate: int  # kbps when transcoding, 0 = no limit
     preload_next: bool
     known_hosts: tuple[str, ...]  # Cast device addresses, when mDNS is blocked
+    scrobble: bool = True  # report plays to Navidrome
 
 
 # Playback field -> environment setting (see config.py).
@@ -59,6 +60,7 @@ PLAYBACK_ENV = {
     "max_bitrate": "stream_max_bitrate",
     "preload_next": "cast_preload_next",
     "known_hosts": "cast_known_hosts",
+    "scrobble": "scrobble",
 }
 
 
@@ -206,6 +208,7 @@ class ConfigStore:
             "max_bitrate": s.stream_max_bitrate,
             "preload_next": s.cast_preload_next,
             "known_hosts": tuple(s.known_hosts),
+            "scrobble": s.scrobble,
         }
         locked = set(self.playback_locked)
         values = {}

@@ -29,7 +29,7 @@ Mobile-first, installable on the home screen.
   the queue as a playlist); favorites (☆ on tracks, albums, artists; a
   *Favorites* filter on the Tracks, Albums and Artists pages); 5-star ratings; scrobbling to Navidrome ("now playing" when
   a track starts, a scrobble after half the track or 4 minutes of actual
-  listening; seeking forward does not count).
+  listening; seeking forward does not count; can be turned off in Settings).
 - Phase 4: installable PWA; signed-in devices with per-device and "all other
   devices" sign-out, effective immediately; preloading of the next track to
   shorten gaps; the Navidrome play queue is re-read every minute while idle,
@@ -84,8 +84,8 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
 - **Settings** (sidebar bottom on desktop, in Library on mobile):
   - *Navidrome*: server, account and Cast URL, with a connection test before
     saving.
-  - *Playback*: streaming quality and maximum bitrate, preloading, Cast device
-    addresses.
+  - *Playback*: streaming quality and maximum bitrate, preloading, scrobbling,
+    Cast device addresses.
   - *Access to CastHome*: password, open at home, or no password; this
     device's sign-out.
   - *Signed-in devices*: every browser signed in, each can be signed out.
@@ -160,7 +160,8 @@ does not support this reliably; run CastHome natively there (see Development).
 
 The Navidrome connection and access are set in the browser (first-run setup,
 then **Settings**), and so are the playback options in **Settings → Playback**:
-streaming quality and maximum bitrate, preloading of the next track, and Cast
+streaming quality and maximum bitrate, preloading of the next track,
+scrobbling to Navidrome, and Cast
 device addresses for networks where discovery does not find them. They apply
 from the next track, without a restart. Environment variables are optional, in `.env` or the
 container environment; see [`.env.example`](.env.example). A Navidrome value
@@ -179,6 +180,7 @@ Settings (handy for scripted installs).
 | `TRANSCODE_FALLBACK_FORMAT` | Format for files Cast cannot play, and retry format after a playback error (default `mp3`). |
 | `CAST_PRELOAD_NEXT` | On by default: hand the next track to the device 20 s before the end of the current one to shorten the gap. `false` disables it. Also in Settings. |
 | `CAST_KNOWN_HOSTS` | Cast device IPs, when mDNS is blocked. Also in Settings. |
+| `SCROBBLE` | On by default: report plays to Navidrome ("now playing" and scrobbles). `false` disables it. Also in Settings. |
 
 ### Access
 

@@ -83,6 +83,8 @@ class AppContext:
             return await cast.connect(uuid, sink)
 
         async def scrobble(song_id: str, submission: bool, time_ms: int | None) -> None:
+            if not config.playback.scrobble:
+                return  # turned off in Settings
             # Fire and forget: a slow or failing Navidrome must not delay playback.
             async def send() -> None:
                 try:

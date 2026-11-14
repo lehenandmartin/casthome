@@ -72,6 +72,9 @@ class Settings(BaseSettings):
     # current one, to shorten the silence between tracks.
     cast_preload_next: bool = True
 
+    # Report plays to Navidrome ("now playing", then a scrobble).
+    scrobble: bool = True
+
     # Comma-separated IPs of Cast devices, for networks where mDNS is filtered.
     cast_known_hosts: str = ""
 

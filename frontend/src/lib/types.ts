@@ -201,6 +201,8 @@ export interface PlaybackOptions {
   max_bitrate: number;
   preload_next: boolean;
   known_hosts: string[];
+  /** Report plays to Navidrome. */
+  scrobble: boolean;
 }
 
 export interface ServerSettings {

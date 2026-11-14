@@ -48,6 +48,7 @@ class PlaybackBody(BaseModel):
     max_bitrate: int = 0
     preload_next: bool = True
     known_hosts: list[str] = Field(default_factory=list, max_length=32)
+    scrobble: bool = True
 
 
 class AccessBody(BaseModel):
@@ -225,6 +226,7 @@ async def update_playback(
             max_bitrate=body.max_bitrate,
             preload_next=body.preload_next,
             known_hosts=tuple(hosts),
+            scrobble=body.scrobble,
         )
     )
     ctx.apply_playback()

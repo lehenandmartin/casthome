@@ -26,6 +26,8 @@
   let preload = $state(initial.preload_next);
   // svelte-ignore state_referenced_locally
   let hosts = $state(initial.known_hosts.join(', '));
+  // svelte-ignore state_referenced_locally
+  let scrobble = $state(initial.scrobble);
   let busy = $state(false);
   let error = $state<string | null>(null);
 
@@ -40,6 +42,7 @@
     format !== initial.stream_format ||
       bitrate !== initial.max_bitrate ||
       preload !== initial.preload_next ||
+      scrobble !== initial.scrobble ||
       hostList.join(',') !== initial.known_hosts.join(','),
   );
 
@@ -48,7 +51,13 @@
     busy = true;
     error = null;
     try {
-      await api.updatePlayback({ stream_format: format, max_bitrate: bitrate, preload_next: preload, known_hosts: hostList });
+      await api.updatePlayback({
+        stream_format: format,
+        max_bitrate: bitrate,
+        preload_next: preload,
+        known_hosts: hostList,
+        scrobble,
+      });
       hosts = hostList.join(', ');
       store.notify('settings_saved', {}, 'info');
       onsaved();
@@ -88,6 +97,14 @@
     <span class="text">
       <strong>{t('playback.preload')}</strong>
       <small class="muted">{isLocked('preload_next') ? t('navidrome.locked') : t('playback.preloadHint')}</small>
+    </span>
+  </label>
+
+  <label class="check">
+    <input type="checkbox" bind:checked={scrobble} disabled={isLocked('scrobble')} />
+    <span class="text">
+      <strong>{t('playback.scrobble')}</strong>
+      <small class="muted">{isLocked('scrobble') ? t('navidrome.locked') : t('playback.scrobbleHint')}</small>
     </span>
   </label>
 

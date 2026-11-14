@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -232,7 +233,12 @@ async def test_playback_options_are_saved_and_applied(app_factory) -> None:  # t
         await finish_setup(http)
         playback = (await http.get("/api/settings")).json()["playback"]
         assert playback == {
-            "stream_format": "raw", "max_bitrate": 0, "preload_next": True, "known_hosts": [], "locked": []
+            "stream_format": "raw",
+            "max_bitrate": 0,
+            "preload_next": True,
+            "known_hosts": [],
+            "scrobble": True,
+            "locked": [],
         }
         body = {"stream_format": "mp3", "max_bitrate": 192, "preload_next": False, "known_hosts": [" 192.168.1.20 ", "tv.lan"]}
         assert (await http.put("/api/settings/playback", json=body)).json() == {"ok": True}
@@ -258,3 +264,25 @@ async def test_playback_options_set_in_the_environment_are_locked(app_factory) -
         body = {"stream_format": "mp3", "max_bitrate": 128, "preload_next": True, "known_hosts": []}
         assert (await http.put("/api/settings/playback", json=body)).status_code == 200
     assert ctx.config.playback.stream_format == "opus" and ctx.config.playback.max_bitrate == 128
+
+
+async def test_scrobbling_can_be_turned_off(app_factory) -> None:  # type: ignore[no-untyped-def]
+    app = await app_factory()
+    ctx = app.state.ctx
+    sent: list[str] = []
+
+    async def record(song_id: str, submission: bool, time_ms: int | None = None) -> None:
+        sent.append(song_id)
+
+    ctx.subsonic.scrobble = record  # type: ignore[method-assign]
+    sink = ctx.coordinator._scrobbler._sink  # the function the scrobbler reports through
+    async with Client(app) as http:
+        await finish_setup(http)
+        await sink("s1", True, None)
+        await asyncio.sleep(0)
+        assert sent == ["s1"]
+        body = {"stream_format": "raw", "max_bitrate": 0, "preload_next": True, "known_hosts": [], "scrobble": False}
+        assert (await http.put("/api/settings/playback", json=body)).status_code == 200
+        await sink("s2", True, None)
+        await asyncio.sleep(0)
+        assert sent == ["s1"]
