@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     # Docker sets DATA_DIR=/data; running natively, data goes to <repo>/data.
     data_dir: Path = REPO_ROOT / "data"
     host: str = "0.0.0.0"
-    port: int = 8080
+    port: int = 4577
     log_level: str = "INFO"
 
     cookie_secure: bool = False

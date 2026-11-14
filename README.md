@@ -153,7 +153,7 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
 docker compose up -d --build
 ```
 
-Open `http://<host-ip>:8080` and follow the setup: Navidrome URL, username
+Open `http://<host-ip>:4577` and follow the setup: Navidrome URL, username
 and password (checked right away), then how to protect CastHome. Everything is
 saved under `./data`; no `.env` is needed.
 
@@ -164,7 +164,7 @@ The container starts as root only to give `./data` to the user CastHome runs
 as (`PUID`:`PGID`, default `1000:1000`), then drops to that user. On a NAS, set
 `PUID`/`PGID` in `docker-compose.yml` to the owner you want for the folder.
 
-To use another port than 8080, set `PORT` under `environment:` in
+To use another port than 4577, set `PORT` under `environment:` in
 `docker-compose.yml` (a `ports:` mapping has no effect with
 `network_mode: host`):
 

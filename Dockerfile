@@ -22,6 +22,6 @@ COPY docker/entrypoint.sh /usr/local/bin/casthome-entrypoint
 # then drops to PUID:PGID (default 1000:1000) to run CastHome.
 ENV PUID=1000 PGID=1000
 VOLUME ["/data"]
-EXPOSE 8080
+EXPOSE 4577
 ENTRYPOINT ["casthome-entrypoint"]
 CMD ["python", "-m", "casthome.main"]
