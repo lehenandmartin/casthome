@@ -1,5 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api';
+  import { menu } from '../lib/contextMenu.svelte';
+  import { artistMenu } from '../lib/menus';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { SearchResult } from '../lib/types';
@@ -60,7 +62,7 @@
     <h3>{t('search.artists')}</h3>
     <ul class="artists">
       {#each result.artists as artist (artist.id)}
-        <li><a href={`#/artist/${encodeURIComponent(artist.id)}`}>{artist.name}</a></li>
+        <li><a href={`#/artist/${encodeURIComponent(artist.id)}`} use:menu={() => artistMenu(artist)}>{artist.name}</a></li>
       {/each}
     </ul>
   {/if}

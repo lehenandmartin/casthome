@@ -148,6 +148,19 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   handle sits on the right, under the thumb.
 - **Track actions:** `⋯` on a track opens a sheet: play now, add to queue, add
   to playlist, go to album or artist, rating.
+- **Right-click (mouse or trackpad):** opens a menu at the pointer on
+  - tracks: the same actions as `⋯`;
+  - queue rows: play now, move to *Next in queue* (album or playlist rows),
+    radio, add to playlist, go to album or artist, rating, remove;
+  - albums (grids, Home): play, add to queue, favorite, rating, go to artist;
+  - playlists (Playlists, Home): play, add to queue, rename, delete;
+  - artists (Artists, Search, Home): play all, add to queue, favorite;
+  - the current track (player bar, Now Playing, queue): favorite, radio, add
+    to playlist, go to album or artist, rating.
+
+  Arrow keys move through the menu, Escape closes it, and a right-click
+  elsewhere opens the menu there. Shift + right-click keeps the browser's own
+  menu; touch screens keep their long-press and swipes.
 
 ## Install (Docker, Linux host)
 
@@ -463,6 +476,10 @@ frontend/src/
   lib/router.svelte.ts      hash routing without page loads
   lib/browserPlayer.ts      <audio> player for "This browser", Media Session
   lib/icons.ts              SVG icon set
+  lib/contextMenu.svelte.ts the action menu (⋯ sheet or right-click), shown by
+                            components/ContextMenu.svelte
+  lib/menus.ts              menu entries for tracks, queue, albums, playlists,
+                            artists
   components/               UI (PlayerBar, NowPlaying, QueueView, DevicePicker…)
 frontend/public/            manifest, service worker, icons
 scripts/make_icons.py       regenerates the PWA icons

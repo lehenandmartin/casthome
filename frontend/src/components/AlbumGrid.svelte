@@ -1,5 +1,7 @@
 <script lang="ts">
   import { coverUrl } from '../lib/api';
+  import { menu } from '../lib/contextMenu.svelte';
+  import { albumMenu } from '../lib/menus';
   import type { Album } from '../lib/types';
 
   let { albums, showArtist = true }: { albums: Album[]; showArtist?: boolean } = $props();
@@ -8,7 +10,7 @@
 <ul class="grid">
   {#each albums as album (album.id)}
     <li>
-      <a href={`#/album/${encodeURIComponent(album.id)}`}>
+      <a href={`#/album/${encodeURIComponent(album.id)}`} use:menu={() => albumMenu(album)}>
         {#if album.cover_art}
           <img src={coverUrl(album.cover_art)} alt="" loading="lazy" />
         {:else}

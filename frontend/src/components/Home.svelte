@@ -1,6 +1,8 @@
 <script lang="ts">
   import { api, coverUrl } from '../lib/api';
+  import { menu, type MenuSpec } from '../lib/contextMenu.svelte';
   import { t } from '../lib/i18n';
+  import { albumMenu, artistMenu, playlistMenu } from '../lib/menus';
   import { startRadio } from '../lib/radio';
   import { store } from '../lib/store.svelte';
   import type { HomeData } from '../lib/types';
@@ -12,11 +14,12 @@
   // then refreshes it in the background.
   let data = $state<HomeData | null>(homeCache.value);
 
-  store.run(async () => {
+  async function refresh() {
     const fresh = await api.home();
     data = fresh;
     homeCache.value = fresh;
-  });
+  }
+  store.run(refresh);
 
   interface Tile {
     href: string;
@@ -26,6 +29,8 @@
     play?: () => Promise<void>;
     albumId?: string;
     playlistId?: string;
+    /** Right-click menu (album and playlist tiles). */
+    menu?: () => MenuSpec;
   }
 
   // Recently played row, without what is already on screen: the albums in the
@@ -62,6 +67,7 @@
         icon: 'disc',
         albumId: a.id,
         play: () => api.playAlbum(a.id),
+        menu: () => albumMenu(a),
       }),
     );
     const lists = data.playlists.slice(0, 3).map(
@@ -72,6 +78,7 @@
         icon: 'playlist',
         playlistId: p.id,
         play: () => api.playPlaylist(p.id),
+        menu: () => playlistMenu(p, refresh),
       }),
     );
     for (let i = 0; out.length < 6 && (i < albums.length || i < lists.length); i++) {
@@ -92,7 +99,7 @@
   {#if tiles.length > 0}
     <div class="tiles">
       {#each tiles as tile (tile.href)}
-        <div class="tile">
+        <div class="tile" use:menu={() => tile.menu?.() ?? null}>
           <a href={tile.href} class="tile-link">
             {#if tile.cover}
               <img src={coverUrl(tile.cover, 120)} alt="" loading="lazy" />
@@ -114,7 +121,7 @@
   {#if recentRow.length > 0}
     <HomeRow title={t('home.recentlyPlayed')} seeAll="#/albums?type=recent">
       {#each recentRow as album (album.id)}
-        <a class="card" href={`#/album/${encodeURIComponent(album.id)}`}>
+        <a class="card" href={`#/album/${encodeURIComponent(album.id)}`} use:menu={() => albumMenu(album)}>
           <img src={coverUrl(album.cover_art, 300)} alt="" loading="lazy" />
           <strong class="ellipsis">{album.name}</strong>
           <span class="muted ellipsis">{album.artist}</span>
@@ -126,7 +133,7 @@
   {#if data && data.recently_added.length > 0}
     <HomeRow title={t('home.recentlyAdded')} seeAll="#/albums?type=newest">
       {#each data.recently_added as album (album.id)}
-        <a class="card" href={`#/album/${encodeURIComponent(album.id)}`}>
+        <a class="card" href={`#/album/${encodeURIComponent(album.id)}`} use:menu={() => albumMenu(album)}>
           <img src={coverUrl(album.cover_art, 300)} alt="" loading="lazy" />
           <strong class="ellipsis">{album.name}</strong>
           <span class="muted ellipsis">{album.artist}</span>
@@ -141,7 +148,7 @@
       seeAll={data.artists_are_favorites ? '#/artists?fav=1' : '#/artists'}
     >
       {#each data.favorite_artists as artist (artist.id)}
-        <a class="card artist" href={`#/artist/${encodeURIComponent(artist.id)}`}>
+        <a class="card artist" href={`#/artist/${encodeURIComponent(artist.id)}`} use:menu={() => artistMenu(artist)}>
           <img src={coverUrl(artist.cover_art, 300)} alt="" loading="lazy" />
           <strong class="ellipsis">{artist.name}</strong>
         </a>
@@ -169,7 +176,7 @@
   {#if playlistRow.length > 0}
     <HomeRow title={t('home.yourPlaylists')} seeAll="#/playlists">
       {#each playlistRow as playlist (playlist.id)}
-        <a class="card" href={`#/playlist/${encodeURIComponent(playlist.id)}`}>
+        <a class="card" href={`#/playlist/${encodeURIComponent(playlist.id)}`} use:menu={() => playlistMenu(playlist, refresh)}>
           {#if playlist.cover_art}
             <img src={coverUrl(playlist.cover_art, 300)} alt="" loading="lazy" />
           {:else}

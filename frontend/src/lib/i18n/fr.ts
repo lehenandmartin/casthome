@@ -287,6 +287,7 @@ export const fr: Record<MessageKey, string> = {
   'queue.clearConfirm': 'Retirer tous les titres, y compris l’album ou la playlist en cours d’écoute ?',
   'queue.count': '{count} titres',
   'queue.remove': 'Retirer de la file',
+  'queue.moveToNext': 'Mettre ensuite dans la file',
   'queue.drag': 'Glisser pour réorganiser',
   'queue.saveAsPlaylist': 'Enregistrer comme playlist',
 

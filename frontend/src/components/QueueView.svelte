@@ -2,9 +2,11 @@
   import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action';
   import { flip } from 'svelte/animate';
   import { api, coverUrl } from '../lib/api';
+  import { menu } from '../lib/contextMenu.svelte';
   import { dialogs } from '../lib/dialog.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
+  import { currentSongMenu, queueItemMenu } from '../lib/menus';
   import { store } from '../lib/store.svelte';
   import type { MessageKey } from '../lib/i18n/en';
   import type { QueueItem } from '../lib/types';
@@ -76,6 +78,10 @@
     store.closeQueue();
     if (!wasOverPlayer) setTimeout(() => store.openNowPlaying(), 40);
   }
+
+  // Right-click menu of a row ("Move to Next in queue" for album/playlist rows).
+  const rowMenu = (row: Row, zone?: Zone) =>
+    queueItemMenu({ ...row, id: row.song_id }, zone === 'context' ? () => toNextInQueue(row.uid) : undefined);
 
   function remove(uid: number) {
     store.run(() => api.removeItem(uid));
@@ -191,7 +197,7 @@
 
   {#if current}
     <p class="section">{t('queue.nowPlaying')}</p>
-    <button class="current" onclick={openPlayer}>
+    <button class="current" onclick={openPlayer} use:menu={() => currentSongMenu(current)}>
       {#if current.cover_art}
         <img src={coverUrl(current.cover_art, 128)} alt="" />
       {:else}
@@ -218,7 +224,7 @@
       onfinalize={(e) => finalize(name, e)}
     >
       {#each rows as item (item.id)}
-        <li animate:flip={{ duration: FLIP_MS }}>
+        <li animate:flip={{ duration: FLIP_MS }} use:menu={() => rowMenu(item, name)}>
           <SwipeRow
             left={{ label: t('queue.remove'), icon: 'trash', action: () => remove(item.uid), dismiss: true }}
             right={name === 'context' ? { label: t('song.addToQueue'), icon: 'queue', action: () => toNextInQueue(item.uid) } : undefined}
@@ -285,7 +291,7 @@
     {#if showHistory}
       <ol class="list history">
         {#each history as item (item.uid)}
-          <li>
+          <li use:menu={() => queueItemMenu(item)}>
             <SwipeRow left={{ label: t('queue.remove'), icon: 'trash', action: () => remove(item.uid), dismiss: true }}>
             <button class="row" onclick={() => store.run(() => api.jump(item.uid))}>
               {#if item.cover_art}

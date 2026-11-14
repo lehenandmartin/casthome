@@ -1,13 +1,13 @@
 <script lang="ts">
   import { api } from '../lib/api';
+  import { contextMenu, menu } from '../lib/contextMenu.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
-  import { startRadio } from '../lib/radio';
+  import { songMenu } from '../lib/menus';
   import { store } from '../lib/store.svelte';
-  import type { AddMode, Song } from '../lib/types';
+  import type { MenuSpec } from '../lib/contextMenu.svelte';
+  import type { Song } from '../lib/types';
   import Icon from './Icon.svelte';
-  import PlaylistPicker from './PlaylistPicker.svelte';
-  import RatingStars from './RatingStars.svelte';
   import StarButton from './StarButton.svelte';
   import SwipeRow from './SwipeRow.svelte';
 
@@ -30,26 +30,30 @@
     showAlbum?: boolean;
   } = $props();
 
-  let menuFor = $state<number | null>(null);
-  let pickerFor = $state<string | null>(null);
   const currentId = $derived(store.player?.current?.id);
-  const menuSong = $derived(menuFor !== null ? (songs[menuFor] ?? null) : null);
 
-  async function add(song: Song, mode: AddMode) {
-    menuFor = null;
+  // The ⋯ button and a right-click on the row open the same menu.
+  function menuFor(index: number): MenuSpec {
+    const remove = onremove;
+    return songMenu(
+      songs[index],
+      remove ? [{ label: t('playlist.removeTrack'), icon: 'trash', danger: true, action: () => remove(index) }] : [],
+    );
+  }
+
+  async function addToQueue(song: Song) {
     await store.run(async () => {
-      await api.queueSongs([song.id], mode);
-      if (mode !== 'now') store.notify('added_to_queue', {}, 'info');
+      await api.queueSongs([song.id], 'queue');
+      store.notify('added_to_queue', {}, 'info');
     });
   }
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && (menuFor = null)} />
 
 <ol class="songs">
   {#each songs as song, i (`${song.id}-${i}`)}
-    <li class:current={song.id === currentId}>
-      <SwipeRow right={{ label: t('song.addToQueue'), icon: 'queue', action: () => add(song, 'queue') }}>
+    <li class:current={song.id === currentId} use:menu={() => menuFor(i)}>
+      <SwipeRow right={{ label: t('song.addToQueue'), icon: 'queue', action: () => addToQueue(song) }}>
       <button class="row" onclick={() => onplay(i)}>
         {#if ranked}<span class="num muted">{i + 1}</span>
         {:else if numbered}<span class="num muted">{song.track ?? i + 1}</span>{/if}
@@ -66,71 +70,13 @@
         aria-haspopup="dialog"
         onclick={(e) => {
           e.stopPropagation();
-          menuFor = i;
+          contextMenu.open(menuFor(i));
         }}><Icon name="more" size={20} /></button
       >
       </SwipeRow>
     </li>
   {/each}
 </ol>
-
-<!-- Actions open as a bottom sheet: a dropdown would end up under the player on mobile. -->
-{#if menuSong && menuFor !== null}
-  {@const index = menuFor}
-  <div class="sheet-backdrop" role="presentation" onclick={() => (menuFor = null)}></div>
-  <div class="sheet" role="dialog" aria-modal="true" aria-label={t('song.more')}>
-    <div class="sheet-head">
-      <span class="text">
-        <strong class="ellipsis">{menuSong.title}</strong>
-        <span class="muted ellipsis">{menuSong.artist}{menuSong.album ? ` · ${menuSong.album}` : ''}</span>
-      </span>
-      <RatingStars id={menuSong.id} bind:rating={songs[index].user_rating} />
-    </div>
-    <div class="sheet-actions" role="menu">
-      <button role="menuitem" onclick={() => add(menuSong, 'now')}><Icon name="play" size={20} />{t('song.playNow')}</button>
-      <button role="menuitem" onclick={() => add(menuSong, 'queue')}><Icon name="queue" size={20} />{t('song.addToQueue')}</button>
-      <button
-        role="menuitem"
-        onclick={() => {
-          const seed = menuSong;
-          menuFor = null;
-          startRadio(seed);
-        }}><Icon name="radio" size={20} />{t('song.startRadio')}</button
-      >
-      <button
-        role="menuitem"
-        onclick={() => {
-          pickerFor = menuSong.id;
-          menuFor = null;
-        }}><Icon name="playlist" size={20} />{t('song.addToPlaylist')}</button
-      >
-      {#if menuSong.album_id}
-        <a role="menuitem" href={`#/album/${encodeURIComponent(menuSong.album_id)}`} onclick={() => (menuFor = null)}
-          ><Icon name="disc" size={20} />{t('song.goToAlbum')}</a
-        >
-      {/if}
-      {#if menuSong.artist_id}
-        <a role="menuitem" href={`#/artist/${encodeURIComponent(menuSong.artist_id)}`} onclick={() => (menuFor = null)}
-          ><Icon name="artist" size={20} />{t('song.goToArtist')}</a
-        >
-      {/if}
-      {#if onremove}
-        <button
-          role="menuitem"
-          class="danger"
-          onclick={() => {
-            menuFor = null;
-            onremove(index);
-          }}><Icon name="trash" size={20} />{t('playlist.removeTrack')}</button
-        >
-      {/if}
-    </div>
-  </div>
-{/if}
-
-{#if pickerFor}
-  <PlaylistPicker songIds={[pickerFor]} onclose={() => (pickerFor = null)} />
-{/if}
 
 <style>
   .songs {
@@ -185,37 +131,5 @@
     padding: 0;
     color: var(--muted);
     flex: none;
-  }
-  .sheet-head {
-    display: grid;
-    gap: 8px;
-    padding: 4px 4px 12px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 6px;
-  }
-  .sheet-head .text {
-    display: grid;
-    min-width: 0;
-  }
-  .sheet-actions {
-    display: grid;
-  }
-  .sheet-actions > * {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: none;
-    border-radius: 10px;
-    padding: 12px 8px;
-    text-align: left;
-    text-decoration: none;
-    color: inherit;
-    font-size: 1rem;
-  }
-  .sheet-actions > *:hover {
-    background: var(--surface-2);
-  }
-  .sheet-actions .danger {
-    color: var(--danger);
   }
 </style>

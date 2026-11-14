@@ -1,5 +1,7 @@
 <script lang="ts">
   import { coverUrl } from '../lib/api';
+  import { menu } from '../lib/contextMenu.svelte';
+  import { currentSongMenu } from '../lib/menus';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import DeviceButton from './DeviceButton.svelte';
@@ -12,6 +14,7 @@
   const song = $derived(store.player?.current ?? null);
   const duration = $derived(store.player?.duration ?? song?.duration ?? 0);
   const progress = $derived(duration ? Math.min(100, (store.position / duration) * 100) : 0);
+  const songMenu = () => (song ? currentSongMenu(song) : null);
   const casting = $derived(Boolean(store.player?.device_uuid) && !store.isThisBrowser);
 </script>
 
@@ -19,7 +22,7 @@
   <!-- Mobile: compact bar, tap to open Now Playing -->
   <div class="mini">
     <div class="mini-progress" style:width={`${progress}%`}></div>
-    <button class="mini-main" disabled={!song} onclick={() => store.openNowPlaying()} aria-label={t('nowPlaying.open')}>
+    <button class="mini-main" use:menu={songMenu} disabled={!song} onclick={() => store.openNowPlaying()} aria-label={t('nowPlaying.open')}>
       {#if song?.cover_art}
         <img src={coverUrl(song.cover_art, 96)} alt="" />
       {:else}
@@ -38,7 +41,7 @@
 
   <!-- Desktop: full bar -->
   <div class="full">
-    <div class="now">
+    <div class="now" use:menu={songMenu}>
       <button class="cover" disabled={!song} onclick={() => store.openNowPlaying()} aria-label={t('nowPlaying.open')}>
         {#if song?.cover_art}
           <img src={coverUrl(song.cover_art, 128)} alt="" />

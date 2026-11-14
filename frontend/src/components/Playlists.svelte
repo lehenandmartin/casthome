@@ -1,5 +1,7 @@
 <script lang="ts">
   import { api, coverUrl } from '../lib/api';
+  import { menu } from '../lib/contextMenu.svelte';
+  import { playlistMenu } from '../lib/menus';
   import { router } from '../lib/router.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
@@ -43,7 +45,7 @@
   <ul>
     {#each playlists as playlist (playlist.id)}
       <li>
-        <a href={`#/playlist/${encodeURIComponent(playlist.id)}`}>
+        <a href={`#/playlist/${encodeURIComponent(playlist.id)}`} use:menu={() => playlistMenu(playlist, load)}>
           {#if playlist.cover_art}
             <img src={coverUrl(playlist.cover_art, 96)} alt="" loading="lazy" />
           {:else}

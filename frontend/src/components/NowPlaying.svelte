@@ -1,5 +1,7 @@
 <script lang="ts">
   import { coverUrl } from '../lib/api';
+  import { contextMenu, menu } from '../lib/contextMenu.svelte';
+  import { currentSongMenu } from '../lib/menus';
   import { startRadio } from '../lib/radio';
   import { router } from '../lib/router.svelte';
   import { formatTime } from '../lib/format';
@@ -44,7 +46,7 @@
   }
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && store.closeNowPlaying()} />
+<svelte:window onkeydown={(e) => e.key === 'Escape' && !e.defaultPrevented && !contextMenu.current && store.closeNowPlaying()} />
 
 <div
   class="np"
@@ -71,7 +73,7 @@
   </header>
 
   <div class="body">
-    <div class="art">
+    <div class="art" use:menu={() => (song ? currentSongMenu(song) : null)}>
       {#if cover}
         <img src={cover} alt="" />
       {:else}
@@ -80,7 +82,7 @@
     </div>
 
     <div class="info">
-      <div class="titles">
+      <div class="titles" use:menu={() => (song ? currentSongMenu(song) : null)}>
         <h2 class="ellipsis">{song?.title ?? t('player.nothing')}</h2>
         {#if song}
           <p class="ellipsis">

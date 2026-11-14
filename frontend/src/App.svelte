@@ -10,6 +10,7 @@
   import ArtistView from './components/ArtistView.svelte';
   import Artists from './components/Artists.svelte';
   import DevicePicker from './components/DevicePicker.svelte';
+  import ContextMenu from './components/ContextMenu.svelte';
   import Dialog from './components/Dialog.svelte';
   import GenreView from './components/GenreView.svelte';
   import Genres from './components/Genres.svelte';
@@ -87,6 +88,7 @@
 </script>
 
 <Toasts />
+<ContextMenu />
 <Dialog />
 <!-- Installed iOS app: the status bar is translucent; keep scrolled content from showing through it. -->
 <div class="statusbar-bg" aria-hidden="true"></div>

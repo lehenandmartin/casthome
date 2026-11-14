@@ -4,6 +4,7 @@
   //   chevron or a swipe down on its header closes it and returns there;
   // - desktop: a panel on the right, next to the page, toggled from the
   //   player bar or the sidebar.
+  import { contextMenu } from '../lib/contextMenu.svelte';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import Icon from './Icon.svelte';
@@ -28,7 +29,7 @@
   }
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && !store.isDesktop && store.closeQueue()} />
+<svelte:window onkeydown={(e) => e.key === 'Escape' && !e.defaultPrevented && !contextMenu.current && !store.isDesktop && store.closeQueue()} />
 
 {#if store.isDesktop}
   <aside class="side" aria-label={t('queue.title')}>

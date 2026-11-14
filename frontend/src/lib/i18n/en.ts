@@ -287,6 +287,7 @@ export const en = {
   'queue.clearConfirm': 'Remove every track, including the album or playlist you are listening to?',
   'queue.count': '{count} tracks',
   'queue.remove': 'Remove from queue',
+  'queue.moveToNext': 'Move to Next in queue',
   'queue.drag': 'Drag to reorder',
   'queue.saveAsPlaylist': 'Save as playlist',
 

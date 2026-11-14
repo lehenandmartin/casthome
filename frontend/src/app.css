@@ -242,6 +242,14 @@ input[type='range']:disabled {
 }
 
 /* Bottom sheet (mobile) / centered panel (desktop) */
+/* What a right-click menu was opened on, while the menu is open. */
+.context-target {
+  background: var(--surface-2);
+  outline: 2px solid var(--surface-3);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
 .sheet-backdrop {
   position: fixed;
   inset: 0;

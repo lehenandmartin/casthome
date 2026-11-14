@@ -1,5 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api';
+  import { menu } from '../lib/contextMenu.svelte';
+  import { artistMenu } from '../lib/menus';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
   import type { Artist } from '../lib/types';
@@ -34,7 +36,7 @@
   <ul>
     {#each visible as artist (artist.id)}
       <li>
-        <a href={`#/artist/${encodeURIComponent(artist.id)}`}>
+        <a href={`#/artist/${encodeURIComponent(artist.id)}`} use:menu={() => artistMenu(artist)}>
           <span>{artist.name}</span>
           <span class="muted">{t('album.count', { count: artist.album_count })}</span>
         </a>
