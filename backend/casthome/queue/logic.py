@@ -115,6 +115,29 @@ class QueueModel(Generic[T]):
         if self.shuffle:
             self._shuffle_context(random.Random(), keep_original=True)
 
+    def follow_current(self, items: list[T], name: str | None = None) -> bool:
+        """Keep the current track where it is (playing on) and make `items` the
+        new album/playlist part after it, e.g. a radio started from the track
+        being played. Tracks in "next in queue" are kept, right after it; the
+        tracks already played are dropped, as when starting a new context.
+        False (nothing changed) when there is no current track."""
+        current = self.current
+        if current is None:
+            return False
+        self.context_name = name
+        self.radio = False
+        self.radio_source = None
+        self.radio_artist = None
+        pending = [e for i, e in enumerate(self.entries) if e.queued and i != self.index]
+        # Same uid (the device keeps playing it), no longer in "next in queue".
+        playing = replace(current, queued=False)
+        self.entries = [playing, *pending, *self._wrap(items)]
+        self.index = 0
+        self.original_order = None
+        if self.shuffle:
+            self._shuffle_context(random.Random(), keep_original=True)
+        return True
+
     def replace(self, items: list[T], start_index: int = 0) -> None:
         """Replace everything, "next in queue" included (used when restoring)."""
         self.entries = self._wrap(items)

@@ -280,3 +280,23 @@ def test_clear():
     q = make()
     q.clear()
     assert len(q) == 0 and q.index is None
+
+
+class TestFollowCurrent:
+    def test_keeps_the_current_entry_and_next_in_queue(self):
+        q = make("abcde", 2)
+        q.add(["q"], AddMode.QUEUE)
+        uid = q.current.uid
+        assert q.follow_current(list("xyz"), "Radio")
+        assert q.items == ["c", "q", "x", "y", "z"] and q.index == 0
+        assert q.current.uid == uid and q.context_name == "Radio"
+
+    def test_shuffle_keeps_current_first(self):
+        q = make("abcde", 1)
+        q.set_shuffle(True)
+        q.follow_current(list("vwxyz"))
+        assert q.items[0] == "b" and sorted(q.items[1:]) == list("vwxyz")
+
+    def test_without_a_current_track_does_nothing(self):
+        q: QueueModel[str] = QueueModel()
+        assert q.follow_current(["x"]) is False and len(q) == 0

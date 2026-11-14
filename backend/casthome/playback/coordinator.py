@@ -293,7 +293,9 @@ class PlaybackCoordinator:
 
     async def start_radio(self, seed: Song) -> str:
         """Play `seed`, then similar tracks; the radio refills itself as it plays.
-        Returns the source used. Tracks in "next in queue" are kept."""
+        Returns the source used. Tracks in "next in queue" are kept.
+        When `seed` is the track being played, it carries on where it is and
+        the similar tracks follow it (no restart)."""
         if self._radio_builder is None:
             raise PlaybackError("no_similar_tracks")
         try:
@@ -303,11 +305,17 @@ class PlaybackCoordinator:
         if not songs or source is None:
             raise PlaybackError("no_similar_tracks", {"title": seed.title})
         async with self._lock:
-            self.queue.play_context([seed, *songs], 0, seed.title)
+            current = self.queue.current
+            continuing = current is not None and current.item.id == seed.id
+            if continuing:
+                self.queue.follow_current(songs, seed.title)
+            else:
+                self.queue.play_context([seed, *songs], 0, seed.title)
             self.queue.radio = True
             self.queue.radio_source = source
             self._queue_mutated()
-            await self._load_current(0)
+            if not continuing:
+                await self._load_current(0)
         return source
 
     async def start_artist_radio(self, artist_id: str, artist_name: str) -> str:

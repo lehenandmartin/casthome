@@ -158,8 +158,10 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   Navidrome's own API (`/api/song`, signed in with the same account).
 - **Radio:** *Start radio* (track menu, or the Now Playing view) plays the
   track, then similar tracks, and keeps adding more as it plays (endless, no
-  repeats). Tracks in *Next in queue* stay first; starting an album or a
-  playlist ends the radio. Sources, tried in order so the radio still works
+  repeats). Started from the track being played, that track carries on
+  where it is (no restart) and the similar tracks follow it. Tracks in *Next
+  in queue* stay first; starting an album or a playlist ends the radio.
+  Sources, tried in order so the radio still works
   when a service behind Navidrome is down: `getSimilarSongs` on the track
   (AudioMuse-AI sonic similarity when that plugin is active, else Last.fm and
   other agents), then `getSimilarSongs2` on the artist, then the artist's top

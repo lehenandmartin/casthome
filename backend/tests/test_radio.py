@@ -95,6 +95,30 @@ async def test_start_radio_plays_seed_then_similar_and_keeps_queue(h):
     assert [i["id"] for i in snap["items"][:3]] == ["seed", "q", "s0"] and snap["context_name"] == "Seed"
 
 
+async def test_radio_from_the_track_being_played_keeps_it_playing(h):
+    h.c._radio_builder = make_radio_builder(FakeSource(similar=tracks("s", 10)))
+    await h.c.play_songs([SEED, *tracks("x", 2)], 0, "Album")
+    await h.c.add_songs([Song(id="q", title="Q")], AddMode.QUEUE)
+    current_uid = h.c.queue.current.uid
+    loads = len(h.target.loads)
+    await h.c.start_radio(SEED)
+    snap = h.c.queue_snapshot()
+    # Not restarted: same entry, no new load on the device.
+    assert h.c.queue.current.uid == current_uid and len(h.target.loads) == loads
+    # Next in queue kept, then the radio instead of the rest of the album.
+    assert [i["id"] for i in snap["items"][:3]] == ["seed", "q", "s0"]
+    assert "x0" not in [i["id"] for i in snap["items"]]
+    assert snap["radio"] is True and snap["context_name"] == "Seed"
+
+
+async def test_radio_from_another_track_still_starts_with_it(h):
+    h.c._radio_builder = make_radio_builder(FakeSource(similar=tracks("s", 10)))
+    await h.c.play_songs(tracks("x", 2), 0, "Album")
+    loads = len(h.target.loads)
+    await h.c.start_radio(SEED)
+    assert playing_id(h) == "seed" and len(h.target.loads) == loads + 1
+
+
 async def test_radio_without_results_reports_it(h):
     h.c._radio_builder = make_radio_builder(FakeSource())
     with pytest.raises(PlaybackError) as err:
