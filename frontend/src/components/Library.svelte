@@ -28,9 +28,9 @@
   </ul>
   <ul>
     <li>
-      <a href="#/account">
-        <span class="icon"><Icon name="account" size={22} /></span>
-        <span class="label">{t('nav.account')}</span>
+      <a href="#/settings">
+        <span class="icon"><Icon name="settings" size={22} /></span>
+        <span class="label">{t('nav.settings')}</span>
         <Icon name="chevronRight" size={18} />
       </a>
     </li>

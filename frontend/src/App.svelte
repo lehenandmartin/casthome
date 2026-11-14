@@ -24,27 +24,15 @@
   import Playlists from './components/Playlists.svelte';
   import QueuePanel from './components/QueuePanel.svelte';
   import Search from './components/Search.svelte';
-  import Sessions from './components/Sessions.svelte';
+  import Settings from './components/Settings.svelte';
   import Toasts from './components/Toasts.svelte';
   import Tracks from './components/Tracks.svelte';
 
   const hash = $derived(router.hash);
 
-  const PAGES = ['albums', 'artists', 'genres', 'playlists', 'tracks', 'search', 'account', 'library'] as const;
+  const PAGES = ['albums', 'artists', 'genres', 'playlists', 'tracks', 'search', 'settings', 'library'] as const;
   type Page = (typeof PAGES)[number] | 'home';
   type Route = { name: Page } | { name: 'album' | 'artist' | 'genre' | 'playlist'; id: string };
-
-  // Old links (bookmarks, the PWA's last page): #/queue opens the queue layer,
-  // #/favorites (a page that no longer exists) shows favorite tracks.
-  $effect(() => {
-    const path = router.hash.split('?')[0];
-    if (path === '#/queue') {
-      router.navigate('#/', { replace: true });
-      queueMicrotask(() => store.openQueue());
-    } else if (path === '#/favorites') {
-      router.navigate('#/tracks?fav=1', { replace: true });
-    }
-  });
 
   const route = $derived.by((): Route => {
     const path = hash.split('?')[0];
@@ -61,8 +49,8 @@
 
   const PARENT: Record<string, string> = { album: 'albums', artist: 'artists', genre: 'genres', playlist: 'playlists' };
   const section = $derived(PARENT[route.name] ?? route.name);
-  // Mobile tabs: Library groups artists, genres, playlists, favorites and account.
-  const LIBRARY_SECTIONS = new Set(['library', 'albums', 'artists', 'genres', 'playlists', 'tracks', 'account']);
+  // Mobile tabs: Library groups albums, tracks, artists, genres, playlists and settings.
+  const LIBRARY_SECTIONS = new Set(['library', 'albums', 'artists', 'genres', 'playlists', 'tracks', 'settings']);
   const tab = $derived(LIBRARY_SECTIONS.has(section) ? 'library' : section);
 
   interface NavItem {
@@ -121,8 +109,8 @@
         {#if upcoming > 0}<span class="badge">{upcoming}</span>{/if}
       </button>
     </nav>
-    <a class="account" href="#/account" class:active={section === 'account'}>
-      <Icon name="account" size={20} />{t('nav.account')}
+    <a class="settings-link" href="#/settings" class:active={section === 'settings'}>
+      <Icon name="settings" size={20} />{t('nav.settings')}
     </a>
   </aside>
 
@@ -135,8 +123,8 @@
       {#key route.id}<GenreView name={route.id} />{/key}
     {:else if route.name === 'playlist'}
       <PlaylistView id={route.id} />
-    {:else if route.name === 'account'}
-      <Sessions />
+    {:else if route.name === 'settings'}
+      <Settings />
     {:else if route.name === 'library'}
       <Library />
     {:else if route.name === 'playlists'}
@@ -318,7 +306,7 @@
     .sidebar .badge {
       margin-left: auto;
     }
-    .account {
+    .settings-link {
       margin-top: auto;
     }
     .content {

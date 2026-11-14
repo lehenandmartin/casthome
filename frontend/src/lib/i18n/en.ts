@@ -18,7 +18,11 @@ export const en = {
   'nav.playlists': 'Playlists',
   'nav.queue': 'Queue',
   'nav.signOut': 'Sign out',
-  'nav.account': 'Account',
+  'nav.settings': 'Settings',
+
+  'settings.title': 'Settings',
+  'settings.account': 'Account',
+  'settings.accountDetail': 'Navidrome account used by CastHome',
   'nav.home': 'Home',
   'nav.library': 'Library',
 

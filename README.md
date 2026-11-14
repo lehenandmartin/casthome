@@ -30,8 +30,8 @@ Mobile-first, installable on the home screen.
   *Favorites* filter on the Tracks, Albums and Artists pages); 5-star ratings; scrobbling to Navidrome ("now playing" when
   a track starts, a scrobble after half the track or 4 minutes of actual
   listening; seeking forward does not count).
-- Phase 4: installable PWA; "Account" page listing signed-in devices, with
-  per-device and "all other devices" sign-out (takes effect immediately);
+- Phase 4: installable PWA; Settings page (account; signed-in devices with
+  per-device and "all other devices" sign-out, effective immediately);
   preloading of the next track to shorten gaps (`CAST_PRELOAD_NEXT`); the Navidrome
   play queue is re-read every minute while idle, so a queue saved by another
   Subsonic client is picked up.
@@ -70,7 +70,7 @@ never sent to the frontend.
 ## Using CastHome
 
 - **Mobile:** tabs at the bottom (Home, Search, Library; Library holds
-  playlists, favorites, tracks, artists, genres and your account). Above them,
+  playlists, tracks, artists, genres, albums and Settings). Above them,
   the mini player: tap it for the full-screen **Now Playing** view (large
   artwork, seek bar, controls, shuffle/repeat, device, volume, next track).
   Swipe down or use Back to close it. The queue button under *repeat* slides

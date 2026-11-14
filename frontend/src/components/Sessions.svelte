@@ -5,6 +5,8 @@
   import type { SessionInfo } from '../lib/types';
   import { describeUserAgent } from '../lib/useragent';
 
+  // Inside Settings, which shows the section title.
+  let { embedded = false }: { embedded?: boolean } = $props();
   let sessions = $state<SessionInfo[]>([]);
 
   async function load() {
@@ -39,8 +41,8 @@
 </script>
 
 <section>
-  <h2>{t('sessions.title')}</h2>
-  <p class="muted">{t('sessions.intro')}</p>
+  {#if !embedded}<h2>{t('sessions.title')}</h2>{/if}
+  <p class="muted intro">{t('sessions.intro')}</p>
 
   <ul>
     {#each sessions as session (session.id)}
@@ -60,7 +62,8 @@
           </span>
         </div>
         {#if session.current}
-          <button onclick={signOut}>{t('nav.signOut')}</button>
+          <!-- In Settings, this device signs out from the Account section above. -->
+          {#if !embedded}<button onclick={signOut}>{t('nav.signOut')}</button>{/if}
         {:else}
           <button class="danger" onclick={() => revoke(session.id)}>{t('sessions.revoke')}</button>
         {/if}
@@ -104,6 +107,8 @@
     background: var(--accent);
     color: var(--on-accent);
     vertical-align: middle;
+    display: inline-block;
+    white-space: nowrap;
   }
   button {
     flex: none;
