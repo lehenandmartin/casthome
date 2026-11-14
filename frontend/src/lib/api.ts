@@ -11,6 +11,7 @@ import type {
   AlbumListType,
   Artist,
   ArtistDetail,
+  ArtistHighlights,
   HomeData,
   Genre,
   Playlist,
@@ -100,6 +101,8 @@ export const api = {
     ),
   artists: () => request<Artist[]>('GET', '/library/artists'),
   artist: (id: string) => request<ArtistDetail>('GET', `/library/artists/${encodeURIComponent(id)}`),
+  artistHighlights: (id: string) =>
+    request<ArtistHighlights>('GET', `/library/artists/${encodeURIComponent(id)}/highlights`),
   genres: () => request<Genre[]>('GET', '/library/genres'),
   genreSongs: (genre: string, count = 200) =>
     request<Song[]>('GET', `/library/genres/${encodeURIComponent(genre)}/songs?count=${count}`),
@@ -145,11 +148,13 @@ export const api = {
   /** Endless radio: the track, then similar tracks, refilled as it plays. */
   startRadio: (songId: string) => request<{ source: string }>('POST', '/radio', { song_id: songId }),
   home: () => request<HomeData>('GET', '/home'),
-  /** Every track, paged; 'recent' = most recently added first. */
-  songs: (sort: SongSort = 'recent', offset = 0, size = 100, starred = false) =>
+  /** Every track, paged; 'recent' = most recently added first. `artistId`: that artist's only. */
+  songs: (sort: SongSort = 'recent', offset = 0, size = 100, starred = false, artistId?: string) =>
     request<SongPage>(
       'GET',
-      `/library/songs?sort=${sort}&offset=${offset}&size=${size}` + (starred ? '&starred=true' : ''),
+      `/library/songs?sort=${sort}&offset=${offset}&size=${size}` +
+        (starred ? '&starred=true' : '') +
+        (artistId ? `&artist_id=${encodeURIComponent(artistId)}` : ''),
     ),
   /** Insert songs without replacing the queue. */
   queueSongs: (songIds: string[], mode: AddMode) =>

@@ -93,6 +93,10 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   - *Access to CastHome*: password, open at home, or no password; this
     device's sign-out.
   - *Signed-in devices*: every browser signed in, each can be signed out.
+- **Artist page:** *Favorite tracks* opens that artist's starred tracks
+  (features included) with the Tracks page sorts; *Popular* lists their most
+  popular tracks in your library (Last.fm popularity through Navidrome's
+  `getTopSongs`; without it, your most played), 5 shown, 10 with *See more*.
 - **Favorites:** a ★ *Favorites* filter on the Tracks, Albums and Artists
   pages shows only what you starred, with that page's sorts; it is kept in
   the address (`?fav=1`), so links and Back keep it.

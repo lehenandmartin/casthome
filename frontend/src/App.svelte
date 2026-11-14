@@ -46,6 +46,9 @@
   const query = $derived(new URLSearchParams(hash.split('?')[1] ?? ''));
   const albumsType = $derived((query.get('type') as AlbumListType | null) ?? 'newest');
   const favOnly = $derived(query.get('fav') === '1');
+  // #/tracks?artist=<id>&name=<name>: one artist's tracks (from the artist page).
+  const tracksArtist = $derived(query.get('artist'));
+  const tracksArtistName = $derived(query.get('name') ?? '');
 
   const PARENT: Record<string, string> = { album: 'albums', artist: 'artists', genre: 'genres', playlist: 'playlists' };
   const section = $derived(PARENT[route.name] ?? route.name);
@@ -134,7 +137,7 @@
     {:else if route.name === 'playlists'}
       <Playlists />
     {:else if route.name === 'tracks'}
-      <Tracks fav={favOnly} />
+      <Tracks fav={favOnly} artist={tracksArtist} artistName={tracksArtistName} />
     {:else if route.name === 'artists'}
       <Artists fav={favOnly} />
     {:else if route.name === 'genres'}

@@ -60,6 +60,7 @@ def album_from_native(d: dict[str, Any]) -> Album:
         duration=float(d.get("duration") or 0),
         starred=bool(d.get("starred")),
         user_rating=int(d.get("rating") or 0),
+        play_count=int(d.get("playCount") or 0),
     )
 
 
@@ -185,12 +186,20 @@ class NativeClient:
         return [song_from_native(row) for row in recent[:limit]]
 
     async def get_songs(
-        self, sort: SongSort = "recent", offset: int = 0, size: int = 100, starred: bool = False
+        self,
+        sort: SongSort = "recent",
+        offset: int = 0,
+        size: int = 100,
+        starred: bool = False,
+        artist_id: str | None = None,
     ) -> tuple[list[Song], int]:
+        """Tracks, paged. `artist_id` keeps the artist's tracks, features included."""
         field, order = SORTS[sort]
         params: dict[str, Any] = {"_start": offset, "_end": offset + size, "_sort": field, "_order": order, "missing": "false"}
         if starred:
             params["starred"] = "true"
+        if artist_id:
+            params["artists_id"] = artist_id
         r = await self._get("/api/song", params)
         items = [song_from_native(d) for d in r.json()]
         total = int(r.headers.get("x-total-count") or (offset + len(items)))

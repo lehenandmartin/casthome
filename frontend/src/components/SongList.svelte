@@ -16,6 +16,7 @@
     onplay,
     onremove,
     numbered = false,
+    ranked = false,
     showAlbum = true,
   }: {
     songs: Song[];
@@ -24,6 +25,8 @@
     /** When set, the menu offers "Remove from playlist". */
     onremove?: (index: number) => void;
     numbered?: boolean;
+    /** Number rows 1, 2, 3… (a top list) instead of by track number. */
+    ranked?: boolean;
     showAlbum?: boolean;
   } = $props();
 
@@ -48,7 +51,8 @@
     <li class:current={song.id === currentId}>
       <SwipeRow right={{ label: t('song.addToQueue'), icon: 'queue', action: () => add(song, 'queue') }}>
       <button class="row" onclick={() => onplay(i)}>
-        {#if numbered}<span class="num muted">{song.track ?? i + 1}</span>{/if}
+        {#if ranked}<span class="num muted">{i + 1}</span>
+        {:else if numbered}<span class="num muted">{song.track ?? i + 1}</span>{/if}
         <span class="text">
           <span class="title">{song.title}</span>
           {#if showAlbum}<span class="muted">{song.artist} · {song.album}</span>{/if}

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 
 from casthome.api.deps import get_ctx, require_session
+from casthome.subsonic.client import SubsonicError
 from casthome.subsonic.native import SongSort
 
 router = APIRouter(prefix="/api", tags=["library"], dependencies=[Depends(require_session)])
@@ -42,9 +44,10 @@ async def songs(
     offset: int = Query(0, ge=0),
     size: int = Query(100, ge=1, le=500),
     starred: bool = False,
+    artist_id: str | None = Query(None, max_length=200),
 ) -> dict:
-    """Every track (or only favorites), paged; "recent" = most recently added first."""
-    items, total = await get_ctx(request).native.get_songs(sort, offset, size, starred)
+    """Every track (or only favorites, or one artist's), paged; "recent" = most recently added first."""
+    items, total = await get_ctx(request).native.get_songs(sort, offset, size, starred, artist_id)
     return {"items": [s.model_dump() for s in items], "total": total}
 
 
@@ -63,6 +66,35 @@ async def artists(request: Request) -> list[dict]:
 async def artist(artist_id: str, request: Request) -> dict:
     info, albums_ = await get_ctx(request).subsonic.get_artist(artist_id)
     return {**info.model_dump(), "albums": [a.model_dump(exclude={"songs"}) for a in albums_]}
+
+
+TOP_SONGS = 10
+
+
+@router.get("/library/artists/{artist_id}/highlights")
+async def artist_highlights(artist_id: str, request: Request) -> dict:
+    """Popular tracks and the number of favorite tracks, for the artist page.
+
+    Popular tracks come from Navidrome's getTopSongs (Last.fm popularity,
+    matched to the library); without them, the artist's most played tracks.
+    """
+    ctx = get_ctx(request)
+    info, _albums = await ctx.subsonic.get_artist(artist_id)
+
+    async def popular() -> tuple[str, list]:
+        try:
+            top = await ctx.subsonic.get_top_songs(info.name, TOP_SONGS)
+        except SubsonicError:
+            top = []
+        if top:
+            return "popular", top
+        played, _total = await ctx.native.get_songs("frequent", 0, TOP_SONGS, artist_id=artist_id)
+        return "most_played", [s for s in played if s.play_count]
+
+    (source, top), (_liked, liked_count) = await asyncio.gather(
+        popular(), ctx.native.get_songs("recent", 0, 1, starred=True, artist_id=artist_id)
+    )
+    return {"top_source": source, "top": [s.model_dump() for s in top], "liked_count": liked_count}
 
 
 @router.get("/library/genres")

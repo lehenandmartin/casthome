@@ -25,6 +25,7 @@ class Song(BaseModel):
     bit_depth: int | None = None
     starred: bool = False
     user_rating: int = 0
+    play_count: int = 0
 
     @classmethod
     def from_api(cls, d: dict[str, Any]) -> Song:
@@ -46,6 +47,7 @@ class Song(BaseModel):
             bit_depth=d.get("bitDepth"),
             starred=bool(d.get("starred")),
             user_rating=int(d.get("userRating") or 0),
+            play_count=int(d.get("playCount") or 0),
         )
 
 

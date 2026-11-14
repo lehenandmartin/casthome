@@ -6,7 +6,13 @@
   import FavoritesToggle from './FavoritesToggle.svelte';
   import SongList from './SongList.svelte';
 
-  let { fav = false }: { fav?: boolean } = $props();
+  // `artist` (an id, with its `artistName`): only that artist's tracks, e.g.
+  // "Favorite tracks" from an artist page.
+  let {
+    fav = false,
+    artist = null,
+    artistName = '',
+  }: { fav?: boolean; artist?: string | null; artistName?: string } = $props();
 
   const PAGE = 100;
   const SORTS: SongSort[] = ['recent', 'title', 'artist', 'album', 'frequent', 'played'];
@@ -30,10 +36,11 @@
     loading = true;
     const requested = sort;
     const requestedFav = fav;
+    const requestedArtist = artist;
     const offset = reset ? 0 : songs.length;
     await store.run(async () => {
-      const page = await api.songs(requested, offset, PAGE, fav);
-      if (requested !== sort || requestedFav !== fav) return; // changed meanwhile
+      const page = await api.songs(requested, offset, PAGE, fav, artist ?? undefined);
+      if (requested !== sort || requestedFav !== fav || requestedArtist !== artist) return; // changed meanwhile
       songs = reset ? page.items : [...songs, ...page.items];
       total = page.total;
     });
@@ -53,6 +60,7 @@
   $effect(() => {
     void sort;
     void fav;
+    void artist;
     songs = [];
     total = null;
     load(true);
@@ -63,12 +71,20 @@
   // Tapping a track plays the loaded list from there (as an unnamed "Next up").
   function play(index: number) {
     const ids = songs.map((s) => s.id);
-    store.run(() => api.playSongs(ids, index, fav ? t('favorites.tracksContext') : t('tracks.title')));
+    store.run(() => api.playSongs(ids, index, title));
   }
+
+  const title = $derived(
+    artist
+      ? t(fav ? 'artist.likedTitle' : 'artist.tracksTitle', { name: artistName })
+      : fav
+        ? t('favorites.tracksContext')
+        : t('tracks.title'),
+  );
 </script>
 
 <section>
-  <h2>{t('tracks.title')}</h2>
+  <h2>{title}</h2>
   {#if total !== null}<p class="muted count">{total === 1 ? t('tracks.one') : t('tracks.count', { count: total })}</p>{/if}
   <div class="tabs" role="tablist">
     <FavoritesToggle active={fav} />

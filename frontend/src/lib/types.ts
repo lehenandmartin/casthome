@@ -11,6 +11,15 @@ export interface Song {
   disc: number | null;
   starred: boolean;
   user_rating: number;
+  play_count?: number;
+}
+
+/** Artist page extras: popular tracks and how many of theirs are favorites. */
+export interface ArtistHighlights {
+  /** 'popular': Last.fm popularity (via Navidrome); 'most_played': your plays. */
+  top_source: 'popular' | 'most_played';
+  top: Song[];
+  liked_count: number;
 }
 
 export interface QueueItem extends Song {
