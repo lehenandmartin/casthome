@@ -344,6 +344,9 @@ cd backend && ../.venv/bin/python -m pytest
 cd frontend && npm run check && npm run build
 ```
 
+UI text never goes in components: add each string to `lib/i18n/en.ts` and its
+French version to `lib/i18n/fr.ts` (`npm run check` fails if one is missing).
+
 ### Layout
 
 ```
