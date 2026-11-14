@@ -242,6 +242,16 @@ input[type='range']:disabled {
 }
 
 /* Bottom sheet (mobile) / centered panel (desktop) */
+/* Elements with a long-press menu: on touch screens, the long-press is ours
+   (no link preview, no text selection). */
+@media (hover: none) {
+  .has-menu {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
 /* What a right-click menu was opened on, while the menu is open. */
 .context-target {
   background: var(--surface-2);

@@ -15,6 +15,11 @@
     contextMenu.close();
   }
 
+  // The backdrop appears under the finger of a long-press: ignore the tap that ends it.
+  function backdropClick() {
+    if (Date.now() - contextMenu.openedAt > 400) close();
+  }
+
   function choose(item: MenuAction) {
     close();
     item.action?.();
@@ -86,7 +91,7 @@
 />
 
 {#if open}
-  <div class="sheet-backdrop" class:clear={open.at} role="presentation" onclick={close} oncontextmenu={reopenUnder}></div>
+  <div class="sheet-backdrop" class:clear={open.at} role="presentation" onclick={backdropClick} oncontextmenu={reopenUnder}></div>
   <div
     class="sheet"
     class:popover={open.at}
@@ -165,8 +170,12 @@
     color: inherit;
     font-size: 1rem;
   }
-  .sheet-actions > *:hover {
-    background: var(--surface-2);
+  /* Mouse only: on touch screens the hover would stick to the entry under the
+     finger that opened the menu with a long-press. */
+  @media (hover: hover) {
+    .sheet-actions > *:hover {
+      background: var(--surface-2);
+    }
   }
   .sheet-actions .danger {
     color: var(--danger);

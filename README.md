@@ -148,7 +148,8 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   handle sits on the right, under the thumb.
 - **Track actions:** `⋯` on a track opens a sheet: play now, add to queue, add
   to playlist, go to album or artist, rating.
-- **Right-click (mouse or trackpad):** opens a menu at the pointer on
+- **Right-click (mouse or trackpad) or long-press (touch screens):** opens
+  the item's menu, at the pointer with a mouse, as a sheet on touch screens, on
   - tracks: the same actions as `⋯`;
   - queue rows: play now, move to *Next in queue* (album or playlist rows),
     radio, add to playlist, go to album or artist, rating, remove;
@@ -160,7 +161,9 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
 
   Arrow keys move through the menu, Escape closes it, and a right-click
   elsewhere opens the menu there. Shift + right-click keeps the browser's own
-  menu; touch screens keep their long-press and swipes.
+  menu. A long-press (half a second, without moving) never plays or opens
+  the item; moving the finger scrolls or swipes as before, and the queue's
+  drag handle keeps its own long-press.
 
 ## Install (Docker, Linux host)
 
