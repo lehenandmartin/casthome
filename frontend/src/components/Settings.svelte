@@ -122,6 +122,8 @@
   const MODE_LABEL = { password: 'access.password', lan: 'access.lan', open: 'access.open' } as const;
   const MODE_DETAIL = { password: 'access.passwordDetail', lan: 'access.lanDetail', open: 'access.openDetail' } as const;
 
+  const REPO_URL = 'https://github.com/lehenandmartin/casthome';
+
   load();
 </script>
 
@@ -246,6 +248,22 @@
       <Sessions embedded />
     </section>
   {/if}
+
+  <section class="block">
+    <h3>{t('settings.about')}</h3>
+    <div class="card">
+      <span class="avatar"><Icon name="cast" size={22} /></span>
+      <span class="text">
+        <strong>CastHome</strong>
+        <span class="muted">
+          {settings
+            ? t('settings.version', { version: settings.version }) + (settings.revision ? ` (${settings.revision})` : '')
+            : '…'}
+        </span>
+        <a href={REPO_URL} target="_blank" rel="noopener noreferrer">{t('settings.sourceCode')}</a>
+      </span>
+    </div>
+  </section>
 </section>
 
 <style>

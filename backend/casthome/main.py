@@ -12,6 +12,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from casthome import __version__
 from casthome.api import auth, home, library, player, playlists, server, setup, stream, ws
 from casthome.api.deps import origin_allowed
 from casthome.config import Settings, get_settings
@@ -54,7 +55,7 @@ def create_app(settings: Settings | None = None, ctx: AppContext | None = None, 
         await context.subsonic.aclose()
         await context.db.close()
 
-    app = FastAPI(title="CastHome", lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json")
+    app = FastAPI(title="CastHome", version=__version__, lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json")
     app.state.ctx = context
 
     @app.middleware("http")

@@ -93,6 +93,8 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   - *Access to CastHome*: password, open at home, or no password; this
     device's sign-out.
   - *Signed-in devices*: every browser signed in, each can be signed out.
+  - *About*: CastHome version (and the commit, for images built by GitHub),
+    with a link to the repository.
 - **Artist page:** *Favorite tracks* opens that artist's starred tracks
   (features included) with the Tracks page sorts; *Popular* lists their most
   popular tracks in your library (Last.fm popularity through Navidrome's
@@ -149,9 +151,16 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
 
 ## Install (Docker, Linux host)
 
+No need to clone the repository: the image is published on GitHub
+(`ghcr.io/lehenandmartin/casthome`, amd64 and arm64, so a Raspberry Pi works
+too). Get the compose file and start it:
+
 ```bash
-docker compose up -d --build
+mkdir casthome && cd casthome && curl -fsSLO https://raw.githubusercontent.com/lehenandmartin/casthome/main/docker-compose.yml && docker compose up -d
 ```
+
+Or paste [`docker-compose.yml`](docker-compose.yml) as a stack in Portainer,
+Dockge, etc.
 
 Open `http://<host-ip>:4577` and follow the setup: Navidrome URL, username
 and password (checked right away), then how to protect CastHome. Everything is
@@ -176,6 +185,25 @@ To use another port than 4577, set `PORT` under `environment:` in
 `network_mode: host` is **required**: Cast discovery uses mDNS multicast,
 which does not cross Docker's bridge network. Docker Desktop on macOS/Windows
 does not support this reliably; run CastHome natively there (see Development).
+
+### Update
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+`:latest` is the last release. To control updates, pin a version in
+`docker-compose.yml` (`:0.1` takes the fixes of 0.1, `:0.1.0` never moves);
+`:main` follows the development branch. The running version is shown in
+**Settings → About**, with a link to this repository.
+
+### Build the image yourself
+
+From a clone of the repository:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
 
 ## Configuration
 
@@ -321,8 +349,8 @@ when saving the connection for this reason.
 LAN, or a publicly trusted certificate (e.g. Let's Encrypt via DNS challenge)
 on a name the devices can resolve.
 
-**The installed app still shows the old version after an update.** Rebuild the
-frontend (`npm run build`), then close the app completely (swipe it away) and
+**The installed app still shows the old version after an update.** After
+pulling the new image (or, in development, `npm run build`), close the app completely (swipe it away) and
 reopen it.
 
 **"Reconnecting to CastHome…" stays on screen.** The WebSocket cannot reach the
@@ -369,10 +397,24 @@ cd frontend && npm run check && npm run build
 UI text never goes in components: add each string to `lib/i18n/en.ts` and its
 French version to `lib/i18n/fr.ts` (`npm run check` fails if one is missing).
 
+### Releases
+
+The version lives in one place: `__version__` in
+`backend/casthome/__init__.py` (the API and **Settings → About** report it).
+Every push to `main` publishes the `:main` image (GitHub Actions,
+[`.github/workflows/docker.yml`](.github/workflows/docker.yml)). To release:
+
+1. Set `__version__` to the new version (e.g. `0.2.0`) and commit.
+2. Tag and push: `git tag v0.2.0 && git push origin main v0.2.0`.
+
+The workflow checks the tag matches `__version__`, then publishes `:0.2.0`,
+`:0.2`, `:0` and `:latest`.
+
 ### Layout
 
 ```
 backend/casthome/
+  __init__.py          __version__ (the only place to change it)
   config.py            optional environment settings
   appconfig.py         configuration saved from the browser, access modes,
                        CastHome password hashing, encryption key file
@@ -399,3 +441,7 @@ frontend/src/
 frontend/public/            manifest, service worker, icons
 scripts/make_icons.py       regenerates the PWA icons
 ```
+
+## License
+
+[MIT](LICENSE)

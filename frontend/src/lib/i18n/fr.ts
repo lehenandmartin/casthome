@@ -40,6 +40,9 @@ export const fr: Record<MessageKey, string> = {
   'settings.language': 'Langue',
   'settings.languageAuto': 'Automatique ({language})',
   'settings.languageHint': 'Automatique suit la langue de ce navigateur. Enregistré sur cet appareil.',
+  'settings.about': 'À propos',
+  'settings.version': 'Version {version}',
+  'settings.sourceCode': 'Code source et mises à jour sur GitHub',
   'language.en': 'English',
   'language.fr': 'Français',
 

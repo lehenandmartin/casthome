@@ -39,6 +39,9 @@ export const en = {
   'settings.language': 'Language',
   'settings.languageAuto': 'Automatic ({language})',
   'settings.languageHint': 'Automatic follows this browser’s language. Saved on this device.',
+  'settings.about': 'About',
+  'settings.version': 'Version {version}',
+  'settings.sourceCode': 'Source code and updates on GitHub',
   // Language names stay in their own language.
   'language.en': 'English',
   'language.fr': 'Français',

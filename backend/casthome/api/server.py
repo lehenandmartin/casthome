@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import os
 import re
 from dataclasses import asdict
 from typing import Annotated, Any
@@ -11,6 +12,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
+from casthome import __version__
 from casthome.api.auth import throttle, throttle_passed
 from casthome.api.deps import OPEN_SESSION, client_host, get_ctx, require_session, start_session
 from casthome.appconfig import AccessMode, NavidromeConfig, PlaybackConfig, is_local_address
@@ -145,6 +147,9 @@ async def get_settings(request: Request, _session: Annotated[Session, Depends(re
         "playback": {**asdict(ctx.config.playback), "locked": ctx.config.playback_locked},
         # Whether LAN mode would let this browser in without a password.
         "client_is_local": is_local_address(client_host(request)),
+        "version": __version__,
+        # Short commit the Docker image was built from (blank outside CI builds).
+        "revision": os.environ.get("CASTHOME_REVISION", "")[:7],
     }
 
 

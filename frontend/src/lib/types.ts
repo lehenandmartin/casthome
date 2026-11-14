@@ -220,6 +220,8 @@ export interface ServerSettings {
   locked: LockedField[];
   access: { mode: AccessMode; has_password: boolean };
   client_is_local: boolean;
+  version: string;
+  revision: string;
 }
 
 export interface AccessForm {

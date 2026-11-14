@@ -1,6 +1,8 @@
 services:
   casthome:
-    build: .
+    # Released image (:latest is the last release). Pin a version for
+    # controlled updates, e.g. :0.1 or :0.1.0; :main follows development.
+    image: ghcr.io/lehenandmartin/casthome:latest
     container_name: casthome
     # Required: mDNS discovery of Cast devices does not cross Docker's bridge network.
     network_mode: host
