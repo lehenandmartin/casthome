@@ -151,6 +151,7 @@ export const en = {
   'album.moreBy': 'More by {artist}',
   'album.tracks': '{count} tracks',
   'album.oneTrack': '1 track',
+  'album.disc': 'Disc {number}',
   'album.count': '{count} albums',
 
   'tracks.title': 'Tracks',

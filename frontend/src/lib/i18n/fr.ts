@@ -151,6 +151,7 @@ export const fr: Record<MessageKey, string> = {
   'album.moreBy': 'Plus de {artist}',
   'album.tracks': '{count} titres',
   'album.oneTrack': '1 titre',
+  'album.disc': 'Disque {number}',
   'album.count': '{count} albums',
 
   'tracks.title': 'Titres',

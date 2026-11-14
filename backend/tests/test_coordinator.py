@@ -426,3 +426,48 @@ async def test_events_from_a_device_we_left_are_ignored(h):
     old.sink(ReceiverEvent(app_id=None, volume_level=0.9, volume_muted=True))  # its session closing
     await h.settle()
     assert h.c.volume != 0.9 and h.c.muted is False
+
+
+# --- edge cases ----------------------------------------------------------------
+
+
+async def test_empty_queue_commands_do_nothing(h):
+    for command in (h.c.next, h.c.previous, h.c.toggle, h.c.play, h.c.pause):
+        await command()
+    assert h.target.loads == [] and h.c.queue.current is None and h.c.status == Status.STOPPED
+
+
+async def test_clear_while_playing_stops_and_empties(h):
+    await h.c.play_songs(songs(3), 1)
+    h.target.media("PLAYING", t=5.0)
+    await h.settle()
+    await h.c.clear()
+    assert len(h.c.queue) == 0 and h.c.queue.current is None and h.c.status == Status.STOPPED
+    # Nothing to play afterwards, and no error.
+    await h.c.next()
+    await h.c.play()
+    assert len(h.target.loads) == 1
+
+
+async def test_two_quick_plays_end_with_the_last_one(h):
+    first = [Song(id=f"a{i}", title=f"a{i}", duration=200) for i in range(3)]
+    second = [Song(id=f"b{i}", title=f"b{i}", duration=200) for i in range(2)]
+    await asyncio.gather(h.c.play_songs(first, 0, "A"), h.c.play_songs(second, 1, "B"))
+    assert playing_id(h) == "b1" and h.c.queue.context_name == "B"
+    assert [e.item.id for e in h.c.queue.entries] == ["b0", "b1"]
+    assert "id=b1" in h.target.last_url
+
+
+async def test_shuffled_album_starts_with_the_chosen_track(h):
+    await h.c.set_mode(shuffle=True)
+    await h.c.play_songs(songs(8), 3)
+    assert playing_id(h) == "s3" and sorted(e.item.id for e in h.c.queue.entries) == sorted(s.id for s in songs(8))
+
+
+async def test_moving_to_an_invalid_position_is_reported(h):
+    await h.c.play_songs(songs(3), 0)
+    uid = h.c.queue.entries[1].uid
+    with pytest.raises(PlaybackError) as err:
+        await h.c.move_entry(uid, 99)
+    assert err.value.code == "invalid_queue_index"
+    assert [e.item.id for e in h.c.queue.entries] == ["s0", "s1", "s2"]

@@ -111,6 +111,17 @@ async def test_radio_from_the_track_being_played_keeps_it_playing(h):
     assert snap["radio"] is True and snap["context_name"] == "Seed"
 
 
+async def test_radio_from_the_track_being_played_while_shuffled(h):
+    h.c._radio_builder = make_radio_builder(FakeSource(similar=tracks("s", 10)))
+    await h.c.set_mode(shuffle=True)
+    await h.c.play_songs([SEED, *tracks("x", 4)], 0, "Album")
+    loads = len(h.target.loads)
+    await h.c.start_radio(SEED)
+    ids = [e.item.id for e in h.c.queue.entries]
+    assert ids[0] == "seed" and playing_id(h) == "seed" and len(h.target.loads) == loads
+    assert sorted(ids[1:]) == sorted(s.id for s in tracks("s", 10))
+
+
 async def test_radio_from_another_track_still_starts_with_it(h):
     h.c._radio_builder = make_radio_builder(FakeSource(similar=tracks("s", 10)))
     await h.c.play_songs(tracks("x", 2), 0, "Album")

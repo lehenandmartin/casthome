@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, cached, coverUrl } from '../lib/api';
+  import { byDisc } from '../lib/discs';
   import { display } from '../lib/display.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
@@ -114,7 +115,16 @@
       </div>
     </header>
     {#if album.songs}
-      <SongList songs={album.songs} numbered showAlbum={false} onplay={(i) => store.run(() => api.playAlbum(album!.id, i))} />
+      <!-- Several discs: a heading for each (track numbers restart on every disc). -->
+      {#each byDisc(album.songs) as part (part.start)}
+        {#if part.disc !== null}<h3 class="disc">{t('album.disc', { number: part.disc })}</h3>{/if}
+        <SongList
+          songs={part.songs}
+          numbered
+          showAlbum={false}
+          onplay={(i) => store.run(() => api.playAlbum(album!.id, part.start + i))}
+        />
+      {/each}
     {:else}
       <SkeletonList count={Math.min(album.song_count || 8, 12)} />
     {/if}
@@ -165,6 +175,14 @@
     width: 120px;
     height: 42px;
     border-radius: 999px;
+  }
+  .disc {
+    margin: 18px 8px 4px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
   .more-title {
     margin: 28px 0 10px;

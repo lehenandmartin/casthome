@@ -2,7 +2,7 @@ import { ApiError, api, setBeforePlayHook, setUnauthorizedHandler } from './api'
 import { browserPlayer } from './browserPlayer';
 import type { AppStatus, Device, Me, Notification, PlayerState, QueueState } from './types';
 import { describeUserAgent } from './useragent';
-import { display } from './display.svelte';
+import { setShowRatings } from './display.svelte';
 
 
 // Last known state, shown instantly when the app (re)starts so a reload never
@@ -219,7 +219,7 @@ class AppStore {
       .me()
       .then((me) => {
         this.me = me;
-        display.ratings = me.show_ratings ?? true;
+        setShowRatings(me.show_ratings ?? true);
       })
       .catch(() => {});
   }

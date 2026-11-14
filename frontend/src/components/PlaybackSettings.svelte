@@ -2,7 +2,7 @@
   // Settings → Playback: streaming quality, preloading, Cast addresses.
   import { ApiError, api } from '../lib/api';
   import { t, tCode } from '../lib/i18n';
-  import { display } from '../lib/display.svelte';
+  import { setShowRatings } from '../lib/display.svelte';
   import { store } from '../lib/store.svelte';
   import type { PlaybackOptions, StreamFormat } from '../lib/types';
 
@@ -64,7 +64,7 @@
         show_ratings: showRatings,
       });
       hosts = hostList.join(', ');
-      display.ratings = isLocked('show_ratings') ? initial.show_ratings : showRatings;
+      setShowRatings(isLocked('show_ratings') ? initial.show_ratings : showRatings);
       store.notify('settings_saved', {}, 'info');
       onsaved();
     } catch (err) {
