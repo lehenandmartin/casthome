@@ -4,7 +4,7 @@ import { api } from './api';
 import { contextMenu, type MenuAction, type MenuSpec } from './contextMenu.svelte';
 import { dialogs } from './dialog.svelte';
 import { t } from './i18n';
-import { startRadio } from './radio';
+import { startArtistRadio, startRadio } from './radio';
 import { store } from './store.svelte';
 import type { Album, Artist, Playlist, QueueItem, Song, StarKind } from './types';
 
@@ -105,6 +105,7 @@ export function artistMenu(artist: Pick<Artist, 'id' | 'name' | 'starred'>): Men
     items: [
       { label: t('artist.playAll'), icon: 'play', action: () => store.run(() => api.playArtist(artist.id)) },
       { label: t('song.addToQueue'), icon: 'queue', action: () => queued(() => api.queueArtist(artist.id)) },
+      { label: t('song.startRadio'), icon: 'radio', action: () => startArtistRadio(artist) },
       starItem('artist', artist),
     ],
   };

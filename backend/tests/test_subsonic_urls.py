@@ -209,3 +209,13 @@ def test_queued_split_survives_a_restart():
     restored = NavidromeQueueStore._merge(local, model.items, "a", 0, None)
     assert [e.queued for e in restored.model.entries] == [False, True, False, False, False]
     assert restored.model.context_name == "Album"
+
+
+def test_artist_radio_survives_a_restart():
+    from casthome.playback.persistence import NavidromeQueueStore
+
+    ids = ["a", "b"]
+    local = {"ids": ids, "index": 0, "context_name": "Artist", "radio": True,
+             "radio_source": "similar_artists", "radio_artist": ["ar1", "Artist"]}
+    restored = NavidromeQueueStore._merge(local, [Song(id=i, title=i) for i in ids], "a", 0, None)
+    assert restored.model.radio and restored.model.radio_artist == ("ar1", "Artist")

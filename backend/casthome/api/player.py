@@ -141,15 +141,29 @@ async def add_to_queue(body: QueueAddBody, request: Request) -> None:
 
 
 class RadioBody(BaseModel):
-    song_id: str
+    """A track radio (song_id) or an artist radio (artist_id)."""
+
+    song_id: str | None = None
+    artist_id: str | None = None
+
+    @model_validator(mode="after")
+    def _one_seed(self) -> RadioBody:
+        if (self.song_id is None) == (self.artist_id is None):
+            raise ValueError("give song_id or artist_id")
+        return self
 
 
 @router.post("/radio")
 async def start_radio(body: RadioBody, request: Request) -> dict:
-    """Play a track then similar ones, refilled as it plays (endless radio)."""
+    """Endless radio, refilled as it plays: a track then similar ones, or an
+    artist and similar artists."""
     ctx = get_ctx(request)
-    seed = await ctx.subsonic.get_song(body.song_id)
-    source = await ctx.coordinator.start_radio(seed)
+    if body.artist_id is not None:
+        artist, _albums = await ctx.subsonic.get_artist(body.artist_id)
+        source = await ctx.coordinator.start_artist_radio(artist.id, artist.name)
+    else:
+        seed = await ctx.subsonic.get_song(body.song_id or "")
+        source = await ctx.coordinator.start_radio(seed)
     return {"source": source}
 
 

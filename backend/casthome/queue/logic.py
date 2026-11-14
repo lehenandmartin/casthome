@@ -60,6 +60,9 @@ class QueueModel(Generic[T]):
     # The context is a radio (similar tracks, refilled as it plays).
     radio: bool = False
     radio_source: str | None = None  # only used to carry it across a restart
+    # Artist radio: (artist id, name) its refills come from; None for a track
+    # radio, or once the artist has nothing new (it then follows the last track).
+    radio_artist: tuple[str, str] | None = None
     _uids: itertools.count = field(default_factory=lambda: itertools.count(1), repr=False)
 
     # --- read helpers --------------------------------------------------------
@@ -97,6 +100,7 @@ class QueueModel(Generic[T]):
         self.context_name = name
         self.radio = False
         self.radio_source = None
+        self.radio_artist = None
         pending = [e for i, e in enumerate(self.entries) if e.queued and i != self.index]
         new = self._wrap(items)
         if not new:
@@ -124,6 +128,7 @@ class QueueModel(Generic[T]):
         self.index = None
         self.context_name = None
         self.radio = False
+        self.radio_artist = None
 
     def extend_context(self, items: list[T]) -> None:
         """Append tracks to the end of the album/playlist part (radio refill)."""

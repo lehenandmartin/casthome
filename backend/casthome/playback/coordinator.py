@@ -36,7 +36,7 @@ from casthome.cast.types import (
 from casthome.playback.media import MediaBuilder
 from casthome.playback.persistence import QueueStore
 from casthome.queue.logic import AddMode, QueueModel, RepeatMode
-from casthome.playback.radio import RadioBuilder
+from casthome.playback.radio import ArtistRadioBuilder, RadioBuilder
 from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import NavidromeUnavailableError, NotAuthenticatedError, SubsonicError
 from casthome.subsonic.models import Song
@@ -104,8 +104,10 @@ class PlaybackCoordinator:
         scrobbler: Scrobbler | None = None,
         preload_next: bool = False,
         radio_builder: RadioBuilder | None = None,
+        artist_radio_builder: ArtistRadioBuilder | None = None,
     ) -> None:
         self._radio_builder = radio_builder
+        self._artist_radio_builder = artist_radio_builder
         self._connection_id = 0
         self._radio_refilling = False
         self._connector = connector
@@ -308,6 +310,29 @@ class PlaybackCoordinator:
             await self._load_current(0)
         return source
 
+    async def start_artist_radio(self, artist_id: str, artist_name: str) -> str:
+        """Play the artist and similar artists, shuffled, opening with one of the
+        artist's tracks; refilled from the artist as it plays. Returns the source.
+        Tracks in "next in queue" are kept."""
+        if self._artist_radio_builder is None:
+            raise PlaybackError("no_similar_tracks", {"title": artist_name})
+        try:
+            songs, source = await self._artist_radio_builder(artist_id, artist_name, set())
+        except NavidromeUnavailableError as exc:
+            raise PlaybackError("navidrome_unavailable") from exc
+        if not songs or source is None:
+            raise PlaybackError("no_similar_tracks", {"title": artist_name})
+        own = next((i for i, s in enumerate(songs) if s.artist_id == artist_id), 0)
+        songs.insert(0, songs.pop(own))
+        async with self._lock:
+            self.queue.play_context(songs, 0, artist_name)
+            self.queue.radio = True
+            self.queue.radio_source = source
+            self.queue.radio_artist = (artist_id, artist_name)
+            self._queue_mutated()
+            await self._load_current(0)
+        return source
+
     def _maybe_refill_radio(self) -> None:
         if (
             self.queue.radio
@@ -320,16 +345,25 @@ class PlaybackCoordinator:
             asyncio.create_task(self._refill_radio())
 
     async def _refill_radio(self) -> None:
-        """Endless radio: add tracks similar to the last one of the queue."""
+        """Endless radio: add tracks from the artist (artist radio), else tracks
+        similar to the last one of the queue."""
         try:
-            seed = self.queue.entries[-1].item if self.queue.entries else None
-            if seed is None or self._radio_builder is None:
-                return
             exclude = {e.item.id for e in self.queue.entries}
-            songs, source = await self._radio_builder(seed, exclude)
+            artist = self.queue.radio_artist
+            songs: list[Song] = []
+            source: str | None = None
+            if artist and self._artist_radio_builder is not None:
+                songs, source = await self._artist_radio_builder(artist[0], artist[1], exclude)
+                if not songs:
+                    log.info("Artist radio %r has nothing new: following the last track", artist[1])
+            seed = self.queue.entries[-1].item if self.queue.entries else None
+            if not songs and seed is not None and self._radio_builder is not None:
+                songs, source = await self._radio_builder(seed, exclude)
             async with self._lock:
                 if not self.queue.radio or not songs:
                     return
+                if artist and self.queue.radio_artist == artist and source not in ("similar_artists", "top_songs"):
+                    self.queue.radio_artist = None  # the artist is exhausted: stay a track radio
                 self.queue.extend_context(songs)
                 self.queue.radio_source = source or self.queue.radio_source
                 self._queue_mutated()

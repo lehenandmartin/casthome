@@ -63,6 +63,7 @@ class NavidromeQueueStore:
                 "context_name": model.context_name,
                 "radio": model.radio,
                 "radio_source": radio_source,
+                "radio_artist": list(model.radio_artist) if model.radio and model.radio_artist else None,
                 "repeat": model.repeat.value,
                 "shuffle": model.shuffle,
                 "original_positions": original_positions,
@@ -110,6 +111,9 @@ class NavidromeQueueStore:
             model.context_name = local.get("context_name")
             model.radio = bool(local.get("radio"))
             model.radio_source = local.get("radio_source")
+            artist = local.get("radio_artist")
+            if model.radio and isinstance(artist, list) and len(artist) == 2:
+                model.radio_artist = (str(artist[0]), str(artist[1]))
         if same_queue and local.get("shuffle"):
             model.shuffle = True
             positions = local.get("original_positions") or []

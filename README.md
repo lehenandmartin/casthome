@@ -140,6 +140,17 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
   (AudioMuse-AI sonic similarity when that plugin is active, else Last.fm and
   other agents), then `getSimilarSongs2` on the artist, then the artist's top
   tracks. The queue shows which source was used.
+- **Artist radio:** *Start radio* on an artist page (or the artist's menu)
+  plays the artist and similar artists, shuffled, opening with one of the
+  artist's tracks. Source: `getSimilarSongs2` on the artist, asked for 200
+  tracks at once (Last.fm data through Navidrome), else the artist's top
+  tracks. The artist makes up at most a third of each batch, spread through
+  it (never two in a row), and each batch uses at most a quarter of the
+  artist's tracks left, so a small catalogue comes back over several
+  batches. Each refill asks again, skipping what the queue already has; once
+  only the artist's own tracks are left, the radio carries on from the last
+  track like a track radio. AudioMuse-AI does not apply: it only works from a
+  track.
 - **Swipe gestures (touch screens):** swipe a track right to add it to *Next
   in queue* (any track list; in the queue, a track from the album or playlist
   moves to *Next in queue*), swipe left in the queue to remove it. A coloured
@@ -155,7 +166,7 @@ CastHome password (not the Navidrome one) or not at all, as you choose.
     radio, add to playlist, go to album or artist, rating, remove;
   - albums (grids, Home): play, add to queue, favorite, rating, go to artist;
   - playlists (Playlists, Home): play, add to queue, rename, delete;
-  - artists (Artists, Search, Home): play all, add to queue, favorite;
+  - artists (Artists, Search, Home): play all, add to queue, radio, favorite;
   - the current track (player bar, Now Playing, queue): favorite, radio, add
     to playlist, go to album or artist, rating.
 

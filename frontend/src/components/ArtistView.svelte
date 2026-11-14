@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api';
   import { t } from '../lib/i18n';
+  import { startArtistRadio } from '../lib/radio';
   import { store } from '../lib/store.svelte';
   import type { ArtistDetail, ArtistHighlights } from '../lib/types';
   import AlbumGrid from './AlbumGrid.svelte';
@@ -69,6 +70,9 @@
     <div class="actions">
       <button class="primary" onclick={playAll}>{t('artist.playAll')}</button>
       <button onclick={queue}>{t('album.addToQueue')}</button>
+      <button class="radio" onclick={() => artist && startArtistRadio(artist)}>
+        <Icon name="radio" size={18} />{t('song.startRadio')}
+      </button>
     </div>
 
     {#if highlights && highlights.liked_count > 0}
@@ -122,6 +126,11 @@
     flex-wrap: wrap;
     gap: 8px;
     margin: 12px 0 20px;
+  }
+  .radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   .liked {
     display: flex;

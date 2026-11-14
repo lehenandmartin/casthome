@@ -147,6 +147,8 @@ export const api = {
     request<void>('POST', '/queue', { song_ids: songIds, mode: 'now', start_index: startIndex, context_name: contextName }),
   /** Endless radio: the track, then similar tracks, refilled as it plays. */
   startRadio: (songId: string) => request<{ source: string }>('POST', '/radio', { song_id: songId }),
+  /** Artist radio: the artist and similar artists, shuffled, refilled from the artist. */
+  startArtistRadio: (artistId: string) => request<{ source: string }>('POST', '/radio', { artist_id: artistId }),
   home: () => request<HomeData>('GET', '/home'),
   /** Every track, paged; 'recent' = most recently added first. `artistId`: that artist's only. */
   songs: (sort: SongSort = 'recent', offset = 0, size = 100, starred = false, artistId?: string) =>
