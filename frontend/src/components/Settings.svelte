@@ -196,7 +196,7 @@
           bind:password
           bind:confirm
           keepPassword={settings.access.has_password}
-          clientIsLocal={settings.client_is_local}
+          client={settings}
         />
         {#if settings.access.has_password && mode !== 'open' && password}
           <p class="muted note">{t('settings.passwordChangeNote')}</p>
@@ -229,6 +229,9 @@
         </span>
         <button onclick={editAccess} disabled={!settings}>{t('settings.edit')}</button>
       </div>
+      {#if settings?.access.mode === 'lan' && settings.untrusted_proxy}
+        <p class="alert" role="alert">{t('access.untrustedProxy', { address: settings.client_address })}</p>
+      {/if}
       {#if store.me && !store.me.open_session}
         <div class="card">
           <span class="text">

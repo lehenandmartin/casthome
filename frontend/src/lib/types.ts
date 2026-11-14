@@ -195,11 +195,19 @@ export interface NavidromeForm extends NavidromeFields {
   password: string;
 }
 
-export interface SetupInfo {
+/** How CastHome sees this browser (address, local network, reverse proxy). */
+export interface ClientInfo {
+  client_address: string;
+  /** "Open at home" lets this browser in without a password. */
+  client_is_local: boolean;
+  /** A reverse proxy forwards the requests but is not in FORWARDED_ALLOW_IPS. */
+  untrusted_proxy: boolean;
+}
+
+export interface SetupInfo extends ClientInfo {
   setup: { navidrome: boolean; access: boolean };
   navidrome: NavidromeFields;
   locked: LockedField[];
-  client_is_local: boolean;
 }
 
 export type StreamFormat = 'raw' | 'mp3' | 'aac' | 'opus';
@@ -214,12 +222,11 @@ export interface PlaybackOptions {
   scrobble: boolean;
 }
 
-export interface ServerSettings {
+export interface ServerSettings extends ClientInfo {
   navidrome: NavidromeFields & { has_password: boolean };
   playback: PlaybackOptions & { locked: (keyof PlaybackOptions)[] };
   locked: LockedField[];
   access: { mode: AccessMode; has_password: boolean };
-  client_is_local: boolean;
   version: string;
   revision: string;
 }

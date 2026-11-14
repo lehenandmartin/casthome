@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 import pytest
 import respx
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from casthome.appconfig import hash_password, is_local_address, load_secret_key, verify_password
 from casthome.config import Settings
@@ -37,9 +38,9 @@ def make_settings(tmp_path: Path, **env: str) -> Settings:
 class Client:
     """One browser: its own cookies and address."""
 
-    def __init__(self, app, host: str = "81.250.10.7") -> None:  # type: ignore[no-untyped-def]
+    def __init__(self, app, host: str = "81.250.10.7", headers: dict[str, str] | None = None) -> None:  # type: ignore[no-untyped-def]
         transport = httpx.ASGITransport(app=app, client=(host, 50000))
-        self.http = httpx.AsyncClient(transport=transport, base_url="http://casthome")
+        self.http = httpx.AsyncClient(transport=transport, base_url="http://casthome", headers=headers)
 
     async def __aenter__(self) -> httpx.AsyncClient:
         return self.http
@@ -135,6 +136,38 @@ async def test_lan_access_lets_local_clients_in_only(app_factory) -> None:  # ty
         assert (await remote.get("/api/auth/me")).status_code == 401
         assert (await remote.post("/api/auth/login", json={"password": "letmein"})).status_code == 200
         assert (await remote.get("/api/auth/me")).json()["open_session"] is False
+
+
+async def test_lan_access_behind_an_untrusted_proxy_asks_everyone(app_factory) -> None:  # type: ignore[no-untyped-def]
+    # The proxy (a Docker gateway) is not in FORWARDED_ALLOW_IPS: CastHome sees
+    # the proxy's private address for every visitor, so nobody counts as local.
+    app = await app_factory()
+    async with Client(app, host="192.168.1.20") as http:
+        assert (await finish_setup(http, mode="lan")).status_code == 200
+    proxied = {"x-forwarded-for": "81.250.10.9", "x-real-ip": "81.250.10.9"}
+    async with Client(app, host="172.17.0.1", headers=proxied) as remote:
+        assert (await remote.get("/api/status")).json()["signed_in"] is False
+        assert (await remote.get("/api/auth/me")).status_code == 401
+        await remote.post("/api/auth/login", json={"password": "letmein"})
+        settings = (await remote.get("/api/settings")).json()
+        assert settings["untrusted_proxy"] is True
+        assert settings["client_is_local"] is False and settings["client_address"] == "172.17.0.1"
+
+
+async def test_lan_access_behind_a_trusted_proxy_sees_the_visitor(app_factory) -> None:  # type: ignore[no-untyped-def]
+    app = await app_factory()
+    async with Client(app, host="192.168.1.20") as http:
+        assert (await finish_setup(http, mode="lan")).status_code == 200
+    # What uvicorn does with FORWARDED_ALLOW_IPS=172.16.0.0/12.
+    behind = ProxyHeadersMiddleware(app, trusted_hosts="172.16.0.0/12")
+    async with Client(behind, host="172.17.0.1", headers={"x-forwarded-for": "192.168.1.30"}) as local:
+        assert (await local.get("/api/auth/me")).json()["open_session"] is True
+        settings = (await local.get("/api/settings")).json()
+        assert settings["untrusted_proxy"] is False and settings["client_address"] == "192.168.1.30"
+    # A forged local address in front of the real one does not get in.
+    forged = {"x-forwarded-for": "192.168.1.30, 81.250.10.9"}
+    async with Client(behind, host="172.17.0.1", headers=forged) as remote:
+        assert (await remote.get("/api/auth/me")).status_code == 401
 
 
 async def test_changing_access_needs_the_current_password(app_factory) -> None:  # type: ignore[no-untyped-def]

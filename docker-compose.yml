@@ -16,6 +16,8 @@ services:
     #   # Owner of ./data on the host (the container fixes it at start).
     #   PUID: "1000"
     #   PGID: "1000"
+    #   # Behind a reverse proxy: the address it connects from (see README).
+    #   FORWARDED_ALLOW_IPS: "172.16.0.0/12"
     volumes:
       - ./data:/data
     restart: unless-stopped

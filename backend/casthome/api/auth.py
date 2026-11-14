@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
-from casthome.api.deps import COOKIE_NAME, OPEN_SESSION, client_host, get_ctx, require_session, start_session
+from casthome.api.deps import COOKIE_NAME, OPEN_SESSION, access_host, client_host, get_ctx, require_session, start_session
 from casthome.auth.sessions import Session
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -47,7 +47,7 @@ async def app_status(request: Request) -> dict:
     signed_in = False
     if not needs["access"]:
         token = request.cookies.get(COOKIE_NAME)
-        signed_in = ctx.config.open_for(client_host(request)) or (
+        signed_in = ctx.config.open_for(access_host(request)) or (
             token is not None and await ctx.sessions.touch(token) is not None
         )
     return {

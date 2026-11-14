@@ -1,22 +1,22 @@
 <script lang="ts">
   // Access mode and CastHome password, shared by the setup and Settings.
   import { t } from '../lib/i18n';
-  import type { AccessMode } from '../lib/types';
+  import type { AccessMode, ClientInfo } from '../lib/types';
 
   let {
     mode = $bindable(),
     password = $bindable(''),
     confirm = $bindable(''),
     keepPassword = false,
-    clientIsLocal = null,
+    client = null,
   }: {
     mode: AccessMode;
     password?: string;
     confirm?: string;
     /** A password is set: blank keeps it. */
     keepPassword?: boolean;
-    /** Whether this browser is on the local network (null: unknown). */
-    clientIsLocal?: boolean | null;
+    /** How CastHome sees this browser (null: unknown). */
+    client?: ClientInfo | null;
   } = $props();
 
   const MODES: { mode: AccessMode; label: 'access.password' | 'access.lan' | 'access.open'; detail: 'access.passwordDetail' | 'access.lanDetail' | 'access.openDetail' }[] = [
@@ -38,8 +38,12 @@
           <span class="muted">{t(option.detail)}</span>
           {#if option.mode === 'lan' && mode === 'lan'}
             <span class="muted note">{t('access.lanProxyNote')}</span>
-            {#if clientIsLocal !== null}
-              <span class="muted note">{clientIsLocal ? t('access.youAreLocal') : t('access.youAreRemote')}</span>
+            {#if client?.untrusted_proxy}
+              <span class="warning note" role="alert">{t('access.untrustedProxy', { address: client.client_address })}</span>
+            {:else if client}
+              <span class="muted note">
+                {t(client.client_is_local ? 'access.seenLocal' : 'access.seenRemote', { address: client.client_address })}
+              </span>
             {/if}
           {/if}
         </span>
@@ -108,6 +112,10 @@
     font-size: 0.9rem;
   }
   .error {
+    color: var(--danger);
+  }
+  .warning {
+    font-size: 0.85rem;
     color: var(--danger);
   }
 </style>

@@ -224,6 +224,7 @@ Settings (handy for scripted installs).
 | `NAVIDROME_USERNAME`, `NAVIDROME_PASSWORD` | The Navidrome account to play with. |
 | `APP_SECRET_KEY` | Encryption key for the stored Navidrome password (≥ 32 chars). By default one is generated into `data/secret.key`; keep that file with the database. |
 | `COOKIE_SECURE` | `true` when CastHome is behind HTTPS. |
+| `FORWARDED_ALLOW_IPS` | Reverse proxies trusted to give the visitor's address (IPs or networks, comma-separated; default `127.0.0.1,::1`). See [Behind a reverse proxy](#behind-a-reverse-proxy). |
 | `SESSION_REMEMBER_DAYS` / `SESSION_SHORT_HOURS` | Session lifetimes (both sliding). |
 | `STREAM_FORMAT`, `STREAM_MAX_BITRATE` | `raw` (default) streams original files; otherwise a Navidrome transcoding format (`mp3`, `aac`, `opus`) and a limit in kbps. Also in Settings. |
 | `TRANSCODE_FALLBACK_FORMAT` | Format for files Cast cannot play, and retry format after a playback error (default `mp3`). |
@@ -238,8 +239,8 @@ current CastHome password is asked first):
 
 - **Password** (recommended): a CastHome password on every device.
 - **Open at home**: no password from a private address (local network), the
-  password from anywhere else. Behind a reverse proxy every visitor may look
-  local; use **Password** then.
+  password from anywhere else. Behind a reverse proxy, see
+  [Behind a reverse proxy](#behind-a-reverse-proxy).
 - **No password**: anyone who can reach CastHome can use it.
 
 Setting a new password signs every other device out. Sign-in attempts are
@@ -250,6 +251,31 @@ signed in to CastHome: a banner asks you to update it in **Settings →
 Navidrome**, where the connection can be tested before saving. The saved
 password is only ever sent to the server and account it was saved for;
 pointing CastHome at another one asks for the password again.
+
+### Behind a reverse proxy
+
+Behind a reverse proxy (Nginx Proxy Manager, Traefik, Caddy…), CastHome
+receives every request from the proxy. To tell visitors apart, it reads the
+visitor's address from the `X-Forwarded-For` header, but only from proxies
+listed in `FORWARDED_ALLOW_IPS` (default `127.0.0.1,::1`, so a proxy in Docker
+or on another machine is **not** trusted). Add the address the proxy connects
+from, a comma-separated list of IPs or networks:
+
+```yaml
+    environment:
+      # Proxy in Docker on the same host (Docker gateways, 172.17.0.1…):
+      FORWARDED_ALLOW_IPS: "172.16.0.0/12"
+      # Or a proxy on another machine: its LAN address, e.g. "192.168.1.5".
+```
+
+Until the proxy is trusted, **Open at home** asks for the password from
+everyone coming through it (CastHome cannot tell who is local), and
+**Settings → Access to CastHome** shows a warning with the proxy's address.
+Choosing **Open at home** shows the address CastHome sees for your device and
+whether it counts as local; check it from outside (e.g. on mobile data) after
+the change. A visitor cannot fake a local address: the proxy appends the real
+one to the header, and only the address added by the last trusted proxy is
+used.
 
 ### Sessions
 

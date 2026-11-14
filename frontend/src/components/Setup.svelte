@@ -4,7 +4,7 @@
   import { ApiError, api } from '../lib/api';
   import { t, tCode } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
-  import type { AccessMode, LockedField, NavidromeForm } from '../lib/types';
+  import type { AccessMode, ClientInfo, LockedField, NavidromeForm } from '../lib/types';
   import AccessFields from './AccessFields.svelte';
   import Icon from './Icon.svelte';
   import NavidromeFields from './NavidromeFields.svelte';
@@ -14,7 +14,7 @@
   let steps = $state<Step[]>([]);
   let index = $state(0);
   let locked = $state<LockedField[]>([]);
-  let clientIsLocal = $state<boolean | null>(null);
+  let client = $state<ClientInfo | null>(null);
   let navidrome = $state<NavidromeForm>({ url: '', public_url: '', username: '', password: '' });
   let mode = $state<AccessMode>('password');
   let password = $state('');
@@ -31,7 +31,7 @@
     try {
       const info = await api.setupInfo();
       locked = info.locked;
-      clientIsLocal = info.client_is_local;
+      client = info;
       navidrome = { ...info.navidrome, password: '' };
       steps = (['navidrome', 'access'] as Step[]).filter((s) => info.setup[s]);
     } catch (err) {
@@ -97,7 +97,7 @@
           {t('setup.accessIntro')}
           {#if !steps.includes('navidrome')}{t('setup.restoredHint')}{/if}
         </p>
-        <AccessFields bind:mode bind:password bind:confirm {clientIsLocal} />
+        <AccessFields bind:mode bind:password bind:confirm {client} />
         {#if mode !== 'open'}
           <label class="check">
             <input type="checkbox" bind:checked={remember} />

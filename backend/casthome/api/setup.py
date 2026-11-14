@@ -10,9 +10,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel
 
-from casthome.api.deps import client_host, get_ctx, require_session, start_session
+from casthome.api.deps import client_info, get_ctx, require_session, start_session
 from casthome.api.server import AccessBody, NavidromeBody, resolve_navidrome, save_navidrome, validate_new_access
-from casthome.appconfig import AccessMode, is_local_address
+from casthome.appconfig import AccessMode
 
 router = APIRouter(prefix="/api/setup", tags=["setup"])
 
@@ -41,7 +41,7 @@ async def setup_info(request: Request, response: Response) -> dict:
         "setup": needs,
         "navidrome": ctx.config.navidrome_fields(),
         "locked": ctx.config.locked,
-        "client_is_local": is_local_address(client_host(request)),
+        **client_info(request),
     }
 
 

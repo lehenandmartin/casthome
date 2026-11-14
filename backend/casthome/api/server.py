@@ -14,8 +14,8 @@ from pydantic import BaseModel, Field
 
 from casthome import __version__
 from casthome.api.auth import throttle, throttle_passed
-from casthome.api.deps import OPEN_SESSION, client_host, get_ctx, require_session, start_session
-from casthome.appconfig import AccessMode, NavidromeConfig, PlaybackConfig, is_local_address
+from casthome.api.deps import OPEN_SESSION, client_host, client_info, get_ctx, require_session, start_session
+from casthome.appconfig import AccessMode, NavidromeConfig, PlaybackConfig
 from casthome.auth.sessions import Session
 from casthome.config import check_cast_url, normalize_url
 from casthome.context import AppContext
@@ -145,8 +145,8 @@ async def get_settings(request: Request, _session: Annotated[Session, Depends(re
         "locked": ctx.config.locked,
         "access": {"mode": ctx.config.access_mode, "has_password": ctx.config.has_password},
         "playback": {**asdict(ctx.config.playback), "locked": ctx.config.playback_locked},
-        # Whether LAN mode would let this browser in without a password.
-        "client_is_local": is_local_address(client_host(request)),
+        # How this browser is seen: whether LAN mode would let it in without a password.
+        **client_info(request),
         "version": __version__,
         # Short commit the Docker image was built from (blank outside CI builds).
         "revision": os.environ.get("CASTHOME_REVISION", "")[:7],

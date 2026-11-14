@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 from fastapi import HTTPException, Request, Response, WebSocket, status
 
+from casthome.appconfig import is_local_address
 from casthome.auth.sessions import Session
 from casthome.context import AppContext
 
@@ -19,6 +20,34 @@ OPEN_SESSION = Session(
 
 def client_host(conn: Request | WebSocket) -> str | None:
     return conn.client.host if conn.client else None
+
+
+def untrusted_proxy(conn: Request | WebSocket) -> bool:
+    """A reverse proxy forwarded this request but CastHome does not trust it
+    (FORWARDED_ALLOW_IPS): the address seen is the proxy's, not the visitor's.
+
+    When the proxy is trusted, uvicorn replaces the client address with one
+    taken from X-Forwarded-For, so the address is listed there. Otherwise it is
+    the proxy's own address, which the headers do not list."""
+    listed = [h.strip() for h in conn.headers.get("x-forwarded-for", "").split(",") if h.strip()]
+    if real_ip := conn.headers.get("x-real-ip", "").strip():
+        listed.append(real_ip)
+    return bool(listed) and client_host(conn) not in listed
+
+
+def access_host(conn: Request | WebSocket) -> str | None:
+    """The client address for "open at home": unknown (so never local) behind an
+    untrusted proxy, where every visitor would otherwise look like the proxy."""
+    return None if untrusted_proxy(conn) else client_host(conn)
+
+
+def client_info(conn: Request | WebSocket) -> dict:
+    """How CastHome sees this browser, for the setup and Settings."""
+    return {
+        "client_address": client_host(conn) or "",
+        "client_is_local": is_local_address(access_host(conn)),
+        "untrusted_proxy": untrusted_proxy(conn),
+    }
 
 
 def get_ctx(request: Request) -> AppContext:
@@ -68,7 +97,7 @@ async def require_session(request: Request, response: Response) -> Session:
     token = request.cookies.get(COOKIE_NAME)
     result = await ctx.sessions.touch(token) if token else None
     if result is None:
-        if ctx.config.open_for(client_host(request)):
+        if ctx.config.open_for(access_host(request)):
             return OPEN_SESSION
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "not_signed_in"})
     if result.renewed and result.session.persistent:
@@ -87,4 +116,4 @@ async def websocket_session(ws: WebSocket) -> Session | None:
     result = await ctx.sessions.touch(token) if token else None
     if result is not None:
         return result.session
-    return OPEN_SESSION if ctx.config.open_for(client_host(ws)) else None
+    return OPEN_SESSION if ctx.config.open_for(access_host(ws)) else None
