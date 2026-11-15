@@ -56,14 +56,17 @@ French version to `lib/i18n/fr.ts` (`npm run check` fails if one is missing).
 
 ## Releases
 
-The version lives in one place: `__version__` in
-`backend/casthome/__init__.py` (the API and **Settings → About** report it).
+The version is `__version__` in `backend/casthome/__init__.py` (the API and
+**Settings → About** report it); `frontend/package.json` carries the same
+number.
 Every push to `main` publishes the `:main` image (GitHub Actions,
 [`.github/workflows/docker.yml`](.github/workflows/docker.yml)). To release:
 
 1. Run the [device checklist](docs/device-checklist.md) (real browsers,
    phones and Cast devices: what the tests cannot see).
-2. Set `__version__` to the new version (e.g. `0.4.0`) and commit.
+2. Set `__version__` to the new version (e.g. `0.4.0`), do the same in
+   `frontend/package.json` (`cd frontend && npm version 0.4.0
+   --no-git-tag-version`), and commit.
 3. Tag and push: `git tag v0.4.0 && git push origin main v0.4.0`.
 4. Publish the GitHub release with its notes (what changed, for users):
    `gh release create v0.4.0 --title "CastHome 0.4.0" --notes-file notes.md`,
