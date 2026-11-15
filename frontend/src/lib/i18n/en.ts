@@ -168,6 +168,7 @@ export const en = {
   'artists.title': 'Artists',
   'artists.filter': 'Filter artists',
   'artists.empty': 'No artists found.',
+  'artist.label': 'Artist',
   'artist.playAll': 'Play all',
   'artist.albums': 'Albums',
   'artist.similar': 'Similar artists',

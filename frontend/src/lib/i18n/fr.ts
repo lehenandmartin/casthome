@@ -168,6 +168,7 @@ export const fr: Record<MessageKey, string> = {
   'artists.title': 'Artistes',
   'artists.filter': 'Filtrer les artistes',
   'artists.empty': 'Aucun artiste trouvé.',
+  'artist.label': 'Artiste',
   'artist.playAll': 'Tout lire',
   'artist.albums': 'Albums',
   'artist.similar': 'Artistes similaires',

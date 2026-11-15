@@ -91,15 +91,40 @@
 
 {#if artist}
   <section class:arrive>
-    <h2>{artist.name} <StarButton kind="artist" id={artist.id} bind:starred={artist.starred} /></h2>
-    <p class="muted">{t('album.count', { count: artist.albums?.length ?? artist.album_count })}</p>
-    <div class="actions">
-      <button class="primary" onclick={playAll}>{t('artist.playAll')}</button>
-      <button onclick={queue}>{t('album.addToQueue')}</button>
-      <button class="radio" onclick={() => artist && startArtistRadio(artist)}>
-        <Icon name="radio" size={18} />{t('song.startRadio')}
-      </button>
-    </div>
+    <header class="hero">
+      {#if artist.cover_art}
+        <!-- A soft wash of the photo behind the header, fading into the page. -->
+        <div class="wash" aria-hidden="true">
+          <div style:background-image={`url("${coverUrl(artist.cover_art)}")`}></div>
+        </div>
+      {/if}
+      <div class="photo">
+        {#if artist.cover_art}
+          <!-- The smaller picture the lists use is usually cached: it shows while the large one loads. -->
+          <img
+            src={coverUrl(artist.cover_art, 600)}
+            alt=""
+            style:background={`center / cover url("${coverUrl(artist.cover_art)}")`}
+          />
+        {:else}
+          <span class="placeholder"><Icon name="artist" size={64} /></span>
+        {/if}
+      </div>
+      <div class="meta">
+        <span class="eyebrow">{t('artist.label')}</span>
+        <h2>{artist.name} <StarButton kind="artist" id={artist.id} bind:starred={artist.starred} /></h2>
+        <p class="muted">{t('album.count', { count: artist.albums?.length ?? artist.album_count })}</p>
+        <div class="actions">
+          <button class="primary play" onclick={playAll}><Icon name="play" size={18} />{t('artist.playAll')}</button>
+          <button class="radio" onclick={() => artist && startArtistRadio(artist)}>
+            <Icon name="radio" size={18} />{t('song.startRadio')}
+          </button>
+          <button class="icon-btn ring" title={t('album.addToQueue')} aria-label={t('album.addToQueue')} onclick={queue}>
+            <Icon name="queue" size={20} />
+          </button>
+        </div>
+      </div>
+    </header>
 
     {#if highlights && highlights.liked_count > 0}
       <a class="liked" href={likedHref}>
@@ -147,11 +172,16 @@
   </section>
 {:else}
   <section aria-busy="true">
-    <span class="skeleton text page-title"></span>
-    <span class="skeleton text page-sub"></span>
-    <div class="actions" aria-hidden="true">
-      <span class="skeleton pill"></span><span class="skeleton pill"></span><span class="skeleton pill"></span>
-    </div>
+    <header class="hero" aria-hidden="true">
+      <div class="photo"><span class="skeleton sk-photo"></span></div>
+      <div class="meta">
+        <span class="skeleton text page-title"></span>
+        <span class="skeleton text page-sub"></span>
+        <div class="actions">
+          <span class="skeleton pill"></span><span class="skeleton pill"></span>
+        </div>
+      </div>
+    </header>
     <span class="skeleton text heading" aria-hidden="true"></span>
     <SkeletonList count={5} />
     <span class="skeleton text heading" aria-hidden="true"></span>
@@ -179,11 +209,110 @@
     height: 1.15rem;
     margin: 24px 0 12px;
   }
+  /* --- header: the artist's photo (round, as in the lists), name, actions --- */
+  .hero {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    gap: 16px;
+    margin-bottom: 20px;
+    justify-items: center;
+    text-align: center;
+  }
+  .wash {
+    position: absolute;
+    z-index: -1;
+    /* Out to the page's edges and up under the status bar. */
+    inset: calc(-28px - env(safe-area-inset-top)) -16px -24px;
+    overflow: hidden;
+    pointer-events: none;
+    mask-image: linear-gradient(black 30%, transparent);
+  }
+  .wash > div {
+    position: absolute;
+    inset: -60px;
+    background-size: cover;
+    background-position: center 30%;
+    /* Painted once (not a backdrop-filter): nothing redrawn while scrolling. */
+    filter: blur(50px) saturate(1.3);
+    opacity: 0.35;
+  }
+  .photo {
+    width: min(200px, 56vw);
+    aspect-ratio: 1;
+  }
+  .photo img,
+  .placeholder,
+  .sk-photo {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow: var(--shadow);
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+  .meta {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
   h2 {
-    margin-bottom: 4px;
+    margin: 0;
     display: flex;
     align-items: center;
     gap: 4px;
+    overflow-wrap: anywhere;
+  }
+  .meta p {
+    margin: 0;
+  }
+  .hero .actions {
+    margin: 10px 0 0;
+    align-items: center;
+    justify-content: center;
+  }
+  .play {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+  }
+  .ring {
+    background: var(--surface-2);
+  }
+  @media (min-width: 720px) {
+    .hero {
+      grid-template-columns: 200px 1fr;
+      align-items: end;
+      justify-items: start;
+      text-align: left;
+      gap: 28px;
+    }
+    .photo {
+      width: 200px;
+    }
+    .meta {
+      justify-items: start;
+    }
+    .hero .actions {
+      justify-content: flex-start;
+    }
+  }
+  @media (min-width: 900px) {
+    .wash {
+      inset: -28px -32px -24px;
+    }
   }
   h3 {
     margin: 24px 0 8px;
