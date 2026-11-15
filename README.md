@@ -62,13 +62,13 @@ things the Subsonic API cannot give (the full track list with its sorts,
   search, playlists, favorites, 5-star ratings, similar artists, popular
   tracks.
 - **Mobile-first, desktop-ready:** tab bar, mini player and full-screen Now
-  Playing on phones; sidebar, queue panel, right-click menus and drag and drop
-  on desktop. Installable as an app (PWA), lock-screen controls included.
+  Playing on phones; sidebar, queue panel, right-click menus, drag and drop
+  and keyboard shortcuts (Space, `/`) on desktop. Installable as an app (PWA), lock-screen controls included.
 - **Scrobbling** to your server, shorter gaps by preloading the next
   track, automatic transcoding of files the speakers cannot play.
 - **Setup in the browser:** no config file. Sign in to your music server, choose how
   to protect CastHome, done.
-- English and French.
+- English, French, German and Spanish.
 
 See the [user guide](docs/usage.md) for the full tour.
 

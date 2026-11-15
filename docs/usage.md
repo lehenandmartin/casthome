@@ -25,6 +25,9 @@ playlist>** (the rest of what you started), then *Played* (collapsed).
   queue row, album, playlist, artist or the current track. Arrow keys move
   through it, Escape closes it. Shift + right-click keeps the browser's own
   menu.
+- **Keyboard (computer):** Space plays or pauses, `/` opens the search.
+  Neither works while typing in a field, and Space keeps ticking a focused
+  checkbox.
 
 ## Radio
 
@@ -67,3 +70,5 @@ listening with the screen locked, use a Cast device.
 - **Favorites filter:** the ★ filter on the Tracks, Albums and Artists pages
   is kept in the address (`?fav=1`), so links and Back keep it.
 - **Ratings** can be hidden for every device in Settings → Playback.
+- **Language:** English, French, German or Spanish, in Settings → Language
+  (automatic follows the browser's language), chosen on each device.

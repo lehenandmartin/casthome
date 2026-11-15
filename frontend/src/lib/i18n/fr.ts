@@ -45,6 +45,8 @@ export const fr: Record<MessageKey, string> = {
   'settings.sourceCode': 'Code source et mises à jour sur GitHub',
   'language.en': 'English',
   'language.fr': 'Français',
+  'language.de': 'Deutsch',
+  'language.es': 'Español',
 
   'playback.title': 'Lecture',
   'playback.format': 'Qualité du streaming',

@@ -65,7 +65,8 @@ page and the browser: useful to see what went wrong on a phone.
 ## Translations
 
 UI text never goes in components: add each string to `lib/i18n/en.ts` and its
-French version to `lib/i18n/fr.ts` (`npm run check` fails if one is missing).
+translations to `lib/i18n/fr.ts`, `de.ts` and `es.ts` (`npm run check` fails if
+one is missing).
 
 ## Releases
 
@@ -131,7 +132,7 @@ backend/casthome/
   ws/hub.py            WebSocket broadcast and per-tab messages
 frontend/src/
   lib/i18n/en.ts            every UI string, in English (the default)
-  lib/i18n/fr.ts            French translation (same keys, checked by the compiler)
+  lib/i18n/fr.ts, de.ts, es.ts  French, German and Spanish (same keys, checked by the compiler)
   lib/i18n/lang.svelte.ts   language choice (automatic or per device)
   lib/store.svelte.ts       app state, WebSocket client, startup cache
   lib/router.svelte.ts      hash routing without page loads

@@ -1,10 +1,12 @@
 import { en, type MessageKey } from './en';
+import { de } from './de';
+import { es } from './es';
 import { fr } from './fr';
 import { currentLanguage, type Language } from './lang.svelte';
 
 export { LANGUAGES, browserLanguage, currentLanguage, languageState, setLanguage, type LanguagePref } from './lang.svelte';
 
-const locales: Record<Language, Record<MessageKey, string>> = { en, fr };
+const locales: Record<Language, Record<MessageKey, string>> = { en, fr, de, es };
 
 /** Translate a UI string. Reactive: re-renders when the language changes. */
 export function t(key: MessageKey, params: Record<string, unknown> = {}): string {

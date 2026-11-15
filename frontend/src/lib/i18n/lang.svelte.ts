@@ -1,7 +1,7 @@
 // The interface language: automatic (the browser's) or chosen in Settings.
 // Kept per device, like the browser language it defaults to.
 
-export const LANGUAGES = ['en', 'fr'] as const;
+export const LANGUAGES = ['en', 'fr', 'de', 'es'] as const;
 export type Language = (typeof LANGUAGES)[number];
 export type LanguagePref = 'auto' | Language;
 

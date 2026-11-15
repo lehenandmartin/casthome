@@ -1,6 +1,7 @@
 // Every user-facing string lives here, in English (the default). To add a
-// language, copy fr.ts, translate the values, and register it in ./index.ts
-// and in LANGUAGES (./lang.svelte.ts).
+// language, copy fr.ts, translate the values, and register it in ./index.ts,
+// in LANGUAGES (./lang.svelte.ts) and in ./i18n.test.ts. Language names
+// ('language.xx') go in every file.
 export const en = {
   'app.name': 'CastHome',
 
@@ -45,6 +46,8 @@ export const en = {
   // Language names stay in their own language.
   'language.en': 'English',
   'language.fr': 'Français',
+  'language.de': 'Deutsch',
+  'language.es': 'Español',
 
   'playback.title': 'Playback',
   'playback.format': 'Streaming quality',

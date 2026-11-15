@@ -3,35 +3,9 @@
 // skip to the next one.
 
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { playButton, setUp, signIn } from './helpers';
 
-const SUBSONIC = 'http://127.0.0.1:4599';
-const PASSWORD = 'letmein';
-
-test.beforeAll(async ({ request }) => {
-  // First run: the setup is open to whoever comes first. Once done, sign in.
-  const status = await (await request.get('/api/status')).json();
-  if (!status.setup_required) return;
-  const r = await request.post('/api/setup', {
-    data: {
-      navidrome: { url: SUBSONIC, public_url: 'http://subsonic.test:4599', username: 'me', password: 'sesame' },
-      access: { mode: 'password', password: PASSWORD, remember: true },
-    },
-  });
-  expect(r.ok(), await r.text()).toBeTruthy();
-});
-
-async function signIn(page: Page) {
-  await page.goto('/');
-  await page.getByLabel(/password/i).fill(PASSWORD);
-  await page.getByRole('button', { name: /sign in/i }).click();
-  await expect(page.getByRole('link', { name: /Fake Album/ }).first()).toBeVisible();
-}
-
-/** "This browser" plays: the server only says "playing" once the browser's
- * audio has reported it, and the play button turns into Pause. */
-async function playing(page: Page) {
-  await expect(page.getByRole('button', { name: 'Pause', exact: true }).first()).toBeVisible();
-}
+test.beforeAll(async ({ request }) => setUp(request));
 
 /** A real finger swipe (touch events, which the page sees as touch pointers). */
 async function swipeLeft(page: Page, target: Locator) {
@@ -50,16 +24,13 @@ async function swipeLeft(page: Page, target: Locator) {
 
 test('play an album on this browser, then edit the queue', async ({ page, isMobile }) => {
   await signIn(page);
-  // The queue lives on the server: start from an empty one.
-  expect((await page.request.delete('/api/queue')).ok()).toBeTruthy();
-  await page.reload();
 
   await page.getByRole('link', { name: /Fake Album/ }).first().click();
   await expect(page.getByRole('heading', { name: 'Fake Album' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Song Three')).toBeVisible();
 
   await page.getByRole('button', { name: 'Play', exact: true }).first().click();
-  await playing(page);
+  await playButton(page, 'Pause');
   await expect(page.getByRole('contentinfo').getByText('Song One').filter({ visible: true })).toBeVisible();
 
   // The rest of the album comes next. On a phone the queue opens from the player.

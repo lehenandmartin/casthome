@@ -4,6 +4,10 @@
   import type { MessageKey } from './lib/i18n/en';
   import type { AlbumListType } from './lib/types';
   import { router } from './lib/router.svelte';
+  import { contextMenu } from './lib/contextMenu.svelte';
+  import { dialogs } from './lib/dialog.svelte';
+  import { togglePlayback } from './lib/playback.svelte';
+  import { shortcutFor } from './lib/shortcuts';
   import { store } from './lib/store.svelte';
   import AlbumView from './components/AlbumView.svelte';
   import Albums from './components/Albums.svelte';
@@ -91,7 +95,30 @@
   // On load: first-run setup, sign-in, or the app. If the server is briefly
   // unreachable, the cached state stays on screen while the connection retries.
   store.checkStatus();
+
+  // Keyboard shortcuts (see lib/shortcuts.ts): Space plays/pauses, / searches.
+  function onShortcut(e: KeyboardEvent) {
+    // Not behind a confirmation or an action menu: Space belongs to their buttons.
+    if (store.auth !== 'signed-in' || dialogs.current || contextMenu.current) return;
+    const shortcut = shortcutFor(e);
+    if (!shortcut) return;
+    e.preventDefault(); // no page scroll, no button click, no "/" typed
+    if (shortcut === 'toggle') {
+      if (store.queue.items.length > 0) togglePlayback();
+      return;
+    }
+    if (store.nowPlayingOpen) store.closeNowPlaying();
+    if (route.name === 'search') {
+      const input = document.querySelector<HTMLInputElement>('main input[type="search"]');
+      input?.focus();
+      input?.select();
+    } else {
+      location.hash = '#/search';
+    }
+  }
 </script>
+
+<svelte:window onkeydown={onShortcut} />
 
 <Toasts />
 <ContextMenu />

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api';
   import { t } from '../lib/i18n';
+  import { actuallyPlaying as serverPlaying, optimistic, togglePlayback as toggle } from '../lib/playback.svelte';
   import { store } from '../lib/store.svelte';
   import type { RepeatMode } from '../lib/types';
   import Icon from './Icon.svelte';
@@ -8,9 +9,8 @@
   let { size = 'normal', modes = true }: { size?: 'normal' | 'large'; modes?: boolean } = $props();
 
   const p = $derived(store.player);
-  const actuallyPlaying = $derived(p?.status === 'playing' || p?.status === 'buffering' || p?.status === 'loading');
   // Play/pause answers the tap at once; the server's state takes over when it arrives.
-  const playing = $derived(optimistic.value ?? actuallyPlaying);
+  const playing = $derived(optimistic.value ?? serverPlaying());
   // Only a real change of status ends the optimistic state (not every player update).
   const status = $derived(p?.status);
   $effect(() => {
@@ -18,19 +18,6 @@
     optimistic.value = null;
   });
 
-  function toggle() {
-    optimistic.value = !actuallyPlaying;
-    clearTimeout(optimistic.timer);
-    optimistic.timer = setTimeout(() => (optimistic.value = null), 3000);
-    store.run(async () => {
-      try {
-        await api.action('toggle');
-      } catch (error) {
-        optimistic.value = null;
-        throw error;
-      }
-    });
-  }
   const busy = $derived(p?.status === 'loading' || p?.status === 'buffering');
   const hasQueue = $derived(store.queue.items.length > 0);
   const nextRepeat: Record<RepeatMode, RepeatMode> = { off: 'all', all: 'one', one: 'off' };
@@ -38,10 +25,6 @@
   const big = $derived(size === 'large');
 </script>
 
-<script lang="ts" module>
-  // Shared by every player bar (mini, full, Now Playing), so they all agree.
-  const optimistic = $state<{ value: boolean | null; timer?: ReturnType<typeof setTimeout> }>({ value: null });
-</script>
 
 <div class="controls" class:big>
   {#if modes}
