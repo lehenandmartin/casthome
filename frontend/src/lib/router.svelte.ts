@@ -14,12 +14,19 @@ import { tick } from 'svelte';
 
 const newKey = () => Math.random().toString(36).slice(2);
 const RESTORE_TIMEOUT_MS = 1500;
+// A page just opened stays at the top (see #pinTop): wheel events closer than
+// FLICK_GAP_MS belong to the same flick; the pin ends SETTLE_MS after the last
+// of them (or the opening), and never lasts longer than PIN_MAX_MS.
+const FLICK_GAP_MS = 120;
+const SETTLE_MS = 400;
+const PIN_MAX_MS = 3000;
 
 class Router {
   hash = $state(location.hash);
   #key: string;
   #positions = new Map<string, number>();
   #restoring = 0;
+  #lastWheel = 0;
 
   constructor() {
     history.scrollRestoration = 'manual';
@@ -53,6 +60,7 @@ class Router {
       },
       { passive: true },
     );
+    window.addEventListener('wheel', (e) => (this.#lastWheel = e.timeStamp), { passive: true });
     // The user scrolling takes over from a restore still waiting for content.
     const stop = () => cancelAnimationFrame(this.#restoring);
     for (const type of ['wheel', 'touchstart', 'keydown']) window.addEventListener(type, stop, { passive: true });
@@ -87,6 +95,44 @@ class Router {
     this.hash = location.hash;
     // Scroll up once the new page is in place (scrolling the old one could show its top).
     tick().then(() => window.scrollTo(0, 0));
+    this.#pinTop();
+  }
+
+  /** Keep a page just opened at the top while the old page's scroll dies out.
+   *  Firefox animates each wheel notch smoothly, and that animation went on
+   *  after the link was followed, without any event, towards the old page's
+   *  position: the new page (still short while it loads) ended up scrolled
+   *  to its bottom, and Firefox showed an unpainted band there. A trackpad
+   *  flick does the same with its tail of wheel events, which are cancelled.
+   *  Any new gesture (a wheel after a pause, a touch, a key, a click) ends it. */
+  #pinTop(): void {
+    const opened = performance.now();
+    // Event times are when each event was made: while the new page is being
+    // built, the flick's events wait and then arrive all at once.
+    let lastFlick = opened - this.#lastWheel <= FLICK_GAP_MS ? this.#lastWheel : opened;
+    const top = () => {
+      if (window.scrollY !== 0) window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+    const onWheel = (event: WheelEvent) => {
+      if (event.timeStamp - lastFlick > FLICK_GAP_MS) return release(); // a new gesture
+      lastFlick = event.timeStamp;
+      event.preventDefault();
+      top();
+    };
+    const timer = setInterval(() => {
+      const now = performance.now();
+      if (now - lastFlick > SETTLE_MS || now - opened > PIN_MAX_MS) release();
+    }, 100);
+    const release = () => {
+      clearInterval(timer);
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('scroll', top);
+      for (const type of ['touchstart', 'keydown', 'pointerdown']) window.removeEventListener(type, release);
+    };
+    // Not passive, so a flick's events can be cancelled (only while pinned).
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('scroll', top, { passive: true });
+    for (const type of ['touchstart', 'keydown', 'pointerdown']) window.addEventListener(type, release, { passive: true });
   }
 
   #intercept(event: MouseEvent): void {

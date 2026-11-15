@@ -19,9 +19,6 @@ import asyncio
 import logging
 
 from casthome.background import spawn
-from casthome.cast.types import (
-    CastEvent,
-)
 from casthome.playback.state import Notifier, PlaybackError, Status
 from casthome.queue.logic import AddMode, QueueModel, RepeatMode
 from casthome.subsonic.client import NavidromeUnavailableError, NotAuthenticatedError, SubsonicError
@@ -119,34 +116,14 @@ class PlaybackCoordinator(DeviceEvents):
             except PlaybackError as exc:
                 self.notifier.notify("error", exc.code, exc.params)
 
-    async def _connect(self, uuid: str) -> None:
-        self._connecting = True
-        try:
-            # Each connection gets its own sink: events still arriving from a
-            # device we left (its last volume, its session closing) are dropped.
-            self._connection_id += 1
-            connection_id = self._connection_id
-
-            def sink(event: CastEvent) -> None:
-                if connection_id == self._connection_id:
-                    self._events.put_nowait(event)
-
-            self.target = await self._connector(uuid, sink)
-            self.connected = True
-        except Exception as exc:  # noqa: BLE001 - any connection failure is reported the same way
-            log.warning("Cannot connect to Cast device %s: %s", uuid, exc)
-            self.target = None
-            self.connected = False
-            raise PlaybackError("device_unreachable") from exc
-        finally:
-            self._connecting = False
-        self.notifier.player_changed()
-
     async def select_device(self, uuid: str) -> None:
         async with self._lock:
             if uuid == self.device_uuid and self.target is not None:
                 return
-            was_active = self.status in (Status.PLAYING, Status.BUFFERING, Status.LOADING)
+            # Chosen again after another app took it: take it back where we were.
+            was_active = self.status in (Status.PLAYING, Status.BUFFERING, Status.LOADING) or (
+                self._taken_over and uuid == self.device_uuid
+            )
             position = self.current_position()
             old = self.target
             self._connection_id += 1  # ignore whatever the old device still sends

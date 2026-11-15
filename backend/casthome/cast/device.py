@@ -99,8 +99,16 @@ class CastDevice:
             await asyncio.to_thread(fn, *args, **kwargs)
 
     async def load(self, url: str, content_type: str, metadata: dict[str, Any], start_at: float) -> None:
-        await self._run(
-            self._cast.media_controller.play_media,
+        await self._run(self._load, url, content_type, metadata, start_at)
+
+    def _load(self, url: str, content_type: str, metadata: dict[str, Any], start_at: float) -> None:
+        if self._cast.app_id not in (None, DEFAULT_MEDIA_RECEIVER_APP_ID):
+            # Another app (Spotify...) holds the device. It may take media
+            # commands too, so pychromecast would send our LOAD to it instead
+            # of starting our receiver: start ours first, and wait for it.
+            log.info("Taking %s back from app %s", self.info.name, self._cast.app_id)
+            self._cast.start_app(DEFAULT_MEDIA_RECEIVER_APP_ID)
+        self._cast.media_controller.play_media(
             url,
             content_type,
             stream_type=STREAM_TYPE_BUFFERED,

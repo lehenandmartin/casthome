@@ -287,6 +287,33 @@ async def test_other_app_takes_over(h):
     h.target.sink(ReceiverEvent(app_id="SPOTIFY", volume_level=0.5, volume_muted=False))
     await h.settle()
     assert h.c.status == Status.STOPPED and "device_taken_over" in h.notifications
+    # Let go: shown as not connected, its later reports are ignored.
+    assert h.c.target is None and not h.c.connected and h.c.device_uuid == "dev1"
+    await h.settle()
+    assert "disconnect" in h.target.calls
+
+
+async def test_play_after_another_app_took_over_takes_the_device_back(h):
+    await h.c.play_songs(songs(3), 0)
+    h.target.media("PLAYING", t=42.0)
+    h.target.sink(ReceiverEvent(app_id="SPOTIFY", volume_level=0.5, volume_muted=False))
+    await h.settle()
+    await h.c.play()
+    assert len(h.targets) == 2 and h.c.connected
+    assert h.target.loads == [(h.target.last_url, pytest.approx(42.0, abs=0.5))]
+    assert "id=s0" in h.target.last_url
+
+
+async def test_choosing_the_device_again_after_a_takeover_resumes(h):
+    await h.c.play_songs(songs(3), 0)
+    h.target.media("PLAYING", t=42.0)
+    h.target.sink(ReceiverEvent(app_id="SPOTIFY", volume_level=0.5, volume_muted=False))
+    await h.settle()
+    await h.c.select_device("dev1")
+    assert len(h.targets) == 2 and h.target.loads[-1][1] == pytest.approx(42.0, abs=0.5)
+    # Once ours again, choosing it does not reload.
+    await h.c.select_device("dev1")
+    assert len(h.target.loads) == 1
 
 
 async def test_switching_device_transfers_playback(h):

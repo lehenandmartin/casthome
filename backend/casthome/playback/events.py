@@ -174,6 +174,7 @@ class DeviceEvents(Preloading):
             else:
                 log.info("Another app took over the device (%s)", ev.app_id)
                 self.notifier.notify("warning", "device_taken_over", {})
+                self._release_device()
             self._schedule_save()
             changed = True
         if changed:

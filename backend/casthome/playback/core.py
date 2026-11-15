@@ -16,6 +16,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from typing import Any
 
+from casthome.background import spawn
 from casthome.cast.types import (
     CastEvent,
     CastTarget,
@@ -87,10 +88,47 @@ class CoordinatorCore:
         self._consecutive_errors = 0
         self._reattach_song_id: str | None = None
         self._connecting = False
+        # Another app took the device: it was let go until chosen again or Play.
+        self._taken_over = False
         self._remote_changed: str | None = None
         self._last_position_save = 0.0
         self._save_task: asyncio.Task[None] | None = None
         self._tasks: list[asyncio.Task[None]] = []
+
+    async def _connect(self, uuid: str) -> None:
+        self._connecting = True
+        try:
+            # Each connection gets its own sink: events still arriving from a
+            # device we left (its last volume, its session closing) are dropped.
+            self._connection_id += 1
+            connection_id = self._connection_id
+
+            def sink(event: CastEvent) -> None:
+                if connection_id == self._connection_id:
+                    self._events.put_nowait(event)
+
+            self.target = await self._connector(uuid, sink)
+            self.connected = True
+            self._taken_over = False
+        except Exception as exc:  # noqa: BLE001 - any connection failure is reported the same way
+            log.warning("Cannot connect to Cast device %s: %s", uuid, exc)
+            self.target = None
+            self.connected = False
+            raise PlaybackError("device_unreachable") from exc
+        finally:
+            self._connecting = False
+        self.notifier.player_changed()
+
+    def _release_device(self) -> None:
+        """Let go of a device another app took: it shows as not connected, and
+        choosing it again (or Play) takes it back."""
+        old = self.target
+        self._connection_id += 1  # ignore whatever it still sends
+        self.target = None
+        self.connected = False
+        self._taken_over = True
+        if old is not None:
+            spawn(old.disconnect(), name="leave device")
 
     def _position_of(self, uid: int) -> int:
         for position, entry in enumerate(self.queue.entries):

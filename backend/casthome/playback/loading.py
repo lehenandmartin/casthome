@@ -33,6 +33,8 @@ class Loading(RadioFeed):
         if entry is None:
             await self._stop_device()
             return
+        if self.target is None and self._taken_over and self.device_uuid is not None:
+            await self._connect(self.device_uuid)  # take the device back from the other app
         if self.target is None:
             self._set_position(start_at)
             self.status = Status.STOPPED

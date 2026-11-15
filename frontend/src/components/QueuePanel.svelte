@@ -116,7 +116,7 @@
     z-index: 25; /* below the player bar (30) and overlays */
     top: 0;
     right: 0;
-    bottom: 84px; /* the player bar */
+    bottom: var(--player-desktop-h); /* the player bar */
     width: var(--queue-w);
     display: flex;
     flex-direction: column;

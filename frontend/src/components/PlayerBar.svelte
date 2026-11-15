@@ -179,6 +179,12 @@
     .player {
       bottom: 0;
       left: var(--sidebar-w);
+      /* Solid, without the blur: on a large window the blur is redrawn on every
+         scrolled frame, and Firefox then fell behind, leaving an unpainted band
+         at the bottom while a heavy page was opening. */
+      background: var(--surface);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
     .mini {
       display: none;
@@ -188,7 +194,7 @@
       grid-template-columns: minmax(0, 1fr) minmax(300px, 480px) minmax(0, 1fr);
       align-items: center;
       gap: 24px;
-      height: 84px;
+      height: var(--player-desktop-h);
       padding: 0 20px;
     }
     .now {
