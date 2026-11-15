@@ -7,18 +7,7 @@
   <a href="https://github.com/lehenandmartin/casthome/pkgs/container/casthome"><img src="https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-2496ED?logo=docker&logoColor=white" alt="Docker image for amd64 and arm64"></a>
 </p>
 
-<!--
-Screenshots: drop the images in docs/screenshots/ and remove this comment.
-
-<p align="center">
-  <img src="docs/screenshots/now-playing.png" alt="Now Playing on a phone" width="260">
-  <img src="docs/screenshots/queue.png" alt="The queue on a phone" width="260">
-  <img src="docs/screenshots/home.png" alt="Home on a phone" width="260">
-</p>
-<p align="center">
-  <img src="docs/screenshots/desktop.png" alt="CastHome on a desktop browser" width="800">
-</p>
--->
+<img alt="Screenshot of CastHome" src="https://github.com/user-attachments/assets/4c1ebe9e-f89a-40c3-88d3-85bc6436afd1" />
 
 ---
 
@@ -32,11 +21,9 @@ Connect: a small server on your home network drives the speakers itself, and
 **the speaker streams straight from Navidrome**. Your phone, or any browser, is only the remote: pick a speaker,
 press play, put the phone away, and the music keeps going, track after track.
 
-```
- Phone / browser ──(remote)──▶ CastHome ──(controls)──▶ Cast speaker
-                                                             │
-                              Navidrome ◀──(audio stream)────┘
-```
+**CastHome is a web app, not a native iOS or Android app.** Open it in any
+browser, or add it to your home screen to use it like an app (PWA): nothing
+to install from a store.
 
 ## Why CastHome
 
