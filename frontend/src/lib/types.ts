@@ -40,6 +40,8 @@ export interface Album {
   starred: boolean;
   user_rating: number;
   songs?: Song[] | null;
+  /** Names of the discs when tagged, by disc number (album pages only). */
+  disc_titles?: Record<number, string>;
 }
 
 export interface Device {

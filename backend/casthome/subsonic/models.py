@@ -63,10 +63,18 @@ class Album(BaseModel):
     starred: bool = False
     user_rating: int = 0
     songs: list[Song] | None = None
+    # Names of the discs when they are tagged (OpenSubsonic discTitles), by
+    # disc number: "The Fame Monster", "The Fame".
+    disc_titles: dict[int, str] = {}
 
     @classmethod
     def from_api(cls, d: dict[str, Any]) -> Album:
         songs = d.get("song")
+        disc_titles = {
+            int(item["disc"]): str(item["title"]).strip()
+            for item in d.get("discTitles") or []
+            if isinstance(item, dict) and item.get("disc") is not None and str(item.get("title") or "").strip()
+        }
         return cls(
             id=str(d["id"]),
             name=d.get("name") or d.get("title") or "",
@@ -79,6 +87,7 @@ class Album(BaseModel):
             starred=bool(d.get("starred")),
             user_rating=int(d.get("userRating") or 0),
             songs=[Song.from_api(s) for s in songs] if songs is not None else None,
+            disc_titles=disc_titles,
         )
 
 

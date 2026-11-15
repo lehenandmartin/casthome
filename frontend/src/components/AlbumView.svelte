@@ -116,8 +116,8 @@
     </header>
     {#if album.songs}
       <!-- Several discs: a heading for each (track numbers restart on every disc). -->
-      {#each byDisc(album.songs) as part (part.start)}
-        {#if part.disc !== null}<h3 class="disc">{t('album.disc', { number: part.disc })}</h3>{/if}
+      {#each byDisc(album.songs, album.disc_titles) as part (part.start)}
+        {#if part.disc !== null}<h3 class="disc">{part.title ?? t('album.disc', { number: part.disc })}</h3>{/if}
         <SongList
           songs={part.songs}
           numbered
