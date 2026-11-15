@@ -309,6 +309,7 @@ export const en = {
   'error.device_unreachable': 'The Cast device is unreachable.',
   'error.device_disconnected': 'Lost connection to the Cast device. Reconnecting…',
   'error.device_taken_over': 'Another app is now using the Cast device.',
+  'error.device_stopped': 'Playback stopped on the Cast device. Play resumes where it was.',
   'error.track_unplayable': 'Cannot play “{title}”, skipped.',
   'error.too_many_errors': 'Playback stopped after several unplayable tracks.',
   'error.queue_ended': 'End of the queue.',

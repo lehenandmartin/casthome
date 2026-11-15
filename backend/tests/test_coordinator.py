@@ -9,6 +9,7 @@ import pytest
 
 from casthome.cast.types import (
     DEFAULT_MEDIA_RECEIVER_APP_ID,
+    ConnectionEvent,
     DeviceInfo,
     EventSink,
     LoadFailedEvent,
@@ -513,3 +514,47 @@ async def test_polled_status_is_sent_only_when_browsers_could_not_guess_it(h):
     h.target.media("PAUSED", t=62.0)  # still paused: nothing new
     await h.settle()
     assert len(sent) == 3
+
+
+async def test_lost_connection_holds_the_position_until_the_device_answers(h):
+    now = [1000.0]
+    h.c._clock = lambda: now[0]
+    await h.c.play_songs(songs(3), 0)
+    h.target.media("PLAYING", t=10.0)
+    await h.settle()
+    h.c.connected = True
+    now[0] += 15.0  # the loss is noticed late: held at the device's last report
+    h.target.sink(ConnectionEvent(connected=False))
+    await h.settle()
+    assert h.c.status == Status.BUFFERING and "device_disconnected" in h.notifications
+    now[0] += 30.0  # the position does not move on while nothing answers
+    assert h.c.current_position() == 10.0
+
+
+async def test_device_back_without_any_app_stops_quietly_keeping_the_position(h):
+    await h.c.play_songs(songs(3), 0)
+    h.target.media("PLAYING", t=42.0)
+    await h.settle()
+    h.target.sink(ReceiverEvent(app_id=None, volume_level=0.5, volume_muted=False))
+    await h.settle()
+    assert h.c.status == Status.STOPPED and h.c.position == 42.0
+    assert "device_stopped" in h.notifications and "device_taken_over" not in h.notifications
+    loads = len(h.target.loads)
+    await h.c.play()  # Play resumes there
+    assert len(h.target.loads) == loads + 1 and h.target.loads[-1][1] == 42.0
+
+
+async def test_resuming_mid_track_ignores_the_first_buffering_at_zero(h):
+    await h.c.play_songs(songs(3), 0)
+    h.target.media("PLAYING", t=40.0)
+    await h.settle()
+    await h.c.pause()
+    h.target.media("PAUSED", t=40.0)
+    await h.c.stop_playback()
+    await h.c.play()  # loads again from 40 s
+    h.target.media("BUFFERING", t=0.0)
+    await h.settle()
+    assert h.c.position == pytest.approx(40.0, abs=0.1)
+    h.target.media("PLAYING", t=40.2)
+    await h.settle()
+    assert h.c.position == 40.2

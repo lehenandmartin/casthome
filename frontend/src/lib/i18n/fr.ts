@@ -308,6 +308,7 @@ export const fr: Record<MessageKey, string> = {
   'error.device_unreachable': 'L’appareil Cast est injoignable.',
   'error.device_disconnected': 'Connexion à l’appareil Cast perdue. Reconnexion…',
   'error.device_taken_over': 'Une autre application utilise maintenant l’appareil Cast.',
+  'error.device_stopped': 'La lecture s’est arrêtée sur l’appareil Cast. Lecture reprend là où elle était.',
   'error.track_unplayable': 'Impossible de lire « {title} », titre ignoré.',
   'error.too_many_errors': 'Lecture arrêtée après plusieurs titres illisibles.',
   'error.queue_ended': 'Fin de la file d’attente.',

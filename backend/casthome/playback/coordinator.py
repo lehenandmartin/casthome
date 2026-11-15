@@ -657,6 +657,12 @@ class PlaybackCoordinator:
             if event.connected != self.connected:
                 self.connected = event.connected
                 if not event.connected:
+                    # Nothing is known to play until the device answers again: hold
+                    # the position at the device's last report (the loss is noticed
+                    # up to ~20 s late; moving on would skip music on resume).
+                    if self.status in (Status.PLAYING, Status.BUFFERING):
+                        self._set_position(self.position)
+                        self.status = Status.BUFFERING
                     self.notifier.notify("warning", "device_disconnected", {})
                 elif self.target is not None:
                     await self.target.request_status()
@@ -694,6 +700,7 @@ class PlaybackCoordinator:
             return  # status for a media we replaced
 
         if ev.player_state in ("PLAYING", "PAUSED", "BUFFERING"):
+            first = not self._seen_active
             self._seen_active = True
             before = (self.status, self.duration)
             self.status = {"PLAYING": Status.PLAYING, "PAUSED": Status.PAUSED}.get(ev.player_state, Status.BUFFERING)
@@ -701,7 +708,10 @@ class PlaybackCoordinator:
                 self._consecutive_errors = 0
             if ev.duration:
                 self.duration = ev.duration
-            self._set_position(ev.current_time)
+            # Resuming mid-track, devices first report buffering at 0 s before
+            # seeking: keep the start position (the progress bar jumped to 0).
+            if not (first and ev.player_state == "BUFFERING" and ev.current_time < 0.5 and self.position > 1):
+                self._set_position(ev.current_time)
             # Polled every few seconds: tell the browsers only when something they
             # cannot work out themselves changed (they move the position on locally).
             if (self.status, self.duration) != before or self._position_drifted():
@@ -851,10 +861,15 @@ class PlaybackCoordinator:
             and self._seen_active
             and ev.app_id != DEFAULT_MEDIA_RECEIVER_APP_ID
         ):
-            log.info("Another app took over the device (%s)", ev.app_id)
             self._expected_content_id = None
-            self.status = Status.STOPPED
-            self.notifier.notify("warning", "device_taken_over", {})
+            self.status = Status.STOPPED  # the position is kept: Play resumes there
+            if ev.app_id is None:
+                # No app at all: the device restarted (power cut) or was told to stop.
+                log.info("Playback stopped on the device (no app running)")
+                self.notifier.notify("warning", "device_stopped", {})
+            else:
+                log.info("Another app took over the device (%s)", ev.app_id)
+                self.notifier.notify("warning", "device_taken_over", {})
             self._schedule_save()
             changed = True
         if changed:

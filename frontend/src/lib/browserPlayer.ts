@@ -148,6 +148,8 @@ export class BrowserPlayer {
 
   #setMetadata(meta: LoadCommand['metadata']): void {
     if (!('mediaSession' in navigator)) return;
+    // iOS may drop the controls when the track changes: declare them again.
+    this.#setupMediaSession();
     navigator.mediaSession.metadata = new MediaMetadata({
       title: meta.title ?? '',
       artist: meta.artist ?? '',
@@ -175,6 +177,15 @@ export class BrowserPlayer {
     session.setActionHandler('pause', safe(() => api.action('pause')));
     session.setActionHandler('nexttrack', safe(() => api.action('next')));
     session.setActionHandler('previoustrack', safe(() => api.action('previous')));
+    // Safari adds its own ±10 s buttons to any audio player (lock screen,
+    // Dynamic Island) unless they are removed: show previous/next instead.
+    for (const action of ['seekbackward', 'seekforward'] as const) {
+      try {
+        session.setActionHandler(action, null);
+      } catch {
+        /* unsupported action */
+      }
+    }
     try {
       session.setActionHandler('seekto', (details) => {
         if (details.seekTime !== undefined) void api.seek(details.seekTime).catch(() => {});
