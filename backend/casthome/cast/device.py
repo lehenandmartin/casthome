@@ -14,7 +14,12 @@ from typing import Any
 import pychromecast
 from pychromecast.controllers.media import STREAM_TYPE_BUFFERED, MediaStatus, MediaStatusListener
 from pychromecast.controllers.receiver import CastStatus, CastStatusListener
-from pychromecast.socket_client import CONNECTION_STATUS_CONNECTED, ConnectionStatus, ConnectionStatusListener
+from pychromecast.socket_client import (
+    CONNECTION_STATUS_CONNECTED,
+    CONNECTION_STATUS_CONNECTING,
+    ConnectionStatus,
+    ConnectionStatusListener,
+)
 
 from casthome.cast.types import (
     DEFAULT_MEDIA_RECEIVER_APP_ID,
@@ -64,6 +69,12 @@ class _Listener(MediaStatusListener, CastStatusListener, ConnectionStatusListene
         )
 
     def new_connection_status(self, status: ConnectionStatus) -> None:
+        # CONNECTING is not a loss: it opens every connection (and each retry
+        # after a LOST/FAILED, which are reported themselves). Passed on, the
+        # first one reached the player after the device was already connected
+        # and showed "Lost connection" for a few seconds at each selection.
+        if status.status == CONNECTION_STATUS_CONNECTING:
+            return
         self._emit(ConnectionEvent(connected=status.status == CONNECTION_STATUS_CONNECTED))
 
 
