@@ -164,7 +164,7 @@
   }
   .bg.armed.danger {
     background: var(--danger);
-    color: #fff;
+    color: var(--on-danger);
   }
   .hint {
     display: inline-flex;

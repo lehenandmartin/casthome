@@ -53,7 +53,7 @@
   {#if loaded && playlists.length === 0}
     <p class="muted">{t('playlists.empty')}</p>
   {/if}
-  <ul class="rows">
+  <ul class="rows" role="list">
     {#each playlists as playlist (playlist.id)}
       <li>
         <a href={`#/playlist/${encodeURIComponent(playlist.id)}`} use:menu={() => playlistMenu(playlist, load)}>

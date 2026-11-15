@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modal } from '../lib/modal';
   import { riseOut, slideOutRight } from '../lib/motion';
   // The queue as a layer, never a page:
   // - mobile: a sheet that slides up over the page or Now Playing; Back, the
@@ -45,6 +46,7 @@
 {:else}
   <div
     class="sheet-layer"
+    use:modal
     out:riseOut|global
     role="dialog"
     aria-modal="true"

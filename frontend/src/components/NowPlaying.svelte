@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modal } from '../lib/modal';
   import { fadeIn } from '../lib/motion';
   import { coverUrl } from '../lib/api';
   import { contextMenu, menu } from '../lib/contextMenu.svelte';
@@ -51,6 +52,7 @@
 
 <div
   class="np"
+  use:modal
   role="dialog"
   aria-modal="true"
   aria-label={t('nowPlaying.title')}

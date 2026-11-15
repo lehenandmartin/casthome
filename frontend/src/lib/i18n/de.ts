@@ -110,6 +110,7 @@ export const de: Record<MessageKey, string> = {
   'access.seenLocal': 'CastHome sieht dieses Gerät unter {address}, in deinem lokalen Netzwerk.',
   'access.seenRemote': 'CastHome sieht dieses Gerät unter {address}, außerhalb deines lokalen Netzwerks.',
   'access.untrustedProxy': 'Ein Reverse Proxy leitet die Besuche weiter, aber CastHome vertraut ihm nicht: Es sieht nur die Adresse des Proxys ({address}). Daher gilt niemand als lokal und das Passwort wird überall verlangt. Füge diese Adresse zu FORWARDED_ALLOW_IPS hinzu (siehe README).',
+  'nav.skip': 'Zum Inhalt springen',
   'nav.home': 'Start',
   'nav.library': 'Bibliothek',
 
@@ -137,6 +138,7 @@ export const de: Record<MessageKey, string> = {
   'home.onRepeatHint': 'Deine meistgespielten Titel unter denen der letzten 30 Tage',
   'home.yourPlaylists': 'Deine Playlists',
 
+  'list.show': 'Anzeigen',
   'albums.title': 'Alben',
   'albums.newest': 'Zuletzt hinzugefügt',
   'albums.recent': 'Zuletzt gespielt',
@@ -298,6 +300,12 @@ export const de: Record<MessageKey, string> = {
   'queue.moveToNext': 'Nach „Als Nächstes in der Warteschlange“ verschieben',
   'queue.drag': 'Zum Umsortieren ziehen',
   'queue.saveAsPlaylist': 'Als Playlist speichern',
+
+  'dnd.started': '{item} aufgenommen, Position {position} von {count}. Pfeiltasten verschieben ihn in {zone}, Tab wechselt zur anderen Liste, Leertaste oder Eingabe legt ihn ab.',
+  'dnd.moved': '{item}: Position {position} von {count} in {zone}.',
+  'dnd.dropped': '{item} an Position {position} in {zone} abgelegt.',
+  'dnd.instruction': 'Gehe mit Tab zum Ziehpunkt eines Titels und drücke Leertaste oder Eingabe, um ihn zu verschieben.',
+  'dnd.disabled': 'Umsortieren ist hier nicht möglich.',
 
   'connection.offline': 'Verbindung zu CastHome wird wiederhergestellt…',
 

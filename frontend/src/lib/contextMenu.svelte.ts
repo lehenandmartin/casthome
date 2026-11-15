@@ -73,15 +73,18 @@ class ContextMenuStore {
    * the menu is built only when needed, from the item's current state.
    */
   contextMenu(event: MouseEvent, spec: () => MenuSpec | null): void {
-    if (event.shiftKey || !finePointer.matches) return;
+    // From the keyboard (menu key, Shift+F10) the event has no position.
+    const fromKeyboard = event.clientX === 0 && event.clientY === 0;
+    // Shift + right-click keeps the browser's menu; Shift+F10 still opens ours.
+    if ((event.shiftKey && !fromKeyboard) || !finePointer.matches) return;
     const built = spec();
     if (!built) return;
     event.preventDefault();
     event.stopPropagation();
     const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
     let { clientX: x, clientY: y } = event;
-    if (x === 0 && y === 0 && target) {
-      // Opened from the keyboard (menu key, Shift+F10): next to the element.
+    if (fromKeyboard && target) {
+      // Next to the element.
       const rect = target.getBoundingClientRect();
       x = rect.left + 24;
       y = Math.min(rect.bottom, window.innerHeight - 8);

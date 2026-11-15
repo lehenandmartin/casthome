@@ -68,7 +68,8 @@ things the Subsonic API cannot give (the full track list with its sorts,
   track, automatic transcoding of files the speakers cannot play.
 - **Setup in the browser:** no config file. Sign in to your music server, choose how
   to protect CastHome, done.
-- English, French, German and Spanish.
+- English, French, German and Spanish; usable with the keyboard and screen
+  readers, checked for contrast in light and dark.
 
 See the [user guide](docs/usage.md) for the full tour.
 

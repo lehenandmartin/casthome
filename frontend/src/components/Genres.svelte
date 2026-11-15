@@ -24,7 +24,7 @@
   {#if loaded && genres.length === 0}
     <p class="muted">{t('genres.empty')}</p>
   {/if}
-  <ul class="rows">
+  <ul class="rows" role="list">
     {#each genres as genre (genre.name)}
       <li>
         <a href={`#/genre/${encodeURIComponent(genre.name)}`}>

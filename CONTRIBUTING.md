@@ -47,7 +47,9 @@ cd frontend && npm test && npm run check && npm run build
 
 End to end: the real backend serves the built interface (`npm run build`
 first) against a fake Subsonic server ([`frontend/e2e/fake_subsonic.py`](frontend/e2e/fake_subsonic.py)),
-in headless Chromium, on a phone and on a desktop. It plays on *This
+in headless Chromium, on a phone and on a desktop. They include keyboard use
+and an [axe](https://github.com/dequelabs/axe-core) accessibility check
+(contrast, ARIA) of the main screens in light and dark. It plays on *This
 browser*, so no Cast device is needed. Once, install the browser:
 `cd frontend && npx playwright install chromium`. Then:
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dragHandleZone, type DndEvent } from 'svelte-dnd-action';
+  import { TRIGGERS, dragHandleZone, setAriaStrings, type DndEvent } from 'svelte-dnd-action';
   import { flip } from 'svelte/animate';
   import { api, coverUrl } from '../lib/api';
   import { menu } from '../lib/contextMenu.svelte';
@@ -47,6 +47,24 @@
       queuedRows = rows.filter((r) => r.queued);
       contextRows = rows.filter((r) => !r.queued);
     }
+  });
+
+  // What screen readers hear while a track is moved with the keyboard, in the
+  // interface language (the library's own strings are English only).
+  $effect(() => {
+    setAriaStrings({
+      dragStarted: ({ itemLabel, zoneLabel, position, count }) =>
+        t('dnd.started', { item: itemLabel, zone: zoneLabel, position, count }),
+      movedToPosition: ({ itemLabel, zoneLabel, position, count }) =>
+        t('dnd.moved', { item: itemLabel, zone: zoneLabel, position, count }),
+      movedToZoneStart: ({ itemLabel, zoneLabel, position, count }) =>
+        t('dnd.moved', { item: itemLabel, zone: zoneLabel, position, count }),
+      movedToZoneEnd: ({ itemLabel, zoneLabel, position, count }) =>
+        t('dnd.moved', { item: itemLabel, zone: zoneLabel, position, count }),
+      dropped: ({ itemLabel, zoneLabel, position }) => t('dnd.dropped', { item: itemLabel, zone: zoneLabel, position }),
+      zoneActiveInstruction: t('dnd.instruction'),
+      zoneDragDisabledInstruction: t('dnd.disabled'),
+    });
   });
 
   const upcomingCount = $derived(queuedRows.length + contextRows.length);
@@ -123,8 +141,10 @@
   }
 
   function consider(zone: Zone, e: CustomEvent<DndEvent<Row>>) {
-    dragging = true;
     setRows(zone, e.detail.items);
+    // A keyboard drag ends with one more "consider" (dragStopped), after the
+    // drop: it is not a drag, or the queue would stop following the server.
+    dragging = e.detail.info.trigger !== TRIGGERS.DRAG_STOPPED;
   }
 
   async function finalize(zone: Zone, e: CustomEvent<DndEvent<Row>>) {
@@ -221,16 +241,18 @@
   {#snippet zone(name: Zone, rows: Row[])}
     <ol
       class="list"
+      aria-label={name === 'queued' ? t('queue.nextInQueue') : contextTitle}
       data-zone={name}
       class:drop-hint={(dragging || drop !== null) && rows.length === 0}
       class:drop-end={drop?.zone === name && drop.offset === rows.length && rows.length > 0}
       class:drop-into={drop?.zone === name && rows.length === 0}
-      use:dragHandleZone={{ items: rows, type: 'upcoming', flipDurationMs: FLIP_MS, dropTargetStyle: {} }}
+      use:dragHandleZone={{ items: rows, type: 'upcoming', flipDurationMs: FLIP_MS, dropTargetStyle: {}, zoneTabIndex: -1 }}
       onconsider={(e) => consider(name, e)}
       onfinalize={(e) => finalize(name, e)}
     >
       {#each rows as item, i (item.id)}
         <li
+          aria-label={`${item.title}, ${item.artist}`}
           animate:flip={{ duration: FLIP_MS }}
           use:menu={() => rowMenu(item, name)}
           class:drop-before={drop?.zone === name && drop.offset === i}
@@ -280,7 +302,7 @@
       <Icon name={showHistory ? 'chevronDown' : 'chevronRight'} size={16} />
     </button>
     {#if showHistory}
-      <ol class="list history">
+      <ol class="list history" role="list" aria-label={t('queue.history')}>
         {#each history as item (item.uid)}
           <li use:menu={() => queueItemMenu(item)}>
             <QueueRow {item} onplay={() => store.run(() => api.jump(item.uid))} onremove={() => remove(item.uid)} />

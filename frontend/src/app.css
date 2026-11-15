@@ -5,11 +5,12 @@
   --surface-3: #e1e4ea;
   --border: #dde1e7;
   --text: #14181d;
-  --muted: #69727e;
-  --accent: #2f6fdb;
-  --accent-soft: rgb(47 111 219 / 0.12);
+  --muted: #5a626d;
+  --accent: #1f5bbd;
+  --accent-soft: rgb(31 91 189 / 0.12);
   --on-accent: #ffffff;
-  --danger: #c93838;
+  --danger: #b83030;
+  --on-danger: #ffffff;
   --star: #d99a00;
   --shadow: 0 8px 28px rgb(15 20 30 / 0.16);
   --radius: 12px;
@@ -29,11 +30,12 @@
     --surface-3: #2a313a;
     --border: #262d36;
     --text: #e9edf1;
-    --muted: #8d97a3;
+    --muted: #9ba5b1;
     --accent: #6aa0ff;
     --accent-soft: rgb(106 160 255 / 0.14);
     --on-accent: #0b1220;
-    --danger: #e0605c;
+    --danger: #ec7a76;
+    --on-danger: #1a0b0b;
     --star: #f2b63c;
     --shadow: 0 10px 34px rgb(0 0 0 / 0.5);
     color-scheme: dark;
@@ -118,6 +120,47 @@ button {
   transition:
     background 0.15s,
     transform 0.1s;
+}
+
+/* Keyboard focus: one clear ring everywhere (mouse clicks do not show it). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Read by screen readers, not shown. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* "Skip to content": the first stop of the Tab key, shown only then. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+.skip-link:focus {
+  transform: none;
+}
+/* The skip link focuses the page itself: no ring around all of it. */
+main:focus {
+  outline: none;
 }
 
 button:active:not(:disabled) {

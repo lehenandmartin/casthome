@@ -13,13 +13,17 @@ export function actuallyPlaying(): boolean {
   return status === 'playing' || status === 'buffering' || status === 'loading';
 }
 
+/** Play if the player shows paused, pause if it shows playing. The action is
+ * explicit (not "toggle"): two quick presses give pause then play, even if the
+ * server has not confirmed the first one yet. */
 export function togglePlayback(): void {
-  optimistic.value = !actuallyPlaying();
+  const play = !(optimistic.value ?? actuallyPlaying());
+  optimistic.value = play;
   clearTimeout(optimistic.timer);
   optimistic.timer = setTimeout(() => (optimistic.value = null), 3000);
   store.run(async () => {
     try {
-      await api.action('toggle');
+      await api.action(play ? 'play' : 'pause');
     } catch (error) {
       optimistic.value = null;
       throw error;

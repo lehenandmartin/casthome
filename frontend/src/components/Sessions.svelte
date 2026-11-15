@@ -44,7 +44,7 @@
   {#if !embedded}<h2>{t('sessions.title')}</h2>{/if}
   <p class="muted intro">{t('sessions.intro')}</p>
 
-  <ul>
+  <ul role="list">
     {#each sessions as session (session.id)}
       <li>
         <div class="text">

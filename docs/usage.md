@@ -27,7 +27,12 @@ playlist>** (the rest of what you started), then *Played* (collapsed).
   menu.
 - **Keyboard (computer):** Space plays or pauses, `/` opens the search.
   Neither works while typing in a field, and Space keeps ticking a focused
-  checkbox.
+  checkbox. The first Tab shows *Skip to content*. The menu key or
+  Shift+F10 opens the menu of the focused item. In the queue, Tab to a
+  track's reorder handle, press Space or Enter to pick it up, the arrow keys
+  to move it (Tab to the other part of the queue), Space or Enter to drop
+  it; screen readers announce each step. Dialogs keep the focus until they
+  close, then give it back.
 
 ## Radio
 

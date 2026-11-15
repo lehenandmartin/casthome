@@ -228,7 +228,10 @@ class PlaybackCoordinator(DeviceEvents):
 
     async def play(self) -> None:
         async with self._lock:
-            if self.status == Status.PAUSED and self.target is not None and self._expected_content_id:
+            # Also while "playing": a pause just sent may not be confirmed yet
+            # (pause then play in quick succession); play on a playing device is harmless.
+            resumable = (Status.PAUSED, Status.PLAYING, Status.BUFFERING)
+            if self.status in resumable and self.target is not None and self._expected_content_id:
                 await self._device_call(self.target.play())
             elif self.status == Status.STOPPED and self.queue.current is not None:
                 await self._load_current(self.position)

@@ -90,10 +90,10 @@
 <section class:arrive>
   {#if !genre}
     <h2>{t('albums.title')}</h2>
-    <div class="tabs" role="tablist">
+    <div class="tabs" role="group" aria-label={t('list.show')}>
       <FavoritesToggle active={fav} />
       {#each TYPES as kind (kind)}
-        <button role="tab" aria-selected={selected === kind} class:active={selected === kind} onclick={() => (selected = kind)}>
+        <button aria-pressed={selected === kind} class:active={selected === kind} onclick={() => (selected = kind)}>
           {t(`albums.${kind}`)}
         </button>
       {/each}

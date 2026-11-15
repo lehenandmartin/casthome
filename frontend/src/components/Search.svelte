@@ -69,7 +69,7 @@
 
   {#if result && result.artists.length > 0}
     <h3>{t('search.artists')}</h3>
-    <ul class="artists">
+    <ul class="artists" role="list">
       {#each result.artists as artist (artist.id)}
         <li><a href={`#/artist/${encodeURIComponent(artist.id)}`} use:menu={() => artistMenu(artist)}>{artist.name}</a></li>
       {/each}

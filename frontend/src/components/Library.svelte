@@ -16,7 +16,7 @@
 
 <section>
   <h2>{t('nav.library')}</h2>
-  <ul>
+  <ul role="list">
     {#each ENTRIES.filter((e) => e.href !== '#/tracks' || store.capabilities.all_tracks) as entry (entry.href)}
       <li>
         <a href={entry.href}>
@@ -27,7 +27,7 @@
       </li>
     {/each}
   </ul>
-  <ul>
+  <ul role="list">
     <li>
       <a href="#/settings">
         <span class="icon"><Icon name="settings" size={22} /></span>

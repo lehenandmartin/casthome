@@ -24,7 +24,7 @@
   const shown = $derived(rowsOnly ? fullRows(albums, columns) : albums);
 </script>
 
-<ul class="grid" bind:this={grid}>
+<ul class="grid" role="list" bind:this={grid}>
   {#each shown as album (album.id)}
     <li>
       <a href={`#/album/${encodeURIComponent(album.id)}`} use:menu={() => albumMenu(album)}>

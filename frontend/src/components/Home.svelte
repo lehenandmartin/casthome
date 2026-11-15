@@ -119,9 +119,9 @@
   {/if}
 
   {#if tiles.length > 0}
-    <div class="tiles">
+    <div class="tiles" role="list">
       {#each tiles as tile (tile.href)}
-        <div class="tile" use:menu={() => tile.menu?.() ?? null}>
+        <div class="tile" role="listitem" use:menu={() => tile.menu?.() ?? null}>
           <a href={tile.href} class="tile-link">
             {#if tile.cover}
               <img src={coverUrl(tile.cover, 120)} alt="" loading="lazy" />

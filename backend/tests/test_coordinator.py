@@ -258,6 +258,17 @@ async def test_pause_and_resume(h):
     assert h.target.calls[-1] == "play"
 
 
+async def test_pause_then_play_before_the_device_confirms(h):
+    # Two quick presses: the second must resume, even though the device has
+    # not reported the pause yet (the status still says playing).
+    await h.c.play_songs(songs(3), 0)
+    h.target.media("PLAYING", t=5.0)
+    await h.settle()
+    await h.c.pause()
+    await h.c.play()
+    assert h.target.calls[-2:] == ["pause", "play"]
+
+
 async def test_next_when_stopped_only_cues(h):
     h.c.queue.replace(songs(3), 0)
     await h.c.next()

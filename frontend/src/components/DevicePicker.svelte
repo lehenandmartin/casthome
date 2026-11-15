@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modal } from '../lib/modal';
   import { fadeOut, sheetOut } from '../lib/motion';
   import { api } from '../lib/api';
   import { deviceIcon } from '../lib/devices';
@@ -117,20 +118,20 @@
 {/snippet}
 
 <div class="sheet-backdrop" role="presentation" onclick={close} out:fadeOut|global></div>
-<div class="sheet" out:sheetOut|global role="dialog" aria-modal="true" aria-labelledby="device-title">
+<div class="sheet" use:modal out:sheetOut|global role="dialog" aria-modal="true" aria-labelledby="device-title">
   <div class="head">
     <h3 id="device-title">{t('devices.title')}</h3>
     <button class="icon-btn" aria-label={t('playlist.cancel')} onclick={close}><Icon name="close" size={20} /></button>
   </div>
 
-  <ul>
+  <ul role="list">
     {@render row(thisBrowser)}
     {#if otherBrowser}{@render row(otherBrowser)}{/if}
   </ul>
 
   {#if groups.length > 0}
     <p class="section">{t('devices.groups')}</p>
-    <ul>
+    <ul role="list">
       {#each groups as device (device.uuid)}{@render row(toChoice(device))}{/each}
     </ul>
   {/if}
@@ -139,7 +140,7 @@
   {#if singles.length === 0}
     <p class="searching muted"><span class="spinner small" aria-hidden="true"></span>{t('devices.none')}</p>
   {:else}
-    <ul>
+    <ul role="list">
       {#each singles as device (device.uuid)}{@render row(toChoice(device))}{/each}
     </ul>
   {/if}

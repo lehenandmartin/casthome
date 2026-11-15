@@ -23,7 +23,9 @@
   <!-- Mobile: compact bar, tap to open Now Playing -->
   <div class="mini">
     <div class="mini-progress" style:width={`${progress}%`}></div>
-    <button class="mini-main" use:menu={songMenu} disabled={!song} onclick={() => store.openNowPlaying()} aria-label={t('nowPlaying.open')}>
+    <button class="mini-main" use:menu={songMenu} disabled={!song} onclick={() => store.openNowPlaying()}>
+      <!-- The visible title and artist are part of the button's name (WCAG 2.5.3). -->
+      <span class="sr-only">{t('nowPlaying.open')}:</span>
       <!-- A new track: its cover and title fade in. -->
       {#key song?.id}
         {#if song?.cover_art}

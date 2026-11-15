@@ -131,6 +131,8 @@
 {:else if store.auth === 'signed-out'}
   <Login />
 {:else if store.auth === 'signed-in'}
+  <!-- Hash routing: a "#main" link would change the page, so this moves the focus itself. -->
+  <button class="skip-link" onclick={() => document.getElementById('main')?.focus()}>{t('nav.skip')}</button>
   <aside class="sidebar">
     <div class="brand"><Icon name="cast" size={24} />{t('app.name')}</div>
     <nav>
@@ -150,7 +152,7 @@
     </a>
   </aside>
 
-  <main class="content" class:with-queue={store.isDesktop && store.queuePanel}>
+  <main id="main" tabindex="-1" class="content" class:with-queue={store.isDesktop && store.queuePanel}>
     {#if store.navidromeRejected && route.name !== 'settings'}
       <div class="banner" role="alert">
         <span>{t('navidrome.rejected')}</span>

@@ -128,10 +128,10 @@
 <section class:arrive>
   <h2>{title}</h2>
   {#if total !== null}<p class="muted count">{total === 1 ? t('tracks.one') : t('tracks.count', { count: total })}</p>{/if}
-  <div class="tabs" role="tablist">
+  <div class="tabs" role="group" aria-label={t('list.show')}>
     {#if store.capabilities.all_tracks}<FavoritesToggle active={fav} />{/if}
     {#each SORTS as kind (kind)}
-      <button role="tab" aria-selected={sort === kind} class:active={sort === kind} onclick={() => choose(kind)}>
+      <button aria-pressed={sort === kind} class:active={sort === kind} onclick={() => choose(kind)}>
         {t(`tracks.sort.${kind}`)}
       </button>
     {/each}

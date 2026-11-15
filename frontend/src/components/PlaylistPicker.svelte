@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modal } from '../lib/modal';
   import { fadeOut, sheetOut } from '../lib/motion';
   import { api } from '../lib/api';
   import { t } from '../lib/i18n';
@@ -39,13 +40,13 @@
 </script>
 
 <div class="sheet-backdrop" role="presentation" onclick={onclose} out:fadeOut|global></div>
-<div class="sheet" out:sheetOut|global role="dialog" aria-modal="true" aria-label={t('playlist.pickTitle')}>
+<div class="sheet" use:modal out:sheetOut|global role="dialog" aria-modal="true" aria-label={t('playlist.pickTitle')}>
   <h3>{t('playlist.pickTitle')}</h3>
   <form onsubmit={create}>
     <input type="text" bind:value={name} placeholder={t('playlists.namePlaceholder')} aria-label={t('playlists.new')} />
     <button class="primary" type="submit" disabled={busy || !name.trim()}>{t('playlists.create')}</button>
   </form>
-  <ul>
+  <ul role="list">
     {#each playlists as playlist (playlist.id)}
       <li>
         <button disabled={busy} onclick={() => addTo(playlist)}>

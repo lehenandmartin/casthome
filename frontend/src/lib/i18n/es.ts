@@ -110,6 +110,7 @@ export const es: Record<MessageKey, string> = {
   'access.seenLocal': 'CastHome ve este dispositivo en {address}, en tu red local.',
   'access.seenRemote': 'CastHome ve este dispositivo en {address}, fuera de tu red local.',
   'access.untrustedProxy': 'Un proxy inverso reenvía las visitas, pero CastHome no confía en él: solo ve la dirección del proxy ({address}). Así que nadie cuenta como local y se pide la contraseña en todas partes. Añade esta dirección a FORWARDED_ALLOW_IPS (consulta el README).',
+  'nav.skip': 'Saltar al contenido',
   'nav.home': 'Inicio',
   'nav.library': 'Biblioteca',
 
@@ -137,6 +138,7 @@ export const es: Record<MessageKey, string> = {
   'home.onRepeatHint': 'Tus canciones más escuchadas entre las reproducidas en los últimos 30 días',
   'home.yourPlaylists': 'Tus listas',
 
+  'list.show': 'Mostrar',
   'albums.title': 'Álbumes',
   'albums.newest': 'Añadidos recientemente',
   'albums.recent': 'Escuchados recientemente',
@@ -298,6 +300,12 @@ export const es: Record<MessageKey, string> = {
   'queue.moveToNext': 'Mover a “A continuación en la cola”',
   'queue.drag': 'Arrastrar para reordenar',
   'queue.saveAsPlaylist': 'Guardar como lista',
+
+  'dnd.started': '{item} seleccionada, posición {position} de {count}. Las flechas la mueven en {zone}, Tab pasa a la otra lista, Espacio o Intro la suelta.',
+  'dnd.moved': '{item}: posición {position} de {count} en {zone}.',
+  'dnd.dropped': '{item} soltada en la posición {position} de {zone}.',
+  'dnd.instruction': 'Ve con Tab al asa de una canción y pulsa Espacio o Intro para moverla.',
+  'dnd.disabled': 'Aquí no se puede reordenar.',
 
   'connection.offline': 'Reconectando con CastHome…',
 

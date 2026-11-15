@@ -111,6 +111,7 @@ export const en = {
   'access.seenLocal': 'CastHome sees this device at {address}, on your local network.',
   'access.seenRemote': 'CastHome sees this device at {address}, outside your local network.',
   'access.untrustedProxy': 'A reverse proxy forwards the visits, but CastHome does not trust it: it only sees the proxy’s address ({address}). So nobody counts as local and the password is asked everywhere. Add this address to FORWARDED_ALLOW_IPS (see the README).',
+  'nav.skip': 'Skip to content',
   'nav.home': 'Home',
   'nav.library': 'Library',
 
@@ -138,6 +139,7 @@ export const en = {
   'home.onRepeatHint': 'Your most played tracks among those played in the last 30 days',
   'home.yourPlaylists': 'Your playlists',
 
+  'list.show': 'Show',
   'albums.title': 'Albums',
   'albums.newest': 'Recently added',
   'albums.recent': 'Recently played',
@@ -299,6 +301,12 @@ export const en = {
   'queue.moveToNext': 'Move to Next in queue',
   'queue.drag': 'Drag to reorder',
   'queue.saveAsPlaylist': 'Save as playlist',
+
+  'dnd.started': 'Picked up {item}, position {position} of {count}. Arrow keys move it in {zone}, Tab goes to the other list, Space or Enter drops it.',
+  'dnd.moved': '{item}: position {position} of {count} in {zone}.',
+  'dnd.dropped': 'Dropped {item} at position {position} in {zone}.',
+  'dnd.instruction': 'Tab to a track’s reorder handle and press Space or Enter to move it.',
+  'dnd.disabled': 'Reordering is not available here.',
 
   'connection.offline': 'Reconnecting to CastHome…',
 

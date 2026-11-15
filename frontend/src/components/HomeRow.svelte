@@ -27,7 +27,7 @@
       </button>
     </div>
   </div>
-  <div class="track" bind:this={track}>
+  <div class="track" bind:this={track} role="group" aria-label={title}>
     {@render children()}
   </div>
 </section>

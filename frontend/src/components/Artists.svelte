@@ -38,7 +38,7 @@
   {#if loaded && visible.length === 0}
     <p class="muted">{fav ? t('favorites.noArtists') : t('artists.empty')}</p>
   {/if}
-  <ul class="rows">
+  <ul class="rows" role="list">
     {#each visible as artist (artist.id)}
       <li>
         <a href={`#/artist/${encodeURIComponent(artist.id)}`} use:menu={() => artistMenu(artist)}>

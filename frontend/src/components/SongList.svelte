@@ -53,7 +53,7 @@
 </script>
 
 
-<ol class="songs">
+<ol class="songs" role="list">
   {#each songs as song, i (`${song.id}-${i}`)}
     <li
       class:current={song.id === currentId}
