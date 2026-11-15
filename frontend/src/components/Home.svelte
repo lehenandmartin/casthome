@@ -189,7 +189,6 @@
       <p class="muted hint">{t('home.onRepeatHint')}</p>
       <SongList
         songs={data.on_repeat}
-        numbered
         onplay={(i) => store.run(() => api.playSongs(data!.on_repeat.map((s) => s.id), i, t('home.onRepeat')))}
       />
     </section>
