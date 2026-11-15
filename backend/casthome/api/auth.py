@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-from collections import defaultdict, deque
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -11,12 +9,12 @@ from pydantic import BaseModel, Field
 
 from casthome.api.deps import COOKIE_NAME, OPEN_SESSION, access_host, client_host, get_ctx, require_session, start_session
 from casthome.auth.sessions import Session
+from casthome.auth.throttle import LoginThrottle, retry_after
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
-LOGIN_WINDOW_S = 300
-LOGIN_MAX_ATTEMPTS = 10
-_attempts: dict[str, deque[float]] = defaultdict(deque)
+# Password guesses: sign-in and changing the access settings share the limit.
+login_throttle = LoginThrottle(max_attempts=10, window_s=300)
 
 
 class LoginBody(BaseModel):
@@ -26,17 +24,17 @@ class LoginBody(BaseModel):
 
 def throttle(ip: str) -> None:
     """Limit password guesses per client address."""
-    now = time.monotonic()
-    window = _attempts[ip]
-    while window and now - window[0] > LOGIN_WINDOW_S:
-        window.popleft()
-    if len(window) >= LOGIN_MAX_ATTEMPTS:
-        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail={"code": "too_many_attempts"})
-    window.append(now)
+    wait = login_throttle.check(ip)
+    if wait is not None:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "too_many_attempts"},
+            headers={"Retry-After": retry_after(wait)},
+        )
 
 
 def throttle_passed(ip: str) -> None:
-    _attempts.pop(ip, None)
+    login_throttle.passed(ip)
 
 
 @router.get("/status")

@@ -1,18 +1,19 @@
 <script lang="ts">
-  import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action';
+  import { dragHandleZone, type DndEvent } from 'svelte-dnd-action';
   import { flip } from 'svelte/animate';
   import { api, coverUrl } from '../lib/api';
   import { menu } from '../lib/contextMenu.svelte';
-  import { dialogs } from '../lib/dialog.svelte';
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { currentSongMenu, queueItemMenu } from '../lib/menus';
+  import { dropTarget as targetAt, readLayout, type DropTarget, type Zone } from '../lib/queueDrop';
   import { carriesSongs, droppedSongs } from '../lib/songDrag';
   import { store } from '../lib/store.svelte';
   import type { MessageKey } from '../lib/i18n/en';
   import type { QueueItem } from '../lib/types';
   import Icon from './Icon.svelte';
-  import SwipeRow from './SwipeRow.svelte';
+  import QueueHeader from './QueueHeader.svelte';
+  import QueueRow from './QueueRow.svelte';
 
   // svelte-dnd-action keys items by `id`; the song id is kept as `song_id`.
   type Row = Omit<QueueItem, 'id'> & { id: number; song_id: string };
@@ -32,12 +33,10 @@
   // tracks dragged from one to the other); resynced on every queue update.
   //   queuedRows:  "Next in queue" (added by hand, plays first)
   //   contextRows: "Next from: <album/playlist>"
-  type Zone = 'queued' | 'context';
   let queuedRows = $state<Row[]>([]);
   let contextRows = $state<Row[]>([]);
   let dragging = $state(false);
   let showHistory = $state(false);
-  let menuOpen = $state(false);
 
   $effect(() => {
     const rows = items
@@ -143,28 +142,10 @@
   }
 
   // --- tracks dragged in from a list (desktop) ---------------------------------
-  // Where they would land: before row `offset` of a part, or at its end.
-  let drop = $state<{ zone: Zone; offset: number } | null>(null);
+  let drop = $state<DropTarget | null>(null);
   let sectionEl: HTMLElement | undefined = $state();
 
-  function dropTarget(y: number): { zone: Zone; offset: number } {
-    const lists = [...(sectionEl?.querySelectorAll<HTMLElement>('ol.list[data-zone]') ?? [])];
-    for (const list of lists) {
-      const zone = list.dataset.zone as Zone;
-      const rows = [...list.children] as HTMLElement[];
-      const before = rows.findIndex((row) => {
-        const r = row.getBoundingClientRect();
-        return y < r.top + r.height / 2;
-      });
-      if (before < 0) continue;
-      // Above the album's first track, over its heading: end of "Next in queue".
-      if (zone === 'context' && before === 0 && y < list.getBoundingClientRect().top) {
-        return { zone: 'queued', offset: queuedRows.length };
-      }
-      return { zone, offset: before };
-    }
-    return contextRows.length > 0 ? { zone: 'context', offset: contextRows.length } : { zone: 'queued', offset: queuedRows.length };
-  }
+  const dropTarget = (y: number) => targetAt(readLayout(sectionEl), y, queuedRows.length, contextRows.length);
 
   function dragOver(e: DragEvent) {
     if (!store.isDesktop || !carriesSongs(e)) return;
@@ -189,34 +170,9 @@
       store.notify('added_to_queue', {}, 'info');
     });
   }
-
-  async function saveAsPlaylist() {
-    menuOpen = false;
-    const name = await dialogs.prompt({
-      title: t('queue.saveAsPlaylist'),
-      placeholder: t('playlists.namePlaceholder'),
-      confirmLabel: t('playlist.save'),
-    });
-    if (!name) return;
-    await store.run(async () => {
-      await api.createPlaylist(name, [], true);
-      store.notify('playlist_saved', {}, 'info');
-    });
-  }
-
-  async function clearAll() {
-    menuOpen = false;
-    const ok = await dialogs.confirm({
-      title: t('queue.clearAll'),
-      message: t('queue.clearConfirm'),
-      confirmLabel: t('queue.clearAll'),
-      danger: true,
-    });
-    if (ok) await store.run(api.clearQueue);
-  }
 </script>
 
-<svelte:window onclick={() => (menuOpen = false)} ondragend={() => (drop = null)} />
+<svelte:window ondragend={() => (drop = null)} />
 
 <section
   aria-label={t('queue.title')}
@@ -226,43 +182,7 @@
   ondragleave={dragLeave}
   ondrop={dropSongs}
 >
-  <header class="page-head" class:embedded>
-    <div>
-      {#if !embedded}<h2>{t('queue.title')}</h2>{/if}
-      {#if items.length > 0}
-        <p class="muted">{t('queue.summary', { count: items.length, time: formatTime(remaining) })}</p>
-      {/if}
-    </div>
-    {#if items.length > 0}
-      <div class="head-actions">
-        <button
-          class="chip"
-          class:on={p?.shuffle}
-          aria-pressed={p?.shuffle ?? false}
-          onclick={() => store.run(() => api.setMode({ shuffle: !p?.shuffle }))}
-        >
-          <Icon name="shuffle" size={16} />{t('player.shuffle')}
-        </button>
-        <div class="menu-wrap">
-          <button
-            class="icon-btn"
-            aria-label={t('song.more')}
-            aria-expanded={menuOpen}
-            onclick={(e) => {
-              e.stopPropagation();
-              menuOpen = !menuOpen;
-            }}><Icon name="moreVertical" size={20} /></button
-          >
-          {#if menuOpen}
-            <div class="menu" role="menu">
-              <button role="menuitem" onclick={saveAsPlaylist}><Icon name="save" size={18} />{t('queue.saveAsPlaylist')}</button>
-              <button role="menuitem" class="danger" onclick={clearAll}><Icon name="trash" size={18} />{t('queue.clearAll')}</button>
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
-  </header>
+  <QueueHeader {embedded} count={items.length} {remaining} />
 
   {#if items.length === 0}
     <div class="empty">
@@ -315,32 +235,13 @@
           use:menu={() => rowMenu(item, name)}
           class:drop-before={drop?.zone === name && drop.offset === i}
         >
-          <SwipeRow
-            left={{ label: t('queue.remove'), icon: 'trash', action: () => remove(item.uid), dismiss: true }}
-            right={name === 'context' ? { label: t('song.addToQueue'), icon: 'queue', action: () => toNextInQueue(item.uid) } : undefined}
-          >
-          <span class="handle" data-no-swipe use:dragHandle aria-label={t('queue.drag')} title={t('queue.drag')}>
-            <Icon name="grip" size={18} />
-          </span>
-          <button class="row" onclick={() => store.run(() => api.jump(item.uid))}>
-            {#if item.cover_art}
-              <img src={coverUrl(item.cover_art, 96)} alt="" loading="lazy" />
-            {:else}
-              <span class="thumb"><Icon name="disc" size={18} /></span>
-            {/if}
-            <span class="text">
-              <span class="ellipsis">{item.title}</span>
-              <span class="muted ellipsis">{item.artist}</span>
-            </span>
-            <span class="muted time">{formatTime(item.duration)}</span>
-          </button>
-          <button
-            class="icon-btn remove"
-            aria-label={t('queue.remove')}
-            title={t('queue.remove')}
-            onclick={() => remove(item.uid)}><Icon name="close" size={18} /></button
-          >
-          </SwipeRow>
+          <QueueRow
+            {item}
+            handle
+            onplay={() => store.run(() => api.jump(item.uid))}
+            onremove={() => remove(item.uid)}
+            onqueue={name === 'context' ? () => toNextInQueue(item.uid) : undefined}
+          />
         </li>
       {/each}
     </ol>
@@ -382,26 +283,7 @@
       <ol class="list history">
         {#each history as item (item.uid)}
           <li use:menu={() => queueItemMenu(item)}>
-            <SwipeRow left={{ label: t('queue.remove'), icon: 'trash', action: () => remove(item.uid), dismiss: true }}>
-            <button class="row" onclick={() => store.run(() => api.jump(item.uid))}>
-              {#if item.cover_art}
-                <img src={coverUrl(item.cover_art, 96)} alt="" loading="lazy" />
-              {:else}
-                <span class="thumb"><Icon name="disc" size={18} /></span>
-              {/if}
-              <span class="text">
-                <span class="ellipsis">{item.title}</span>
-                <span class="muted ellipsis">{item.artist}</span>
-              </span>
-              <span class="muted time">{formatTime(item.duration)}</span>
-            </button>
-            <button
-              class="icon-btn remove"
-              aria-label={t('queue.remove')}
-              title={t('queue.remove')}
-              onclick={() => remove(item.uid)}><Icon name="close" size={18} /></button
-            >
-            </SwipeRow>
+            <QueueRow {item} onplay={() => store.run(() => api.jump(item.uid))} onremove={() => remove(item.uid)} />
           </li>
         {/each}
       </ol>
@@ -410,73 +292,6 @@
 </section>
 
 <style>
-  .page-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .page-head.embedded {
-    align-items: center;
-  }
-  .page-head.embedded p {
-    margin: 0;
-  }
-  .page-head h2 {
-    margin-bottom: 0;
-  }
-  .page-head p {
-    margin: 2px 0 0;
-  }
-  .head-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding-top: 4px;
-  }
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.9rem;
-    padding: 6px 12px;
-    min-height: 34px;
-  }
-  .chip.on {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-  .menu-wrap {
-    position: relative;
-  }
-  .menu {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    z-index: 15;
-    display: grid;
-    min-width: 210px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    padding: 6px;
-  }
-  .menu button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: none;
-    border-radius: 8px;
-    text-align: left;
-    padding: 10px 12px;
-  }
-  .menu button:hover {
-    background: var(--surface-2);
-  }
-  .danger {
-    color: var(--danger);
-  }
   .section {
     display: flex;
     align-items: center;
@@ -608,35 +423,8 @@
   .history li {
     opacity: 0.65;
   }
-  .history .row {
-    padding-left: 10px;
-  }
-  .handle {
-    flex: none;
-    width: 34px;
-    height: 48px;
-    display: grid;
-    place-items: center;
-    color: var(--muted);
-    cursor: grab;
-    touch-action: none;
-  }
-  .row {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    text-align: left;
-    background: none;
-    padding: 6px 4px;
-    border-radius: 10px;
-    min-height: 0;
-  }
-  img,
-  .thumb {
-    width: 44px;
-    height: 44px;
+  .current img,
+  .current .thumb {
     border-radius: 6px;
     object-fit: cover;
     background: var(--surface-2);
@@ -645,32 +433,10 @@
     place-items: center;
     flex: none;
   }
-  .text {
+  .current .text {
     flex: 1;
     display: grid;
     min-width: 0;
-  }
-  .time {
-    font-variant-numeric: tabular-nums;
-  }
-  .remove {
-    color: var(--muted);
-    flex: none;
-  }
-  /* Touch screens: swipe left removes, so no ✕; the reorder handle moves to
-     the right edge, under the thumb. Mouse users keep handle left + ✕. */
-  @media (hover: none) and (pointer: coarse) {
-    .remove {
-      display: none;
-    }
-    .handle {
-      order: 1;
-      width: 48px;
-      height: 52px;
-    }
-    .row {
-      padding-left: 10px;
-    }
   }
   .end {
     margin: 12px 4px;

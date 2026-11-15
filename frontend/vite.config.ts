@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
@@ -10,4 +11,6 @@ export default defineConfig({
       '/api': { target: 'http://127.0.0.1:4577', ws: true, changeOrigin: false },
     },
   },
+  // Unit tests only; e2e/ is Playwright's (npm run e2e).
+  test: { include: ['src/**/*.test.ts'] },
 });

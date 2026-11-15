@@ -45,6 +45,19 @@ Frontend:
 cd frontend && npm test && npm run check && npm run build
 ```
 
+End to end: the real backend serves the built interface (`npm run build`
+first) against a fake Subsonic server ([`frontend/e2e/fake_subsonic.py`](frontend/e2e/fake_subsonic.py)),
+in headless Chromium, on a phone and on a desktop. It plays on *This
+browser*, so no Cast device is needed. Once, install the browser:
+`cd frontend && npx playwright install chromium`. Then:
+
+```bash
+cd frontend && npm run e2e
+```
+
+Every push runs all of these on GitHub Actions; the Docker image is only
+published when they pass.
+
 Errors in the interface (uncaught exceptions, rejected promises) are sent to
 the server and written to its log as `casthome.client` warnings, with the
 page and the browser: useful to see what went wrong on a phone.
@@ -59,7 +72,7 @@ French version to `lib/i18n/fr.ts` (`npm run check` fails if one is missing).
 The version is `__version__` in `backend/casthome/__init__.py` (the API and
 **Settings → About** report it); `frontend/package.json` carries the same
 number.
-Every push to `main` publishes the `:main` image (GitHub Actions,
+Every push to `main` that passes the checks publishes the `:main` image (GitHub Actions,
 [`.github/workflows/docker.yml`](.github/workflows/docker.yml)). To release:
 
 1. Run the [device checklist](docs/device-checklist.md) (real browsers,

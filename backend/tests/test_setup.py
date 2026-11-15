@@ -12,6 +12,7 @@ import pytest
 import respx
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from casthome.api.auth import login_throttle
 from casthome.appconfig import hash_password, is_local_address, load_secret_key, verify_password
 from casthome.config import Settings
 from casthome.main import create_app
@@ -52,6 +53,7 @@ class Client:
 @pytest.fixture
 async def app_factory(tmp_path: Path):  # type: ignore[no-untyped-def]
     apps = []
+    login_throttle.clear()  # module-level: no guesses carried over from another test
 
     async def build(**env: str):  # type: ignore[no-untyped-def]
         app = create_app(make_settings(tmp_path, **env), start_services=False)
@@ -103,6 +105,20 @@ async def test_fresh_install_runs_the_setup_then_signs_in(app_factory) -> None: 
         assert r.status_code == 401  # the Navidrome password is not the CastHome one
         assert (await other.post("/api/auth/login", json={"password": "letmein"})).status_code == 200
         assert (await other.get("/api/auth/me")).status_code == 200
+
+
+async def test_password_guesses_are_limited(app_factory) -> None:  # type: ignore[no-untyped-def]
+    app = await app_factory()
+    async with Client(app) as http:
+        await finish_setup(http)
+    async with Client(app, host="81.250.10.8") as guesser:
+        for _ in range(login_throttle.max_attempts):
+            assert (await guesser.post("/api/auth/login", json={"password": "wrong"})).status_code == 401
+        r = await guesser.post("/api/auth/login", json={"password": "letmein"})
+        assert r.status_code == 429 and r.json()["code"] == "too_many_attempts"
+        assert int(r.headers["Retry-After"]) >= 1
+    async with Client(app, host="81.250.10.9") as other:  # another address is not blocked
+        assert (await other.post("/api/auth/login", json={"password": "letmein"})).status_code == 200
 
 
 async def test_setup_rejects_a_local_cast_url_and_short_password(app_factory) -> None:  # type: ignore[no-untyped-def]
