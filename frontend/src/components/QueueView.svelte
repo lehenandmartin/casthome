@@ -7,6 +7,7 @@
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { currentSongMenu, queueItemMenu } from '../lib/menus';
+  import { carriesSongs, droppedSongs } from '../lib/songDrag';
   import { store } from '../lib/store.svelte';
   import type { MessageKey } from '../lib/i18n/en';
   import type { QueueItem } from '../lib/types';
@@ -141,6 +142,54 @@
     await store.run(() => api.moveItem(uid, to, queued));
   }
 
+  // --- tracks dragged in from a list (desktop) ---------------------------------
+  // Where they would land: before row `offset` of a part, or at its end.
+  let drop = $state<{ zone: Zone; offset: number } | null>(null);
+  let sectionEl: HTMLElement | undefined = $state();
+
+  function dropTarget(y: number): { zone: Zone; offset: number } {
+    const lists = [...(sectionEl?.querySelectorAll<HTMLElement>('ol.list[data-zone]') ?? [])];
+    for (const list of lists) {
+      const zone = list.dataset.zone as Zone;
+      const rows = [...list.children] as HTMLElement[];
+      const before = rows.findIndex((row) => {
+        const r = row.getBoundingClientRect();
+        return y < r.top + r.height / 2;
+      });
+      if (before < 0) continue;
+      // Above the album's first track, over its heading: end of "Next in queue".
+      if (zone === 'context' && before === 0 && y < list.getBoundingClientRect().top) {
+        return { zone: 'queued', offset: queuedRows.length };
+      }
+      return { zone, offset: before };
+    }
+    return contextRows.length > 0 ? { zone: 'context', offset: contextRows.length } : { zone: 'queued', offset: queuedRows.length };
+  }
+
+  function dragOver(e: DragEvent) {
+    if (!store.isDesktop || !carriesSongs(e)) return;
+    e.preventDefault(); // accept the drop
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    const target = dropTarget(e.clientY);
+    if (drop?.zone !== target.zone || drop.offset !== target.offset) drop = target;
+  }
+
+  function dragLeave(e: DragEvent) {
+    if (!sectionEl?.contains(e.relatedTarget as Node | null)) drop = null;
+  }
+
+  function dropSongs(e: DragEvent) {
+    const ids = droppedSongs(e);
+    const target = drop ?? dropTarget(e.clientY);
+    drop = null;
+    if (!ids) return;
+    e.preventDefault();
+    store.run(async () => {
+      await api.dropSongs(ids, target.zone, target.offset);
+      store.notify('added_to_queue', {}, 'info');
+    });
+  }
+
   async function saveAsPlaylist() {
     menuOpen = false;
     const name = await dialogs.prompt({
@@ -167,9 +216,16 @@
   }
 </script>
 
-<svelte:window onclick={() => (menuOpen = false)} />
+<svelte:window onclick={() => (menuOpen = false)} ondragend={() => (drop = null)} />
 
-<section>
+<section
+  aria-label={t('queue.title')}
+  bind:this={sectionEl}
+  class:drop-over={drop !== null}
+  ondragover={dragOver}
+  ondragleave={dragLeave}
+  ondrop={dropSongs}
+>
   <header class="page-head" class:embedded>
     <div>
       {#if !embedded}<h2>{t('queue.title')}</h2>{/if}
@@ -218,7 +274,13 @@
 
   {#if current}
     <p class="section">{t('queue.nowPlaying')}</p>
-    <button class="current" onclick={openPlayer} use:menu={() => currentSongMenu(current)}>
+    <!-- Drop line under it: first in "Next in queue" (still empty, so not shown). -->
+    <button
+      class="current"
+      class:drop-after={drop?.zone === 'queued' && queuedRows.length === 0}
+      onclick={openPlayer}
+      use:menu={() => currentSongMenu(current)}
+    >
       {#if current.cover_art}
         <img src={coverUrl(current.cover_art, 128)} alt="" />
       {:else}
@@ -239,13 +301,20 @@
   {#snippet zone(name: Zone, rows: Row[])}
     <ol
       class="list"
-      class:drop-hint={dragging && rows.length === 0}
+      data-zone={name}
+      class:drop-hint={(dragging || drop !== null) && rows.length === 0}
+      class:drop-end={drop?.zone === name && drop.offset === rows.length && rows.length > 0}
+      class:drop-into={drop?.zone === name && rows.length === 0}
       use:dragHandleZone={{ items: rows, type: 'upcoming', flipDurationMs: FLIP_MS, dropTargetStyle: {} }}
       onconsider={(e) => consider(name, e)}
       onfinalize={(e) => finalize(name, e)}
     >
-      {#each rows as item (item.id)}
-        <li animate:flip={{ duration: FLIP_MS }} use:menu={() => rowMenu(item, name)}>
+      {#each rows as item, i (item.id)}
+        <li
+          animate:flip={{ duration: FLIP_MS }}
+          use:menu={() => rowMenu(item, name)}
+          class:drop-before={drop?.zone === name && drop.offset === i}
+        >
           <SwipeRow
             left={{ label: t('queue.remove'), icon: 'trash', action: () => remove(item.uid), dismiss: true }}
             right={name === 'context' ? { label: t('song.addToQueue'), icon: 'queue', action: () => toNextInQueue(item.uid) } : undefined}
@@ -440,6 +509,24 @@
     min-height: 52px;
     border: 2px dashed var(--surface-3);
     border-radius: 10px;
+  }
+  /* A track dragged in from a list: a line where it will land. */
+  .drop-hint.drop-into {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  li.drop-before {
+    box-shadow: inset 0 2px 0 var(--accent);
+  }
+  .drop-end,
+  .current.drop-after {
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  /* An empty queue takes the track anywhere. */
+  section.drop-over:has(.empty) {
+    outline: 2px dashed var(--accent);
+    outline-offset: -6px;
+    border-radius: 12px;
   }
   .count {
     font-weight: 600;

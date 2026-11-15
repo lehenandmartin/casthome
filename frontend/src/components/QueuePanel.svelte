@@ -143,4 +143,8 @@
   .side .scroll {
     padding: 0 12px 16px 16px;
   }
+  /* The whole panel takes a track dragged in from a list, also below the queue. */
+  .side .scroll > :global(section) {
+    min-height: 100%;
+  }
 </style>

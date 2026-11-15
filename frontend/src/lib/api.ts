@@ -233,6 +233,9 @@ export const api = {
   /** Insert songs without replacing the queue. */
   queueSongs: (songIds: string[], mode: AddMode) =>
     request<void>('POST', '/queue', { song_ids: songIds, mode, replace: false }),
+  /** Tracks dropped on the queue: at `offset` in "next in queue" or in the album/playlist's upcoming tracks. */
+  dropSongs: (songIds: string[], section: 'queued' | 'context', offset: number) =>
+    request<void>('POST', '/queue', { song_ids: songIds, mode: 'queue', replace: false, section, offset }),
   removeItem: (uid: number) => request<void>('DELETE', `/queue/items/${uid}`),
   moveItem: (uid: number, toIndex: number, queued?: boolean) =>
     request<void>('POST', '/queue/move', { uid, to_index: toIndex, queued }),

@@ -211,9 +211,14 @@ class PlaybackCoordinator(DeviceEvents):
             await self._load_current(0)
         return source
 
-    async def add_songs(self, songs: list[Song], mode: AddMode) -> None:
+    async def add_songs(self, songs: list[Song], mode: AddMode, place: tuple[bool, int] | None = None) -> None:
+        """Add to the queue. `place` (queued, offset): put them at that place in
+        "next in queue" or in the album/playlist's upcoming tracks instead."""
         async with self._lock:
-            current_changed = self.queue.add(songs, mode)
+            if place is not None and mode == AddMode.QUEUE:
+                current_changed = self.queue.insert(songs, *place)
+            else:
+                current_changed = self.queue.add(songs, mode)
             self._queue_mutated()
             if mode == AddMode.NOW or (current_changed and self.status != Status.STOPPED):
                 await self._load_current(0)

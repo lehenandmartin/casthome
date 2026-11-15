@@ -207,6 +207,27 @@ class QueueModel(Generic[T]):
         self._original_insert(new, after_uid=before_uid)
         return False
 
+    def insert(self, items: list[T], queued: bool, offset: int) -> bool:
+        """Insert items `offset` entries into "next in queue" (queued) or into
+        the album/playlist's upcoming tracks (dropped at a place in the queue).
+        The offset is clamped to that part. Returns True when the current
+        entry changed (an empty queue: the items become what is playing)."""
+        if not items:
+            return False
+        if self.index is None:
+            return self.add(items, AddMode.QUEUE)
+        start = self.index + 1
+        context = self._context_start()
+        if queued:
+            at = start + min(max(offset, 0), context - start)
+        else:
+            at = context + min(max(offset, 0), len(self.entries) - context)
+        new = self._wrap(items, queued=queued)
+        before_uid = self.entries[at - 1].uid
+        self.entries[at:at] = new
+        self._original_insert(new, after_uid=before_uid)
+        return False
+
     def remove(self, position: int) -> bool:
         """Remove an entry. Returns True when the current entry was removed."""
         if not (0 <= position < len(self.entries)):

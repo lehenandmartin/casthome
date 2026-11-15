@@ -289,3 +289,14 @@ async def test_status_poll_picks_up_a_queue_saved_elsewhere_when_idle(h, monkeyp
     await h.c.start()
     await asyncio.sleep(0.05)
     assert len(h.c.queue) == 4
+
+
+async def test_tracks_dropped_on_the_queue_go_where_they_were_dropped(h):
+    await h.c.play_songs(songs(4), 0)
+    loads = len(h.target.loads)
+    extra = [Song(id="x", title="X", suffix="flac", duration=100)]
+    await h.c.add_songs(extra, AddMode.QUEUE, (False, 2))
+    assert [e.item.id for e in h.c.queue.entries] == ["s0", "s1", "s2", "x", "s3"]
+    assert len(h.target.loads) == loads  # what plays is left alone
+    await h.c.add_songs([Song(id="y", title="Y", suffix="flac", duration=100)], AddMode.QUEUE, (True, 0))
+    assert [e.item.id for e in h.c.queue.entries][:2] == ["s0", "y"] and h.c.queue.entries[1].queued

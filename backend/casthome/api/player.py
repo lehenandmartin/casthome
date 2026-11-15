@@ -53,6 +53,10 @@ class QueueAddBody(BaseModel):
     mode: AddMode = AddMode.NOW
     start_index: int = Field(default=0, ge=0)
     replace: bool = True  # with mode=now: replace the whole queue (play album)
+    # With mode=queue: where to put them (dropped on the queue): "next in queue"
+    # or the album/playlist's upcoming tracks, `offset` entries into that part.
+    section: Literal["queued", "context"] | None = None
+    offset: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def _one_source(self) -> QueueAddBody:
@@ -137,7 +141,8 @@ async def add_to_queue(body: QueueAddBody, request: Request) -> None:
     if body.mode == AddMode.NOW and body.replace:
         await ctx.coordinator.play_songs(songs, body.start_index, context_name)
     else:
-        await ctx.coordinator.add_songs(songs, body.mode)
+        place = (body.section == "queued", body.offset) if body.section is not None else None
+        await ctx.coordinator.add_songs(songs, body.mode, place)
 
 
 class RadioBody(BaseModel):

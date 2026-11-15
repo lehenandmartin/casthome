@@ -300,3 +300,45 @@ class TestFollowCurrent:
     def test_without_a_current_track_does_nothing(self):
         q: QueueModel[str] = QueueModel()
         assert q.follow_current(["x"]) is False and len(q) == 0
+
+
+class TestInsert:
+    """A track dropped at a place in the queue (desktop drag and drop)."""
+
+    @staticmethod
+    def order(q: QueueModel[str]) -> str:
+        return "".join(("+" if e.queued else "") + e.item for e in q.entries)
+
+    def test_into_next_in_queue_at_a_place(self):
+        q = make("abcd", 0)
+        q.add(["x", "y"], AddMode.QUEUE)
+        assert self.order(q) == "a+x+ybcd"
+        assert q.insert(["n"], queued=True, offset=1) is False
+        assert self.order(q) == "a+x+n+ybcd"
+
+    def test_into_the_album_tracks_at_a_place(self):
+        q = make("abcd", 1)
+        q.insert(["n"], queued=False, offset=1)
+        assert self.order(q) == "abcnd" and q.current.item == "b"
+
+    def test_offsets_are_clamped_to_their_part(self):
+        q = make("abc", 0)
+        q.add(["x"], AddMode.QUEUE)
+        q.insert(["n"], queued=True, offset=99)
+        q.insert(["m"], queued=False, offset=99)
+        assert self.order(q) == "a+x+nbcm"
+
+    def test_empty_queue_gets_it_as_current(self):
+        q: QueueModel[str] = QueueModel()
+        assert q.insert(["n"], queued=False, offset=3) is True
+        assert q.current.item == "n"
+
+    def test_shuffle_off_restores_the_dropped_track_in_place(self):
+        q = make("abcd", 0)
+        random.seed(3)
+        q.set_shuffle(True)
+        q.insert(["n"], queued=False, offset=0)
+        assert "n" in "".join(e.item for e in q.entries)
+        q.set_shuffle(False)
+        order = "".join(e.item for e in q.entries)
+        assert sorted(order) == sorted("abcdn") and order.index("n") > order.index("a")

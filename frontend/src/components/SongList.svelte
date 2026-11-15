@@ -4,6 +4,7 @@
   import { formatTime } from '../lib/format';
   import { t } from '../lib/i18n';
   import { songMenu } from '../lib/menus';
+  import { startSongDrag } from '../lib/songDrag';
   import { store } from '../lib/store.svelte';
   import type { MenuSpec } from '../lib/contextMenu.svelte';
   import type { Song } from '../lib/types';
@@ -31,6 +32,8 @@
   } = $props();
 
   const currentId = $derived(store.player?.current?.id);
+  // Desktop, queue panel open: rows can be dragged into the queue.
+  const draggable = $derived(store.isDesktop && store.queuePanel);
 
   // The ⋯ button and a right-click on the row open the same menu.
   function menuFor(index: number): MenuSpec {
@@ -52,7 +55,12 @@
 
 <ol class="songs">
   {#each songs as song, i (`${song.id}-${i}`)}
-    <li class:current={song.id === currentId} use:menu={() => menuFor(i)}>
+    <li
+      class:current={song.id === currentId}
+      use:menu={() => menuFor(i)}
+      draggable={draggable ? 'true' : undefined}
+      ondragstart={(e) => startSongDrag(e, song)}
+    >
       <SwipeRow right={{ label: t('song.addToQueue'), icon: 'queue', action: () => addToQueue(song) }}>
       <button class="row" onclick={() => onplay(i)}>
         {#if ranked}<span class="num muted">{i + 1}</span>
