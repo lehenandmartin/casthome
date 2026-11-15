@@ -497,8 +497,10 @@ The version lives in one place: `__version__` in
 Every push to `main` publishes the `:main` image (GitHub Actions,
 [`.github/workflows/docker.yml`](.github/workflows/docker.yml)). To release:
 
-1. Set `__version__` to the new version (e.g. `0.2.0`) and commit.
-2. Tag and push: `git tag v0.2.0 && git push origin main v0.2.0`.
+1. Run the [device checklist](docs/device-checklist.md) (real browsers,
+   phones and Cast devices: what the tests cannot see).
+2. Set `__version__` to the new version (e.g. `0.2.0`) and commit.
+3. Tag and push: `git tag v0.2.0 && git push origin main v0.2.0`.
 
 The workflow checks the tag matches `__version__`, then publishes `:0.2.0`,
 `:0.2`, `:0` and `:latest`.
