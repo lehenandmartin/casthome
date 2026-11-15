@@ -17,7 +17,7 @@ from casthome.api import auth, diagnostics, home, library, player, playlists, se
 from casthome.api.deps import origin_allowed
 from casthome.config import Settings, get_settings
 from casthome.context import AppContext
-from casthome.playback.coordinator import PlaybackError
+from casthome.playback.state import PlaybackError
 from casthome.subsonic.client import (
     InvalidCredentialsError,
     NavidromeUnavailableError,

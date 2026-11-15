@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from casthome.cast.types import MediaEvent
-from casthome.playback import coordinator as coordinator_module
+from casthome.playback import preload
 from casthome.playback.coordinator import Status
 from tests.test_coordinator import Harness, playing_id, songs, uid_of
 
@@ -58,7 +58,7 @@ async def test_stale_preload_is_replaced(h):
 
 
 async def test_watchdog_loads_when_receiver_does_not_switch(h, monkeypatch):
-    monkeypatch.setattr(coordinator_module, "PRELOAD_SWITCH_TIMEOUT_S", 0.01)
+    monkeypatch.setattr(preload, "PRELOAD_SWITCH_TIMEOUT_S", 0.01)
     at(h, 185)
     await h.settle()
     at(h, 200, state="IDLE", reason="FINISHED")

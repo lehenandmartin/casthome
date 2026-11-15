@@ -6,8 +6,8 @@ import asyncio
 
 import pytest
 
-from casthome.playback import coordinator as coordinator_module
-from casthome.playback.coordinator import PlaybackError
+from casthome.playback import radio_feed
+from casthome.playback.state import PlaybackError
 import random
 
 from casthome.playback.radio import make_artist_radio_builder, make_radio_builder
@@ -138,7 +138,7 @@ async def test_radio_without_results_reports_it(h):
 
 
 async def test_endless_radio_refills_near_the_end_without_repeats(h, monkeypatch):
-    monkeypatch.setattr(coordinator_module, "RADIO_REFILL_AT", 3)
+    monkeypatch.setattr(radio_feed, "RADIO_REFILL_AT", 3)
     batches = [tracks("s", 4), [*tracks("s", 2), *tracks("r", 3)]]  # second batch overlaps the first
 
     async def builder(seed, exclude):
@@ -230,7 +230,7 @@ async def test_artist_radio_without_results_reports_it(h):
 
 
 async def test_artist_radio_refills_from_the_artist_then_follows_the_last_track(h, monkeypatch):
-    monkeypatch.setattr(coordinator_module, "RADIO_REFILL_AT", 2)
+    monkeypatch.setattr(radio_feed, "RADIO_REFILL_AT", 2)
     artist_batches = [by("ar1", "a", 3), by("ar1", "b", 3), []]  # the third refill finds nothing new
     calls: list[str] = []
 

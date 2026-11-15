@@ -1,157 +1,45 @@
 """Server-side playback state machine.
 
 The server is the source of truth: the Cast device only plays the current
-track. When it reports IDLE/FINISHED for the media we loaded, the next track
-is loaded from here, so playback continues with every browser closed.
+track. When it reports the end of the media we loaded, the next track is
+loaded from here, so playback continues with every browser closed.
 
-How an IDLE status is interpreted (only for the media we loaded last):
-- FINISHED     natural end -> advance (repeat-one replays)
-- ERROR        unplayable -> retry once transcoded, else skip and notify
-- CANCELLED    stopped from elsewhere (remote, Google Home app) -> stopped
-- INTERRUPTED  another media replaced ours -> stopped
-Statuses for an older media (our previous load) are ignored.
+This module holds the commands (play, next, add to queue, select a device...)
+and the lifecycle. The rest is in layers, each in its own module:
+    core        state, position, saving, snapshots
+    radio_feed  endless radio
+    loading     loading tracks, seeking, stopping, unplayable tracks
+    preload     queuing the next track on the receiver ahead of time
+    events      what the device reports
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import time
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, replace
-from enum import StrEnum
-from typing import Any
-from urllib.parse import parse_qs, urlparse
 
 from casthome.background import spawn
 from casthome.cast.types import (
-    DEFAULT_MEDIA_RECEIVER_APP_ID,
     CastEvent,
-    CastTarget,
-    ConnectionEvent,
-    EventSink,
-    LoadFailedEvent,
-    MediaEvent,
-    ReceiverEvent,
 )
-from casthome.playback.media import MediaBuilder
-from casthome.playback.persistence import QueueStore
+from casthome.playback.state import Notifier, PlaybackError, Status
 from casthome.queue.logic import AddMode, QueueModel, RepeatMode
-from casthome.playback.radio import ArtistRadioBuilder, RadioBuilder
-from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import NavidromeUnavailableError, NotAuthenticatedError, SubsonicError
 from casthome.subsonic.models import Song
+
+from casthome.playback.events import DeviceEvents
 
 log = logging.getLogger(__name__)
 
 PREVIOUS_RESTART_THRESHOLD_S = 3.0
-MAX_CONSECUTIVE_ERRORS = 5
 STATUS_POLL_INTERVAL_S = 2.0
-# A polled position this far from where browsers place it is sent to them.
-POSITION_DRIFT_S = 1.0
 POSITION_SAVE_INTERVAL_S = 15.0
-SAVE_DEBOUNCE_S = 1.0
-# Endless radio: fetch more similar tracks when this few are left.
-RADIO_REFILL_AT = 5
 REMOTE_REFRESH_INTERVAL_S = 60.0
-# Preloading (opt-in): the next track is queued on the receiver this long
-# before the current one ends. Preloading late keeps the window in which the
-# preloaded track can become stale (queue edited) small; a stale preload is
-# replaced as soon as the receiver switches to it.
-PRELOAD_LEAD_S = 20.0
-PRELOAD_SWITCH_TIMEOUT_S = 6.0
+
+__all__ = ["Notifier", "PlaybackCoordinator", "PlaybackError", "Status"]
 
 
-@dataclass
-class _Preload:
-    url: str
-    uid: int
-    transcoded: bool
-
-
-class Status(StrEnum):
-    STOPPED = "stopped"
-    LOADING = "loading"
-    BUFFERING = "buffering"
-    PLAYING = "playing"
-    PAUSED = "paused"
-
-
-class PlaybackError(Exception):
-    """A user-facing command failure. `code` is translated by the frontend."""
-
-    def __init__(self, code: str, params: dict[str, Any] | None = None) -> None:
-        super().__init__(code)
-        self.code = code
-        self.params = params or {}
-
-
-Connector = Callable[[str, EventSink], Awaitable[CastTarget]]
-
-
-@dataclass
-class Notifier:
-    player_changed: Callable[[], None] = lambda: None
-    queue_changed: Callable[[], None] = lambda: None
-    notify: Callable[[str, str, dict[str, Any]], None] = lambda level, code, params: None
-
-
-class PlaybackCoordinator:
-    def __init__(
-        self,
-        connector: Connector,
-        media: MediaBuilder,
-        store: QueueStore,
-        notifier: Notifier | None = None,
-        clock: Callable[[], float] = time.time,
-        scrobbler: Scrobbler | None = None,
-        preload_next: bool = False,
-        radio_builder: RadioBuilder | None = None,
-        artist_radio_builder: ArtistRadioBuilder | None = None,
-    ) -> None:
-        self._radio_builder = radio_builder
-        self._artist_radio_builder = artist_radio_builder
-        self._connection_id = 0
-        self._radio_refilling = False
-        self._connector = connector
-        self._scrobbler = scrobbler
-        self.preload_enabled = preload_next
-        self._preload: _Preload | None = None
-        # (status, position, clock) of the last player state sent to browsers.
-        self._sent: tuple[Status, float, float] | None = None
-        self._preload_attempted = False
-        self._preload_wait: asyncio.Task[None] | None = None
-        self._media = media
-        self._store = store
-        self.notifier = notifier or Notifier()
-        self._clock = clock
-
-        self.queue: QueueModel[Song] = QueueModel()
-        self.queue_version = 0
-        self.device_uuid: str | None = None
-        self.target: CastTarget | None = None
-        self.connected = False
-        self.status = Status.STOPPED
-        self.position = 0.0
-        self.position_ts = clock()
-        self.duration: float | None = None
-        self.volume = 0.0
-        self.muted = False
-
-        self._lock = asyncio.Lock()
-        self._events: asyncio.Queue[CastEvent] = asyncio.Queue()
-        self._expected_content_id: str | None = None
-        self._seen_active = False  # our media reached PLAYING/PAUSED/BUFFERING
-        self._fallback_used = False
-        self._transcoded = False
-        self._consecutive_errors = 0
-        self._reattach_song_id: str | None = None
-        self._connecting = False
-        self._remote_changed: str | None = None
-        self._last_position_save = 0.0
-        self._save_task: asyncio.Task[None] | None = None
-        self._tasks: list[asyncio.Task[None]] = []
-
+class PlaybackCoordinator(DeviceEvents):
     # --- lifecycle -----------------------------------------------------------
 
     async def start(self) -> None:
@@ -346,46 +234,6 @@ class PlaybackCoordinator:
             await self._load_current(0)
         return source
 
-    def _maybe_refill_radio(self) -> None:
-        if (
-            self.queue.radio
-            and self._radio_builder is not None
-            and not self._radio_refilling
-            and self.queue.current is not None
-            and self.queue.upcoming_context < RADIO_REFILL_AT
-        ):
-            self._radio_refilling = True
-            spawn(self._refill_radio(), name='refill radio')
-
-    async def _refill_radio(self) -> None:
-        """Endless radio: add tracks from the artist (artist radio), else tracks
-        similar to the last one of the queue."""
-        try:
-            exclude = {e.item.id for e in self.queue.entries}
-            artist = self.queue.radio_artist
-            songs: list[Song] = []
-            source: str | None = None
-            if artist and self._artist_radio_builder is not None:
-                songs, source = await self._artist_radio_builder(artist[0], artist[1], exclude)
-                if not songs:
-                    log.info("Artist radio %r has nothing new: following the last track", artist[1])
-            seed = self.queue.entries[-1].item if self.queue.entries else None
-            if not songs and seed is not None and self._radio_builder is not None:
-                songs, source = await self._radio_builder(seed, exclude)
-            async with self._lock:
-                if not self.queue.radio or not songs:
-                    return
-                if artist and self.queue.radio_artist == artist and source not in ("similar_artists", "top_songs"):
-                    self.queue.radio_artist = None  # the artist is exhausted: stay a track radio
-                self.queue.extend_context(songs)
-                self.queue.radio_source = source or self.queue.radio_source
-                self._queue_mutated()
-                log.info("Radio refilled with %d tracks", len(songs))
-        except Exception:  # noqa: BLE001 - a failed refill just means the radio ends later
-            log.warning("Radio refill failed", exc_info=True)
-        finally:
-            self._radio_refilling = False
-
     async def add_songs(self, songs: list[Song], mode: AddMode) -> None:
         async with self._lock:
             current_changed = self.queue.add(songs, mode)
@@ -443,11 +291,6 @@ class PlaybackCoordinator:
                 raise PlaybackError("invalid_queue_index") from exc
             await self._load_current(0)
 
-    def _position_of(self, uid: int) -> int:
-        for position, entry in enumerate(self.queue.entries):
-            if entry.uid == uid:
-                return position
-        raise PlaybackError("invalid_queue_index")
 
     async def jump_uid(self, uid: int) -> None:
         async with self._lock:
@@ -516,412 +359,6 @@ class PlaybackCoordinator:
                 raise PlaybackError("no_device")
             await self._device_call(self.target.set_muted(muted))
 
-    # --- internals: loading --------------------------------------------------
-
-    async def _start_or_cue(self) -> None:
-        """Play the new current entry if we were playing, otherwise just cue it."""
-        if self.status == Status.STOPPED:
-            self._set_position(0)
-            self.duration = self.queue.current.item.duration if self.queue.current else None
-            self.notifier.player_changed()
-            self._schedule_save()
-        else:
-            await self._load_current(0)
-
-    async def _load_current(self, start_at: float, force_fallback: bool = False) -> None:
-        entry = self.queue.current
-        if entry is None:
-            await self._stop_device()
-            return
-        if self.target is None:
-            self._set_position(start_at)
-            self.status = Status.STOPPED
-            self.notifier.player_changed()
-            raise PlaybackError("no_device")
-        song = entry.item
-        try:
-            media = await self._build_media(song, force_fallback)
-        except NotAuthenticatedError as exc:
-            raise PlaybackError("not_signed_in") from exc
-        self._expected_content_id = media.url
-        self._clear_preload()  # a LOAD replaces the receiver's whole queue
-        self._seen_active = False
-        self._fallback_used = force_fallback
-        if self._scrobbler is not None:
-            self._scrobbler.track_loaded(song.id, song.duration)
-        self._transcoded = media.transcoded
-        self._reattach_song_id = None
-        self.status = Status.LOADING
-        self.duration = song.duration or None
-        self._set_position(start_at)
-        self.notifier.player_changed()
-        self._schedule_save()
-        log.info("Loading %r on %s%s", song.title, self.device_uuid, " (transcoded)" if media.transcoded else "")
-        self._maybe_refill_radio()
-        await self._device_call(self.target.load(media.url, media.content_type, media.metadata, start_at))
-
-    def _is_browser(self) -> bool:
-        return self.target is not None and self.target.info.cast_type == "browser"
-
-    async def _build_media(self, song: Song, force_fallback: bool):  # type: ignore[no-untyped-def]
-        if self._is_browser():
-            return self._media.build_for_browser(song, force_fallback)
-        return await self._media.build(song, force_fallback=force_fallback)
-
-    async def _advance(self, natural: bool) -> None:
-        index = self.queue.next_index(natural=natural)
-        if index is None:
-            await self._stop_device()
-            self._set_position(0)
-            self.notifier.player_changed()
-            self._schedule_save()
-            if natural:
-                self.notifier.notify("info", "queue_ended", {})
-            return
-        self.queue.jump(index)
-        if natural:
-            await self._load_current(0)
-        else:
-            await self._start_or_cue()
-
-    async def _seek(self, position: float) -> None:
-        position = max(0.0, position)
-        if self.duration:
-            position = min(position, self.duration)
-        if self.target is not None and self._expected_content_id and self.status != Status.STOPPED:
-            if self._transcoded:
-                # A transcoded stream cannot be seeked reliably: reload at the offset.
-                await self._load_current(position, force_fallback=self._fallback_used)
-            else:
-                await self._device_call(self.target.seek(position))
-                self._set_position(position)
-        else:
-            self._set_position(position)
-        self.notifier.player_changed()
-        self._schedule_save()
-
-    async def _stop_device(self) -> None:
-        self._clear_preload()
-        position = self.current_position()
-        expected, self._expected_content_id = self._expected_content_id, None
-        if self.target is not None and expected is not None:
-            try:
-                await self.target.stop()
-            except Exception:  # noqa: BLE001 - stopping an unreachable device is not an error
-                log.info("Stop command failed", exc_info=True)
-        self.status = Status.STOPPED
-        self._set_position(position)
-        self.notifier.player_changed()
-
-    async def _device_call(self, call: Awaitable[None]) -> None:
-        try:
-            await call
-        except Exception as exc:  # noqa: BLE001 - pychromecast raises many unrelated types
-            log.warning("Cast command failed: %s", exc)
-            raise PlaybackError("device_unreachable") from exc
-
-    # --- internals: device events --------------------------------------------
-
-    async def _event_worker(self) -> None:
-        while True:
-            event = await self._events.get()
-            try:
-                async with self._lock:
-                    await self._handle_event(event)
-            except PlaybackError as exc:
-                self.notifier.notify("error", exc.code, exc.params)
-            except Exception:  # noqa: BLE001 - keep the worker alive
-                log.exception("Error while handling Cast event %r", event)
-
-    async def _handle_event(self, event: CastEvent) -> None:
-        if isinstance(event, MediaEvent):
-            await self._on_media(event)
-        elif isinstance(event, LoadFailedEvent):
-            if self._expected_content_id is not None:
-                await self._on_error()
-        elif isinstance(event, ReceiverEvent):
-            await self._on_receiver(event)
-        elif isinstance(event, ConnectionEvent):
-            if not event.connected and self._is_browser():
-                # The tab that was playing closed: there is nothing to reconnect to.
-                log.info("The browser used for playback went away")
-                self._expected_content_id = None
-                self._clear_preload()
-                self.status = Status.STOPPED
-                self.target = None
-                self.connected = False
-                self.device_uuid = None
-                self.notifier.player_changed()
-                self._schedule_save()
-                return
-            if event.connected != self.connected:
-                self.connected = event.connected
-                if not event.connected:
-                    # Nothing is known to play until the device answers again: hold
-                    # the position at the device's last report (the loss is noticed
-                    # up to ~20 s late; moving on would skip music on resume).
-                    if self.status in (Status.PLAYING, Status.BUFFERING):
-                        self._set_position(self.position)
-                        self.status = Status.BUFFERING
-                    self.notifier.notify("warning", "device_disconnected", {})
-                elif self.target is not None:
-                    await self.target.request_status()
-                self.notifier.player_changed()
-
-    def _matches_reattach(self, content_id: str | None) -> bool:
-        if not self._reattach_song_id or not content_id:
-            return False
-        query = parse_qs(urlparse(content_id).query)
-        return query.get("id") == [self._reattach_song_id] and query.get("c") == ["CastHome"]
-
-    async def _on_media(self, ev: MediaEvent) -> None:
-        if self._preload is not None and ev.content_id == self._preload.url:
-            if ev.player_state in ("PLAYING", "PAUSED", "BUFFERING"):
-                await self._switch_to_preloaded()
-                if self._expected_content_id != ev.content_id:
-                    return  # the preload was stale and has been replaced
-            elif ev.player_state == "IDLE" and ev.idle_reason == "ERROR":
-                log.info("Preloaded track failed on the receiver; loading it normally")
-                self._clear_preload()
-                await self._advance(natural=True)
-                return
-        if self._expected_content_id is None:
-            if ev.player_state in ("PLAYING", "PAUSED", "BUFFERING") and self._matches_reattach(ev.content_id):
-                log.info("Re-attached to media already playing on the device")
-                self._expected_content_id = ev.content_id
-                self._seen_active = True
-                self._reattach_song_id = None
-                self._transcoded = "format=" in (ev.content_id or "")
-                if self._scrobbler is not None and self.queue.current is not None:
-                    self._scrobbler.track_loaded(self.queue.current.item.id, self.queue.current.item.duration)
-            else:
-                return
-        if ev.content_id and ev.content_id != self._expected_content_id:
-            return  # status for a media we replaced
-
-        if ev.player_state in ("PLAYING", "PAUSED", "BUFFERING"):
-            first = not self._seen_active
-            self._seen_active = True
-            before = (self.status, self.duration)
-            self.status = {"PLAYING": Status.PLAYING, "PAUSED": Status.PAUSED}.get(ev.player_state, Status.BUFFERING)
-            if ev.player_state == "PLAYING":
-                self._consecutive_errors = 0
-            if ev.duration:
-                self.duration = ev.duration
-            # Resuming mid-track, devices first report buffering at 0 s before
-            # seeking: keep the start position (the progress bar jumped to 0).
-            if not (first and ev.player_state == "BUFFERING" and ev.current_time < 0.5 and self.position > 1):
-                self._set_position(ev.current_time)
-            # Polled every few seconds: tell the browsers only when something they
-            # cannot work out themselves changed (they move the position on locally).
-            if (self.status, self.duration) != before or self._position_drifted():
-                self.notifier.player_changed()
-            await self._report_progress(ev)
-            if ev.player_state == "PLAYING":
-                await self._maybe_preload(ev)
-            return
-
-        if ev.player_state != "IDLE":
-            return
-        if ev.idle_reason == "ERROR":
-            await self._on_error()
-        elif ev.idle_reason == "FINISHED" and self._seen_active:
-            if self._preload is not None:
-                # The receiver moves on to the preloaded track by itself.
-                self._start_preload_watchdog()
-                return
-            self._expected_content_id = None
-            await self._advance(natural=True)
-        elif ev.idle_reason in ("CANCELLED", "INTERRUPTED") and self._seen_active:
-            log.info("Playback stopped from outside CastHome (%s)", ev.idle_reason)
-            self._expected_content_id = None
-            self.status = Status.STOPPED
-            self.notifier.player_changed()
-            self._schedule_save()
-
-    # --- internals: preloading ------------------------------------------------
-
-    def _clear_preload(self) -> None:
-        self._preload = None
-        self._preload_attempted = False
-        if self._preload_wait is not None:
-            self._preload_wait.cancel()
-            self._preload_wait = None
-
-    async def _maybe_preload(self, ev: MediaEvent) -> None:
-        if not self.preload_enabled or self._preload_attempted or self.target is None:
-            return
-        if not getattr(self.target, "supports_preload", True):
-            return
-        duration = ev.duration or self.duration
-        if not duration or duration - ev.current_time > PRELOAD_LEAD_S:
-            return
-        self._preload_attempted = True
-        index = self.queue.next_index(natural=True)
-        if index is None:
-            return
-        entry = self.queue.entries[index]
-        try:
-            media = await self._build_media(entry.item, False)
-            await self.target.enqueue(media.url, media.content_type, media.metadata)
-        except Exception as exc:  # noqa: BLE001 - preloading is best effort
-            log.info("Could not preload the next track: %s", exc)
-            return
-        self._preload = _Preload(url=media.url, uid=entry.uid, transcoded=media.transcoded)
-        log.info("Preloaded %r", entry.item.title)
-
-    async def _switch_to_preloaded(self) -> None:
-        """The receiver started the preloaded track: follow it, or correct it if stale."""
-        preload = self._preload
-        assert preload is not None
-        self._preload = None
-        self._preload_attempted = False
-        if self._preload_wait is not None:
-            self._preload_wait.cancel()
-            self._preload_wait = None
-        expected_next = self.queue.next_index(natural=True)
-        try:
-            position = self._position_of(preload.uid)
-        except PlaybackError:
-            position = None
-        if position is None or position != expected_next:
-            log.info("Preloaded track is no longer next; loading the right one")
-            await self._advance(natural=True)
-            return
-        self.queue.jump(position)
-        song = self.queue.entries[position].item
-        self._expected_content_id = preload.url
-        self._seen_active = True
-        self._fallback_used = False
-        self._transcoded = preload.transcoded
-        self.duration = song.duration or None
-        if self._scrobbler is not None:
-            self._scrobbler.track_loaded(song.id, song.duration)
-        self.notifier.player_changed()
-        self._schedule_save()
-        self._maybe_refill_radio()
-
-    def _start_preload_watchdog(self) -> None:
-        async def watchdog() -> None:
-            await asyncio.sleep(PRELOAD_SWITCH_TIMEOUT_S)
-            async with self._lock:
-                if self._preload is None:
-                    return
-                log.info("Receiver did not start the preloaded track; loading it")
-                self._clear_preload()
-                self._expected_content_id = None
-                await self._advance(natural=True)
-
-        if self._preload_wait is None:
-            self._preload_wait = asyncio.create_task(watchdog())
-
-    async def _report_progress(self, ev: MediaEvent) -> None:
-        if self._scrobbler is None or self.queue.current is None:
-            return
-        if ev.player_state == "PLAYING":
-            await self._scrobbler.progress(self.queue.current.item.id, ev.current_time)
-        else:
-            self._scrobbler.stopped()
-
-    def update_song_flags(self, song_id: str, **changes: Any) -> None:
-        """Reflect a star/rating change in the queue copies of a song."""
-        changed = False
-        for i, entry in enumerate(self.queue.entries):
-            if entry.item.id == song_id:
-                self.queue.entries[i] = replace(entry, item=entry.item.model_copy(update=changes))
-                changed = True
-        if changed:
-            self.queue_version += 1
-            self.notifier.queue_changed()
-            self.notifier.player_changed()
-
-    async def _on_error(self) -> None:
-        entry = self.queue.current
-        self._expected_content_id = None
-        if entry is None:
-            return
-        if not self._fallback_used:
-            log.info("Cast could not play %r; retrying transcoded", entry.item.title)
-            await self._load_current(0, force_fallback=True)
-            return
-        self._consecutive_errors += 1
-        self.notifier.notify("error", "track_unplayable", {"title": entry.item.title})
-        if self._consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-            await self._stop_device()
-            self.notifier.notify("error", "too_many_errors", {})
-            return
-        # Status is still LOADING/PLAYING here, so _advance loads the next track.
-        await self._advance(natural=False)
-
-    async def _on_receiver(self, ev: ReceiverEvent) -> None:
-        changed = (ev.volume_level, ev.volume_muted) != (self.volume, self.muted)
-        self.volume, self.muted = ev.volume_level, ev.volume_muted
-        if (
-            self._expected_content_id is not None
-            and self._seen_active
-            and ev.app_id != DEFAULT_MEDIA_RECEIVER_APP_ID
-        ):
-            self._expected_content_id = None
-            self.status = Status.STOPPED  # the position is kept: Play resumes there
-            if ev.app_id is None:
-                # No app at all: the device restarted (power cut) or was told to stop.
-                log.info("Playback stopped on the device (no app running)")
-                self.notifier.notify("warning", "device_stopped", {})
-            else:
-                log.info("Another app took over the device (%s)", ev.app_id)
-                self.notifier.notify("warning", "device_taken_over", {})
-            self._schedule_save()
-            changed = True
-        if changed:
-            self.notifier.player_changed()
-
-    # --- internals: position & persistence -----------------------------------
-
-    def _position_drifted(self) -> bool:
-        """Is the position far from where browsers place it, moving on from the
-        last state they were sent?"""
-        if self._sent is None:
-            return True
-        status, position, at = self._sent
-        if status != self.status:
-            return True
-        expected = position + (self._clock() - at) if status == Status.PLAYING else position
-        return abs(self.position - expected) > POSITION_DRIFT_S
-
-    def _set_position(self, position: float) -> None:
-        self.position = max(0.0, position)
-        self.position_ts = self._clock()
-
-    def current_position(self) -> float:
-        if self.status == Status.PLAYING:
-            pos = self.position + (self._clock() - self.position_ts)
-            return min(pos, self.duration) if self.duration else pos
-        return self.position
-
-    def _queue_mutated(self) -> None:
-        self.queue_version += 1
-        self.notifier.queue_changed()
-        self.notifier.player_changed()
-        self._schedule_save()
-
-    def _schedule_save(self) -> None:
-        if self._save_task is not None and not self._save_task.done():
-            self._save_task.cancel()
-        self._save_task = asyncio.create_task(self._save_later())
-
-    async def _save_later(self) -> None:
-        await asyncio.sleep(SAVE_DEBOUNCE_S)
-        await self.flush()
-
-    async def flush(self) -> None:
-        self._last_position_save = self._clock()
-        try:
-            await self._store.save(self.queue, self.current_position(), self.device_uuid)
-        except NotAuthenticatedError:
-            pass
-        except (NavidromeUnavailableError, SubsonicError) as exc:
-            log.warning("Could not save the play queue to Navidrome: %s", exc)
-
     async def _ticker(self) -> None:
         last_refresh = self._clock()
         while True:
@@ -937,38 +374,3 @@ class PlaybackCoordinator:
                         await self.flush()
             except Exception:  # noqa: BLE001 - the ticker must survive device hiccups
                 log.debug("Status poll failed", exc_info=True)
-
-    # --- snapshots for the API / WebSocket -----------------------------------
-
-    def player_snapshot(self, device_name: str | None) -> dict[str, Any]:
-        current = self.queue.current
-        # What browsers now base the position on (see _position_drifted).
-        self._sent = (self.status, self.current_position(), self._clock())
-        return {
-            "device_uuid": self.device_uuid,
-            "device_name": device_name,
-            "device_type": self.target.info.cast_type if self.target is not None else None,
-            "connected": self.connected and self.target is not None,
-            "status": self.status.value,
-            "index": self.queue.index,
-            "current": current.item.model_dump() if current else None,
-            # Position at snapshot time; clients interpolate from when they receive it,
-            # so client/server clock skew does not matter.
-            "position": self.current_position(),
-            "duration": self.duration,
-            "volume": self.volume,
-            "muted": self.muted,
-            "shuffle": self.queue.shuffle,
-            "repeat": self.queue.repeat.value,
-            "queue_version": self.queue_version,
-        }
-
-    def queue_snapshot(self) -> dict[str, Any]:
-        return {
-            "version": self.queue_version,
-            "index": self.queue.index,
-            "context_name": self.queue.context_name,
-            "radio": self.queue.radio,
-            "radio_source": self.queue.radio_source if self.queue.radio else None,
-            "items": [{"uid": e.uid, "queued": e.queued, **e.item.model_dump()} for e in self.queue.entries],
-        }
