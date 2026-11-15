@@ -1,42 +1,44 @@
 <script lang="ts">
-  import { api } from '../lib/api';
-  import { isIOS } from '../lib/browserPlayer';
   import { t } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
+  import { currentVolume, setVolumeSoon, stepVolume, volumeAvailable } from '../lib/volume.svelte';
   import Icon from './Icon.svelte';
 
-  let local = $state<number | null>(null);
-  let timer: ReturnType<typeof setTimeout> | undefined;
-
   const p = $derived(store.player);
-  // iOS ignores volume changes on <audio>: use the hardware buttons there.
-  const available = $derived(Boolean(p?.connected) && !(store.isThisBrowser && isIOS));
-  const volume = $derived(local ?? p?.volume ?? 0);
-
-  function change(event: Event) {
-    const level = Number((event.target as HTMLInputElement).value);
-    local = level;
-    clearTimeout(timer);
-    timer = setTimeout(async () => {
-      await store.run(() => api.setVolume(level));
-      local = null;
-    }, 120);
-  }
+  const available = $derived(volumeAvailable());
+  const volume = $derived(currentVolume());
 </script>
 
 {#if available}
+  <!-- Touch screens: − and + around the slider, one step each (a slider is
+       hard to set precisely with a finger). Mouse: the speaker icon. -->
   <div class="volume">
-    <Icon name={volume === 0 || p?.muted ? 'volumeMute' : 'volume'} size={18} />
+    <span class="icon"><Icon name={volume === 0 || p?.muted ? 'volumeMute' : 'volume'} size={18} /></span>
+    <button
+      class="icon-btn step"
+      aria-label={t('player.volumeDown')}
+      title={t('player.volumeDown')}
+      disabled={volume <= 0}
+      onclick={() => stepVolume(-1)}><Icon name="minus" size={18} /></button
+    >
     <input
       type="range"
       min="0"
       max="1"
-      step="0.02"
+      step="0.01"
       value={volume}
       style:--fill={`${volume * 100}%`}
       aria-label={t('player.volume')}
-      oninput={change}
+      aria-valuetext={`${Math.round(volume * 100)} %`}
+      oninput={(e) => setVolumeSoon(Number((e.target as HTMLInputElement).value))}
     />
+    <button
+      class="icon-btn step"
+      aria-label={t('player.volumeUp')}
+      title={t('player.volumeUp')}
+      disabled={volume >= 1}
+      onclick={() => stepVolume(1)}><Icon name="plus" size={18} /></button
+    >
   </div>
 {/if}
 
@@ -47,5 +49,27 @@
     gap: 8px;
     color: var(--muted);
     width: 100%;
+  }
+  .icon {
+    display: grid;
+    flex: none;
+  }
+  .step {
+    display: none;
+    flex: none;
+    color: var(--text);
+  }
+  @media (hover: none) and (pointer: coarse) {
+    .volume {
+      gap: 0;
+    }
+    .icon {
+      display: none;
+    }
+    .step {
+      display: inline-grid;
+      width: 40px;
+      height: 44px;
+    }
   }
 </style>

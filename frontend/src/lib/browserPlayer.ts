@@ -16,9 +16,7 @@ interface LoadCommand {
 type Command =
   | LoadCommand
   | { action: 'play' | 'pause' | 'stop' | 'status' }
-  | { action: 'seek'; position: number }
-  | { action: 'volume'; level: number }
-  | { action: 'mute'; muted: boolean };
+  | { action: 'seek'; position: number };
 
 // 0.1 s of silence: playing it inside a user gesture unlocks the element on iOS,
 // so later play() calls triggered by the server are allowed.
@@ -93,6 +91,11 @@ export class BrowserPlayer {
         }
         this.#setMetadata(cmd.metadata);
         this.#play();
+        // Full volume: the device's own buttons and system volume set the level
+        // (CastHome no longer does; a page volume lowered before would stay stuck).
+        a.volume = 1;
+        a.muted = false;
+        this.#send('browser_volume', { volume: a.volume, muted: a.muted });
         break;
       }
       case 'play':
@@ -110,12 +113,6 @@ export class BrowserPlayer {
         break;
       case 'seek':
         a.currentTime = cmd.position;
-        break;
-      case 'volume':
-        a.volume = cmd.level;
-        break;
-      case 'mute':
-        a.muted = cmd.muted;
         break;
       case 'status':
         if (this.#url) this.#report(a.ended ? 'IDLE' : a.paused ? 'PAUSED' : 'PLAYING', a.ended ? 'FINISHED' : undefined);

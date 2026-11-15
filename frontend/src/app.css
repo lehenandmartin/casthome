@@ -191,8 +191,11 @@ button.primary {
   color: inherit;
 }
 
-.icon-btn:hover:not(:disabled) {
-  background: var(--surface-2);
+/* Only with a mouse: on a touch screen the hover stays stuck after a tap. */
+@media (hover: hover) {
+  .icon-btn:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
 }
 
 .icon-btn.on {

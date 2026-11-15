@@ -265,6 +265,8 @@ export const en = {
   'player.repeat.all': 'Repeat: all',
   'player.repeat.one': 'Repeat: one',
   'player.volume': 'Volume',
+  'player.volumeDown': 'Volume down',
+  'player.volumeUp': 'Volume up',
   'player.nothing': 'Nothing playing',
   'player.seek': 'Position',
   'player.onDevice': 'Playing on {device}',

@@ -63,7 +63,7 @@ things the Subsonic API cannot give (the full track list with its sorts,
   tracks.
 - **Mobile-first, desktop-ready:** tab bar, mini player and full-screen Now
   Playing on phones; sidebar, queue panel, right-click menus, drag and drop
-  and keyboard shortcuts (Space, `/`) on desktop. Installable as an app (PWA), lock-screen controls included.
+  and keyboard shortcuts (Space, `/`, `+`/`-`) on desktop. Installable as an app (PWA), lock-screen controls included.
 - **Scrobbling** to your server, shorter gaps by preloading the next
   track, automatic transcoding of files the speakers cannot play.
 - **Setup in the browser:** no config file. Sign in to your music server, choose how

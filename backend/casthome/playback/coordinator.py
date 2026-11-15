@@ -336,12 +336,16 @@ class PlaybackCoordinator(DeviceEvents):
         async with self._lock:
             if self.target is None:
                 raise PlaybackError("no_device")
+            if self._is_browser():
+                return  # a browser's volume is its device's own (system volume, buttons)
             await self._device_call(self.target.set_volume(level))
 
     async def set_muted(self, muted: bool) -> None:
         async with self._lock:
             if self.target is None:
                 raise PlaybackError("no_device")
+            if self._is_browser():
+                return
             await self._device_call(self.target.set_muted(muted))
 
     async def _ticker(self) -> None:

@@ -20,6 +20,16 @@ describe('shortcutFor', () => {
     expect(shortcutFor(key('/', { target: el('BUTTON') }))).toBe('search');
   });
 
+  it('+ and − set the volume, held down too; Ctrl/Cmd +/− stay the browser zoom', () => {
+    expect(shortcutFor(key('+'))).toBe('volumeUp');
+    expect(shortcutFor(key('='))).toBe('volumeUp');
+    expect(shortcutFor(key('-'))).toBe('volumeDown');
+    expect(shortcutFor(key('-', { repeat: true }))).toBe('volumeDown');
+    expect(shortcutFor(key('+', { ctrlKey: true }))).toBeNull();
+    expect(shortcutFor(key('-', { metaKey: true }))).toBeNull();
+    expect(shortcutFor(key('-', { target: el('INPUT', { type: 'text' }) }))).toBeNull();
+  });
+
   it('leaves other keys alone, the arrows included', () => {
     for (const k of ['ArrowRight', 'ArrowLeft', 'k', 'Enter']) expect(shortcutFor(key(k))).toBeNull();
   });

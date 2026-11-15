@@ -25,7 +25,15 @@ playlist>** (the rest of what you started), then *Played* (collapsed).
   queue row, album, playlist, artist or the current track. Arrow keys move
   through it, Escape closes it. Shift + right-click keeps the browser's own
   menu.
-- **Keyboard (computer):** Space plays or pauses, `/` opens the search.
+- **Volume:** CastHome sets the volume of Cast devices only. On a touch
+  screen, − and + around the volume slider change it by 5 %. A web app
+  cannot use the phone's own volume buttons for a Cast speaker (only a native
+  app with the Cast SDK can). Playing in a browser, there is no volume control
+  in CastHome: the browser plays at full volume, and the phone's or
+  computer's own volume sets the level.
+- **Keyboard (computer):** Space plays or pauses, `/` opens the search, `+`
+  and `-` turn a Cast device's volume up and down (held down, it keeps
+  moving).
   Neither works while typing in a field, and Space keeps ticking a focused
   checkbox. The first Tab shows *Skip to content*. The menu key or
   Shift+F10 opens the menu of the focused item. In the queue, Tab to a

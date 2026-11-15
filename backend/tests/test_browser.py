@@ -110,6 +110,15 @@ async def test_volume_reports_do_not_look_like_a_takeover(setup):
     assert c.status == Status.PLAYING and c.volume == 0.3
 
 
+async def test_a_browsers_volume_is_left_to_its_device(setup):
+    # The phone or computer sets it (buttons, system volume): CastHome never does.
+    c, channel, _ = setup
+    await c.play_songs(songs(2), 0)
+    await c.set_volume(0.2)
+    await c.set_muted(True)
+    assert not [d for _, _, d in channel.sent if d["action"] in ("volume", "mute")]
+
+
 async def test_switching_from_browser_to_cast_stops_the_tab(setup):
     c, channel, _ = setup
     await c.play_songs(songs(2), 0)

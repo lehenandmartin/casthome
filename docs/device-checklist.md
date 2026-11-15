@@ -42,7 +42,8 @@ Do this once per browser below, in light and dark mode.
 - [ ] Lock screen and Dynamic Island show **previous / next** (not ±10 s),
       with the cover and title; both buttons work.
 - [ ] Headphone controls (play/pause, next).
-- [ ] Volume slider hidden for "This browser" (hardware buttons only).
+- [ ] No volume control for "This browser" (hardware buttons only), and it
+      plays at full volume.
 - [ ] Leaving the app open for a few minutes then coming back: the state is
       right within a second, no stale track.
 
@@ -68,6 +69,8 @@ Do this once per browser below, in light and dark mode.
 
 - [ ] Pick the speaker: playback moves to it at the same position.
 - [ ] Play an album; next/previous; seek; volume; mute.
+- [ ] Phone: − and + around the volume slider move it by 5 %. Computer: the
+      `+` and `-` keys do the same.
 - [ ] Let a track end: the next one starts by itself (with Preloading on,
       without a gap) — also with every browser closed.
 - [ ] Edit the queue during the last 20 s of a track: the right track

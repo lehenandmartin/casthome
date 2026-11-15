@@ -8,6 +8,7 @@
   import { dialogs } from './lib/dialog.svelte';
   import { togglePlayback } from './lib/playback.svelte';
   import { shortcutFor } from './lib/shortcuts';
+  import { stepVolume, volumeAvailable } from './lib/volume.svelte';
   import { store } from './lib/store.svelte';
   import AlbumView from './components/AlbumView.svelte';
   import Albums from './components/Albums.svelte';
@@ -96,13 +97,18 @@
   // unreachable, the cached state stays on screen while the connection retries.
   store.checkStatus();
 
-  // Keyboard shortcuts (see lib/shortcuts.ts): Space plays/pauses, / searches.
+  // Keyboard shortcuts (see lib/shortcuts.ts): Space plays/pauses, / searches, +/− volume.
   function onShortcut(e: KeyboardEvent) {
     // Not behind a confirmation or an action menu: Space belongs to their buttons.
     if (store.auth !== 'signed-in' || dialogs.current || contextMenu.current) return;
     const shortcut = shortcutFor(e);
     if (!shortcut) return;
-    e.preventDefault(); // no page scroll, no button click, no "/" typed
+    if ((shortcut === 'volumeUp' || shortcut === 'volumeDown') && !volumeAvailable()) return;
+    e.preventDefault();
+    if (shortcut === 'volumeUp' || shortcut === 'volumeDown') {
+      stepVolume(shortcut === 'volumeUp' ? 1 : -1);
+      return;
+    } // no page scroll, no button click, no "/" typed
     if (shortcut === 'toggle') {
       if (store.queue.items.length > 0) togglePlayback();
       return;

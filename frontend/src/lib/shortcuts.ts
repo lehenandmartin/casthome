@@ -1,10 +1,11 @@
 // Keyboard shortcuts:
 //   Space  play / pause
 //   /      search
+//   + / −  volume up / down (also = , the + key without Shift, and the keypad)
 // Never while typing in a field, nor with Ctrl/Cmd/Alt held (the browser's own
 // shortcuts), nor inside an open action menu (Space picks its item there).
 
-export type Shortcut = 'toggle' | 'search';
+export type Shortcut = 'toggle' | 'search' | 'volumeUp' | 'volumeDown';
 
 interface KeyLike {
   key: string;
@@ -44,5 +45,8 @@ export function shortcutFor(e: KeyLike): Shortcut | null {
     return e.repeat || ticks ? null : 'toggle';
   }
   if (e.key === '/') return 'search';
+  // Held down, the volume keeps moving.
+  if (e.key === '+' || e.key === '=') return 'volumeUp';
+  if (e.key === '-' || e.key === '−') return 'volumeDown';
   return null;
 }

@@ -264,6 +264,8 @@ export const de: Record<MessageKey, string> = {
   'player.repeat.all': 'Wiederholen: alle',
   'player.repeat.one': 'Wiederholen: einen',
   'player.volume': 'Lautstärke',
+  'player.volumeDown': 'Leiser',
+  'player.volumeUp': 'Lauter',
   'player.nothing': 'Keine Wiedergabe',
   'player.seek': 'Position',
   'player.onDevice': 'Läuft auf {device}',
