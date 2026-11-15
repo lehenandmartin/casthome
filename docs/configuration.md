@@ -54,7 +54,7 @@ docker compose pull && docker compose up -d
 ```
 
 `:latest` is the last release. To control updates, pin a version in
-`docker-compose.yml` (`:0.4` takes the fixes of 0.4, `:0.4.0` never moves);
+`docker-compose.yml` (`:0.5` takes the fixes of 0.5, `:0.5.0` never moves);
 `:main` follows the development branch. The running version is shown in
 **Settings → About**. See the [releases](https://github.com/lehenandmartin/casthome/releases) for what changed.
 
