@@ -6,6 +6,11 @@ to WebP (or JPEG for a browser that does not take WebP), about 5 to 10 times
 lighter, and keeps the result in <data_dir>/covers. The folder is capped:
 the least recently used files go first.
 
+A kept cover is checked again after MAX_AGE_S: the original is fetched and
+compared with the one it was made from (its SHA-1 is kept next to it, in a
+`.src` file whose date is the last check). Only a changed cover is
+converted again; while the server cannot be reached, the kept one is used.
+
 A cover that cannot be converted is sent as Navidrome gave it.
 """
 
@@ -27,6 +32,7 @@ log = logging.getLogger(__name__)
 
 MAX_BYTES = 300 * 1024 * 1024  # disk space for converted covers
 PRUNE_EVERY = 200  # check the folder's size every this many new files
+MAX_AGE_S = 7 * 24 * 3600  # check a kept cover against the server after this
 WEBP_QUALITY = 80
 JPEG_QUALITY = 82
 
@@ -73,10 +79,13 @@ class CoverCache:
         fmt = "WEBP" if webp else "JPEG"
         content_type = "image/webp" if webp else "image/jpeg"
         path = self._path(cover_id, size, fmt)
+        kept: Cover | None = None
         try:
             data = await asyncio.to_thread(path.read_bytes)
             os.utime(path)  # recently used: kept when the folder is pruned
-            return Cover(data, content_type)
+            kept = Cover(data, content_type)
+            if self._checked_recently(path):
+                return kept
         except FileNotFoundError:
             pass
         # One conversion per cover at a time (a page asks for the same one twice).
@@ -86,7 +95,7 @@ class CoverCache:
         future: asyncio.Future[Cover | None] = asyncio.get_running_loop().create_future()
         self._inflight[path] = future
         try:
-            result = await self._make(path, size, fmt, content_type, fetch)
+            result = await self._make(path, size, fmt, content_type, fetch, kept)
             future.set_result(result)
             return result
         except BaseException as exc:
@@ -97,27 +106,56 @@ class CoverCache:
         finally:
             del self._inflight[path]
 
-    async def _make(self, path: Path, size: int, fmt: str, content_type: str, fetch: Fetch) -> Cover | None:
-        original = await fetch()
+    @staticmethod
+    def _stamp(path: Path) -> Path:
+        return path.with_suffix(".src")
+
+    def _checked_recently(self, path: Path) -> bool:
+        try:
+            return time.time() - self._stamp(path).stat().st_mtime < MAX_AGE_S
+        except FileNotFoundError:
+            return False  # kept before checks existed, or never checked
+
+    async def _make(
+        self, path: Path, size: int, fmt: str, content_type: str, fetch: Fetch, kept: Cover | None = None
+    ) -> Cover | None:
+        try:
+            original = await fetch()
+        except Exception as exc:
+            if kept is None:
+                raise
+            log.info("Cover not checked (%s); the kept one is used", exc)
+            return kept
         if original is None:
-            return None
+            return kept
         data, original_type = original
+        digest = hashlib.sha1(data).hexdigest()
+        stamp = self._stamp(path)
+        if kept is not None:
+            try:
+                unchanged = (await asyncio.to_thread(stamp.read_text)).strip() == digest
+            except OSError:
+                unchanged = False
+            if unchanged:
+                await asyncio.to_thread(stamp.touch)  # checked now
+                return kept
         try:
             converted = await asyncio.to_thread(convert, data, size, fmt)
         except (UnidentifiedImageError, OSError, ValueError) as exc:
             log.info("Cover not converted (%s); sent as is", exc)
             return Cover(data, original_type)
         try:
-            await asyncio.to_thread(self._write, path, converted)
+            await asyncio.to_thread(self._write, path, converted, digest)
         except OSError as exc:
             log.warning("Cover not kept on disk: %s", exc)
         return Cover(converted, content_type)
 
-    def _write(self, path: Path, data: bytes) -> None:
+    def _write(self, path: Path, data: bytes, digest: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
         tmp.write_bytes(data)
         tmp.replace(path)
+        self._stamp(path).write_text(digest)
         self._written += 1
         if self._written % PRUNE_EVERY == 0:
             self.prune()
@@ -140,5 +178,6 @@ class CoverCache:
             if total <= self.max_bytes * 0.9:
                 break
             entry.unlink(missing_ok=True)
+            self._stamp(entry).unlink(missing_ok=True)
             total -= size
         log.info("Cover cache pruned to %d MB in %.2fs", total // (1024 * 1024), time.monotonic() - started)

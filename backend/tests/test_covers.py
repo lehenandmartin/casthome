@@ -70,3 +70,42 @@ async def test_prune_keeps_the_most_recently_used(tmp_path):
     cache.prune()
     left = list(tmp_path.glob("*/*.webp"))
     assert newest in left and sum(f.stat().st_size for f in left) <= sizes // 2
+
+
+def _age_checks(folder, seconds: float) -> None:
+    """Pretend every kept cover was last checked `seconds` ago."""
+    for stamp in folder.glob("*/*.src"):
+        past = stamp.stat().st_mtime - seconds
+        os.utime(stamp, (past, past))
+
+
+async def test_old_cover_is_checked_and_kept_when_unchanged(tmp_path):
+    cache = CoverCache(tmp_path)
+    calls: list[int] = []
+    first = await cache.get("ar-1", 300, True, fetcher(png(), calls))
+    _age_checks(tmp_path, 8 * 24 * 3600)
+    again = await cache.get("ar-1", 300, True, fetcher(png(), calls))
+    assert again == first and calls == [1, 1]  # asked the server again
+    await cache.get("ar-1", 300, True, fetcher(png(), calls))
+    assert calls == [1, 1]  # checked just now: from the disk
+
+
+async def test_old_cover_is_replaced_when_the_server_has_a_new_one(tmp_path):
+    cache = CoverCache(tmp_path)
+    calls: list[int] = []
+    first = await cache.get("ar-1", 300, True, fetcher(png(color=(255, 0, 0)), calls))
+    _age_checks(tmp_path, 8 * 24 * 3600)
+    changed = await cache.get("ar-1", 300, True, fetcher(png(color=(0, 0, 255)), calls))
+    assert changed is not None and first is not None and changed.data != first.data
+    assert await cache.get("ar-1", 300, True, fetcher(None, calls)) == changed  # kept on disk
+
+
+async def test_old_cover_is_used_while_the_server_is_unreachable(tmp_path):
+    cache = CoverCache(tmp_path)
+    first = await cache.get("ar-1", 300, True, fetcher(png(), []))
+    _age_checks(tmp_path, 8 * 24 * 3600)
+
+    async def down():
+        raise ConnectionError("server down")
+
+    assert await cache.get("ar-1", 300, True, down) == first

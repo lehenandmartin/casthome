@@ -35,6 +35,12 @@ Cast device continues meanwhile; the app catches up when it reconnects.
 CastHome transcodes those (and retries after an error) with
 `TRANSCODE_FALLBACK_FORMAT`; make sure transcoding (ffmpeg) works on the music server.
 
+**A cover changed on the server, but CastHome shows the old one.** CastHome
+keeps converted covers and checks them against the server after 7 days;
+browsers keep them for a day. So a new cover shows within 8 days. To see it
+at once, delete the `covers` folder in CastHome's data folder and reload the
+page without the browser cache.
+
 **"Open at home" asks for the password at home.** CastHome is behind a reverse
 proxy it does not trust. See
 [Behind a reverse proxy](configuration.md#behind-a-reverse-proxy).

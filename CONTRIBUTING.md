@@ -78,6 +78,8 @@ The workflow checks the tag matches `__version__`, then publishes `:0.4.0`,
 - **Covers** are converted by CastHome to WebP at the size each page shows
   (about 4 to 6 times lighter than the server's originals) and kept in
   `<data>/covers` (capped at 300 MB, least recently used first).
+  Each one is checked against the server after 7 days and converted again
+  only if it changed; browsers keep them for a day.
 - **Live updates:** while playing, browsers get an update only when something
   changed, not on every status poll; long lists only lay out the rows near
   the screen.

@@ -236,5 +236,5 @@ async def cover(cover_id: str, request: Request, size: int = Query(300, ge=32, l
     return Response(
         content=found.data,
         media_type=found.content_type,
-        headers={"Cache-Control": "private, max-age=604800", "Vary": "Accept"},
+        headers={"Cache-Control": "private, max-age=86400", "Vary": "Accept"},
     )
