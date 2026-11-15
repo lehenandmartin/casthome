@@ -47,6 +47,8 @@ log = logging.getLogger(__name__)
 PREVIOUS_RESTART_THRESHOLD_S = 3.0
 MAX_CONSECUTIVE_ERRORS = 5
 STATUS_POLL_INTERVAL_S = 2.0
+# A polled position this far from where browsers place it is sent to them.
+POSITION_DRIFT_S = 1.0
 POSITION_SAVE_INTERVAL_S = 15.0
 SAVE_DEBOUNCE_S = 1.0
 # Endless radio: fetch more similar tracks when this few are left.
@@ -115,6 +117,8 @@ class PlaybackCoordinator:
         self._scrobbler = scrobbler
         self.preload_enabled = preload_next
         self._preload: _Preload | None = None
+        # (status, position, clock) of the last player state sent to browsers.
+        self._sent: tuple[Status, float, float] | None = None
         self._preload_attempted = False
         self._preload_wait: asyncio.Task[None] | None = None
         self._media = media
@@ -691,13 +695,17 @@ class PlaybackCoordinator:
 
         if ev.player_state in ("PLAYING", "PAUSED", "BUFFERING"):
             self._seen_active = True
+            before = (self.status, self.duration)
             self.status = {"PLAYING": Status.PLAYING, "PAUSED": Status.PAUSED}.get(ev.player_state, Status.BUFFERING)
             if ev.player_state == "PLAYING":
                 self._consecutive_errors = 0
             if ev.duration:
                 self.duration = ev.duration
             self._set_position(ev.current_time)
-            self.notifier.player_changed()
+            # Polled every few seconds: tell the browsers only when something they
+            # cannot work out themselves changed (they move the position on locally).
+            if (self.status, self.duration) != before or self._position_drifted():
+                self.notifier.player_changed()
             await self._report_progress(ev)
             if ev.player_state == "PLAYING":
                 await self._maybe_preload(ev)
@@ -854,6 +862,17 @@ class PlaybackCoordinator:
 
     # --- internals: position & persistence -----------------------------------
 
+    def _position_drifted(self) -> bool:
+        """Is the position far from where browsers place it, moving on from the
+        last state they were sent?"""
+        if self._sent is None:
+            return True
+        status, position, at = self._sent
+        if status != self.status:
+            return True
+        expected = position + (self._clock() - at) if status == Status.PLAYING else position
+        return abs(self.position - expected) > POSITION_DRIFT_S
+
     def _set_position(self, position: float) -> None:
         self.position = max(0.0, position)
         self.position_ts = self._clock()
@@ -908,6 +927,8 @@ class PlaybackCoordinator:
 
     def player_snapshot(self, device_name: str | None) -> dict[str, Any]:
         current = self.queue.current
+        # What browsers now base the position on (see _position_drifted).
+        self._sent = (self.status, self.current_position(), self._clock())
         return {
             "device_uuid": self.device_uuid,
             "device_name": device_name,

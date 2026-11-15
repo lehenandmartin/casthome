@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from casthome.appconfig import ConfigStore, NavidromeConfig, load_secret_key
 from casthome.auth.credentials import CredentialStore
@@ -15,6 +16,8 @@ from casthome.cast.manager import CastManager
 from casthome.cast.types import ConnectionEvent
 from casthome.cast.types import CastTarget, EventSink
 from casthome.config import Settings
+from casthome.covers import CoverCache
+from casthome.memo import Memo
 from casthome.db import Database
 from casthome.playback.coordinator import Notifier, PlaybackCoordinator
 from casthome.playback.media import MediaBuilder, StreamConfig
@@ -22,10 +25,18 @@ from casthome.playback.persistence import NavidromeQueueStore
 from casthome.playback.radio import make_artist_radio_builder, make_radio_builder
 from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import SubsonicClient
+from casthome.subsonic.models import SearchResult, Song
 from casthome.subsonic.native import NativeClient
 from casthome.ws.hub import Hub
 
 log = logging.getLogger(__name__)
+
+
+# Home page: favourites (a large answer, ~0.15 s) and "On repeat" (several
+# pages scanned) are reused this long; a favourite changed in CastHome
+# forgets the first at once.
+STARRED_TTL_S = 60
+ON_REPEAT_TTL_S = 120
 
 
 @dataclass
@@ -41,6 +52,11 @@ class AppContext:
     coordinator: PlaybackCoordinator
     hub: Hub
     media: MediaBuilder
+    # Covers converted for the browser (WebP), kept in <data_dir>/covers.
+    covers: CoverCache = field(default_factory=lambda: CoverCache(Path('covers')))
+    # Slow Navidrome answers the Home page reuses for a short while (api/home.py).
+    starred_memo: Memo[SearchResult] = field(default_factory=lambda: Memo(STARRED_TTL_S))
+    on_repeat_memo: Memo[list[Song]] = field(default_factory=lambda: Memo(ON_REPEAT_TTL_S))
 
     @classmethod
     def build(cls, settings: Settings) -> AppContext:
@@ -105,6 +121,7 @@ class AppContext:
             artist_radio_builder=make_artist_radio_builder(subsonic),
         )
         ctx = cls(settings, db, config, sessions, credentials, subsonic, native, cast, coordinator, hub, media)
+        ctx.covers = CoverCache(settings.data_dir / 'covers')
         coordinator.notifier = Notifier(
             player_changed=lambda: hub.publish("player", ctx.player_snapshot),
             queue_changed=lambda: hub.publish("queue", coordinator.queue_snapshot),
@@ -155,6 +172,9 @@ class AppContext:
         self.subsonic.configure(cfg.url, cfg.username)
         self.native.configure(cfg.url, cfg.username)
         self.media.configure(cfg.public_url, cfg.username)
+        # Another library or account: what was remembered is no longer right.
+        self.starred_memo.forget()
+        self.on_repeat_memo.forget()
 
     async def setup_needs(self) -> dict[str, bool]:
         """What the first-run setup still has to ask."""

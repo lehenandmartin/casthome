@@ -12,6 +12,7 @@ dependencies = [
     "aiosqlite>=0.20",
     "cryptography>=43",
     "pydantic-settings>=2.4",
+    "pillow>=10",
 ]
 
 [project.optional-dependencies]

@@ -58,6 +58,12 @@ Mobile-first, installable on the home screen.
   the same scroll position; pages, slow covers and sheets fade in and out;
   loading placeholders only show when loading lasts; long lists load their
   next page before the bottom; play/pause and queue removals react at once.
+- Lighter and faster: covers are converted by CastHome to WebP at the size
+  each page shows (about 4 to 6 times lighter than Navidrome's originals) and
+  kept in `<data>/covers` (capped at 300 MB, least recently used first); the
+  Home page reuses favourites and *On repeat* for a minute or two; long lists
+  only lay out the rows near the screen; while playing, browsers get an
+  update only when something changed, not on every status poll.
 
 ## How it works
 

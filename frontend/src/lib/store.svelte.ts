@@ -100,7 +100,15 @@ class AppStore {
     }
     setUnauthorizedHandler(() => void this.checkStatus());
     setBeforePlayHook(() => this.#ensureDevice());
-    setInterval(() => (this.now = Date.now() / 1000), 500);
+    // Moves the position on between server messages: only while playing and
+    // while the app is on screen (no need to wake the phone otherwise).
+    const tick = () => {
+      if (!document.hidden && this.player?.status === 'playing') this.now = Date.now() / 1000;
+    };
+    setInterval(tick, 500);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) this.now = Date.now() / 1000;
+    });
     browserPlayer.connect((type, data) => this.send(type, data));
     // Back button / swipe-back closes the Now Playing sheet.
     // Back button / swipe-back closes the queue sheet, then the Now Playing view.
@@ -345,6 +353,7 @@ class AppStore {
   #setPlayer(player: PlayerState): void {
     this.player = player;
     this.receivedAt = Date.now() / 1000;
+    this.now = this.receivedAt;
     // Moving to another track only sends a player update: keep the queue's
     // current index in step (same queue version only).
     if (player.queue_version === this.queue.version && player.index !== this.queue.index) {

@@ -62,4 +62,10 @@
   a:hover {
     background: var(--surface-2);
   }
+  /* Rows off screen are not laid out until they come near (long lists on phones);
+     the estimated height keeps the page's total height, and Back's position, right. */
+  ul.rows > li {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 68px;
+  }
 </style>

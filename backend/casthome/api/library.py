@@ -203,6 +203,7 @@ async def starred(request: Request) -> dict:
 async def set_star(body: StarBody, request: Request) -> None:
     ctx = get_ctx(request)
     await ctx.subsonic.set_starred(body.kind, body.id, body.starred)
+    ctx.starred_memo.forget()  # the Home page counts favourites
     if body.kind == "song":
         ctx.coordinator.update_song_flags(body.id, starred=body.starred)
 
@@ -216,12 +217,24 @@ async def set_rating(body: RatingBody, request: Request) -> None:
 
 @router.get("/cover/{cover_id}")
 async def cover(cover_id: str, request: Request, size: int = Query(300, ge=32, le=1200)) -> Response:
-    """Cover art for the browser; Navidrome credentials never reach the frontend."""
-    upstream = await get_ctx(request).subsonic.get_cover_art(cover_id, size)
-    if upstream.status_code != 200 or not upstream.headers.get("content-type", "").startswith("image/"):
+    """Cover art for the browser, converted to WebP (JPEG for a browser without
+    WebP) and kept on disk, see covers.py; Navidrome credentials never reach the
+    frontend."""
+    ctx = get_ctx(request)
+
+    async def fetch() -> tuple[bytes, str] | None:
+        upstream = await ctx.subsonic.get_cover_art(cover_id, size)
+        content_type = upstream.headers.get("content-type", "")
+        if upstream.status_code != 200 or not content_type.startswith("image/"):
+            return None
+        return upstream.content, content_type
+
+    webp = "image/webp" in request.headers.get("accept", "")
+    found = await ctx.covers.get(cover_id, size, webp, fetch)
+    if found is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "cover_not_found"})
     return Response(
-        content=upstream.content,
-        media_type=upstream.headers["content-type"],
-        headers={"Cache-Control": "private, max-age=604800"},
+        content=found.data,
+        media_type=found.content_type,
+        headers={"Cache-Control": "private, max-age=604800", "Vary": "Accept"},
     )

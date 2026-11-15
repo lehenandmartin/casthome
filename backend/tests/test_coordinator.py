@@ -471,3 +471,45 @@ async def test_moving_to_an_invalid_position_is_reported(h):
         await h.c.move_entry(uid, 99)
     assert err.value.code == "invalid_queue_index"
     assert [e.item.id for e in h.c.queue.entries] == ["s0", "s1", "s2"]
+
+
+# --- updates sent to browsers while playing ------------------------------------
+
+
+async def test_polled_status_is_sent_only_when_browsers_could_not_guess_it(h):
+    now = [1000.0]
+    h.c._clock = lambda: now[0]
+    sent: list[int] = []
+
+    def changed() -> None:
+        sent.append(1)
+        h.c.player_snapshot(None)  # what the hub does: build and send the state
+
+    h.c.notifier = Notifier(player_changed=changed)
+    await h.c.play_songs(songs(3), 0)
+    sent.clear()
+
+    h.target.media("PLAYING", t=0.0)
+    await h.settle()
+    assert len(sent) == 1  # started playing
+
+    for t in (2.0, 4.0, 6.0):  # regular polls, position where expected
+        now[0] += 2.0
+        h.target.media("PLAYING", t=t + 0.3)
+        await h.settle()
+    assert len(sent) == 1
+
+    now[0] += 2.0
+    h.target.media("PLAYING", t=60.0)  # jumped (seek on the device)
+    await h.settle()
+    assert len(sent) == 2
+
+    now[0] += 2.0
+    h.target.media("PAUSED", t=62.0)
+    await h.settle()
+    assert len(sent) == 3 and h.c.status == Status.PAUSED
+
+    now[0] += 2.0
+    h.target.media("PAUSED", t=62.0)  # still paused: nothing new
+    await h.settle()
+    assert len(sent) == 3

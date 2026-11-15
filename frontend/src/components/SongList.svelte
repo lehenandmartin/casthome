@@ -132,4 +132,10 @@
     color: var(--muted);
     flex: none;
   }
+  /* Rows off screen are not laid out until they come near (long track lists on
+     phones); the estimated height keeps the page's total height right. */
+  .songs > li {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 60px;
+  }
 </style>

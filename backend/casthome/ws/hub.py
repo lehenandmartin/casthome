@@ -24,6 +24,8 @@ from typing import Any
 
 from fastapi import WebSocket
 
+from casthome.background import spawn
+
 log = logging.getLogger(__name__)
 
 
@@ -85,11 +87,11 @@ class Hub:
         self._pending[msg_type] = build
         if not self._flush_scheduled:
             self._flush_scheduled = True
-            asyncio.get_running_loop().call_soon(lambda: asyncio.create_task(self._flush()))
+            asyncio.get_running_loop().call_soon(lambda: spawn(self._flush(), name='ws flush'))
 
     def send_now(self, msg_type: str, data: Any) -> None:
         """For events that must not be coalesced (notifications)."""
-        asyncio.get_running_loop().create_task(self._broadcast(json.dumps({"type": msg_type, "data": data})))
+        spawn(self._broadcast(json.dumps({"type": msg_type, "data": data})), name='ws send')
 
     async def send(self, msg_type: str, data: Any) -> None:
         """Send now and wait for it (e.g. right before closing every socket)."""

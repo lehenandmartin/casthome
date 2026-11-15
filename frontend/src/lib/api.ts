@@ -123,8 +123,10 @@ export function prefetch(href: string): void {
   else api.playlist(id).catch(ignore);
 }
 
+// `v`: bumped when covers change format, so browsers drop the ones they cached
+// for a week (v2: WebP made by CastHome, see backend covers.py).
 export const coverUrl = (id: string | null, size = 300): string | null =>
-  id ? `/api/cover/${encodeURIComponent(id)}?size=${size}` : null;
+  id ? `/api/cover/${encodeURIComponent(id)}?size=${size}&v=2` : null;
 
 const { rememberAlbums, rememberArtists } = cache;
 const withAlbums = (list: Album[]) => (rememberAlbums(list), list);
