@@ -38,7 +38,7 @@ class FakeNative:
 
 
 def request_for(subsonic: FakeSubsonic, native: FakeNative):  # type: ignore[no-untyped-def]
-    ctx = SimpleNamespace(subsonic=subsonic, native=native)
+    ctx = SimpleNamespace(subsonic=subsonic, library=native)
     return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(ctx=ctx)))
 
 

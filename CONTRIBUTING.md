@@ -76,7 +76,7 @@ The workflow checks the tag matches `__version__`, then publishes `:0.4.0`,
 ## Implementation notes
 
 - **Covers** are converted by CastHome to WebP at the size each page shows
-  (about 4 to 6 times lighter than Navidrome's originals) and kept in
+  (about 4 to 6 times lighter than the server's originals) and kept in
   `<data>/covers` (capped at 300 MB, least recently used first).
 - **Live updates:** while playing, browsers get an update only when something
   changed, not on every status poll; long lists only lay out the rows near
@@ -101,7 +101,7 @@ backend/casthome/
   appconfig.py         configuration saved from the browser, access modes,
                        CastHome password hashing, encryption key file
   db.py                SQLite + migrations
-  auth/                sessions, encrypted Navidrome password
+  auth/                sessions, encrypted music server password
   subsonic/            Subsonic client, token URLs, Cast format policy
   cast/                discovery (zeroconf), pychromecast adapter,
                        browser.py: a browser tab driven like a Cast device

@@ -34,7 +34,7 @@ async def albums(
     ctx = get_ctx(request)
     if starred:
         # Favorites with the chosen sort: Subsonic's "starred" list cannot be sorted.
-        items = await ctx.native.get_albums(type, offset, size, starred=True)
+        items = await ctx.library.get_albums(type, offset, size, starred=True)
     else:
         items = await ctx.subsonic.get_album_list(type, size, offset, genre if type == "byGenre" else None)
     return [a.model_dump(exclude={"songs"}) for a in items]
@@ -50,7 +50,7 @@ async def songs(
     artist_id: str | None = Query(None, max_length=200),
 ) -> dict:
     """Every track (or only favorites, or one artist's), paged; "recent" = most recently added first."""
-    items, total = await get_ctx(request).native.get_songs(sort, offset, size, starred, artist_id)
+    items, total = await get_ctx(request).library.get_songs(sort, offset, size, starred, artist_id)
     return {"items": [s.model_dump() for s in items], "total": total}
 
 
@@ -91,11 +91,11 @@ async def artist_highlights(artist_id: str, request: Request) -> dict:
             top = []
         if top:
             return "popular", top
-        played, _total = await ctx.native.get_songs("frequent", 0, TOP_SONGS, artist_id=artist_id)
+        played, _total = await ctx.library.get_songs("frequent", 0, TOP_SONGS, artist_id=artist_id)
         return "most_played", [s for s in played if s.play_count]
 
     (source, top), (_liked, liked_count) = await asyncio.gather(
-        popular(), ctx.native.get_songs("recent", 0, 1, starred=True, artist_id=artist_id)
+        popular(), ctx.library.get_songs("recent", 0, 1, starred=True, artist_id=artist_id)
     )
     return {"top_source": source, "top": [s.model_dump() for s in top], "liked_count": liked_count}
 

@@ -1,5 +1,5 @@
 <h1 align="center">CastHome</h1>
-<h3 align="center">Reliable casting of your <a href="https://www.navidrome.org/">Navidrome</a> library to Google Cast speakers: the speaker streams from the source, your phone is just the remote.</h3>
+<h3 align="center">Reliable casting of your Subsonic library to Google Cast speakers: the speaker streams from the source, your phone is just the remote.</h3>
 
 <p align="center">
   <a href="https://github.com/lehenandmartin/casthome/releases"><img src="https://img.shields.io/github/v/release/lehenandmartin/casthome" alt="Latest release"></a>
@@ -18,12 +18,19 @@ drops, stops at the end of the track, or loses its queue.
 
 CastHome takes another approach, inspired by the principle behind Spotify
 Connect: a small server on your home network drives the speakers itself, and
-**the speaker streams straight from Navidrome**. Your phone, or any browser, is only the remote: pick a speaker,
-press play, put the phone away, and the music keeps going, track after track.
+**the speaker streams straight from your music server**. Your phone, or any
+browser, is only the remote: pick a speaker, press play, put the phone away, and the music keeps going, track after track.
 
 **CastHome is a web app, not a native iOS or Android app.** Open it in any
 browser, or add it to your home screen to use it like an app (PWA): nothing
 to install from a store.
+
+**Made for Navidrome, works with other Subsonic servers.** CastHome speaks the
+Subsonic API, the protocol shared by most self-hosted music servers, and the
+OpenSubsonic extensions to it, so it also runs with Gonic and other compatible
+servers. It is designed and optimised for Navidrome, whose own API adds a few
+things the Subsonic API cannot give (the full track list with its sorts,
+*On repeat*).
 
 ## Why CastHome
 
@@ -37,8 +44,8 @@ to install from a store.
 - **Any browser is a remote.** The Cast SDK only runs in Chrome; since
   CastHome's server does the casting, Firefox, Safari and iPhones work just as
   well, and several devices can control the same playback.
-- **Nothing to sync.** Navidrome stays the only library. The queue is your
-  Navidrome play queue, so other Subsonic clients can pick it up.
+- **Nothing to sync.** Your music server stays the only library. The queue is
+  saved as its play queue, so other Subsonic clients can pick it up.
 - **Feels like a streaming app.** A familiar queue (what you add plays next, then the album carries on), endless radio, swipe
   gestures, and an installable app on your home screen.
 
@@ -50,16 +57,16 @@ to install from a store.
 - **Queue:** *Next in queue* before the rest of the album or playlist, drag to
   reorder, swipe to add or remove, save as a playlist.
 - **Radio:** endless track radio and artist radio, using Last.fm or
-  AudioMuse-AI through Navidrome, with fallbacks when a service is down.
+  AudioMuse-AI (on Navidrome), with fallbacks when a service is down.
 - **Library:** albums, artists, genres, every track with useful sorts,
   search, playlists, favorites, 5-star ratings, similar artists, popular
   tracks.
 - **Mobile-first, desktop-ready:** tab bar, mini player and full-screen Now
   Playing on phones; sidebar, queue panel, right-click menus and drag and drop
   on desktop. Installable as an app (PWA), lock-screen controls included.
-- **Scrobbling** to Navidrome, shorter gaps by preloading the next
+- **Scrobbling** to your server, shorter gaps by preloading the next
   track, automatic transcoding of files the speakers cannot play.
-- **Setup in the browser:** no config file. Sign in to Navidrome, choose how
+- **Setup in the browser:** no config file. Sign in to your music server, choose how
   to protect CastHome, done.
 - English and French.
 
@@ -67,7 +74,11 @@ See the [user guide](docs/usage.md) for the full tour.
 
 ## Requirements
 
-- A [Navidrome](https://www.navidrome.org/) server.
+- A music server that speaks the Subsonic API:
+  [Navidrome](https://www.navidrome.org/) 0.50 or later (recommended), or
+  another one such as Gonic, with a few features less (see
+  [Other Subsonic servers](docs/configuration.md#other-subsonic-servers)).
+  The server must accept token sign-in, which Cast devices need to stream.
 - A **Linux host** with Docker (a Raspberry Pi works), on the same network as
   your speakers. CastHome uses Docker's host network for speaker discovery,
   which Docker Desktop on macOS/Windows does not support reliably.
@@ -84,7 +95,7 @@ Or paste [`docker-compose.yml`](docker-compose.yml) as a stack in Portainer,
 Dockge, etc.
 
 Then open `http://<host-ip>:4577` **right away** (the setup is open to whoever
-comes first): enter your Navidrome URL and account, choose how to protect
+comes first): enter your music server's URL and account, choose how to protect
 CastHome, and play.
 
 To update:

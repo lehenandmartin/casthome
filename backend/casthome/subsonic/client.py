@@ -52,6 +52,11 @@ class SubsonicClient:
         self._password_provider = password_provider
         self._http = http or httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=5.0))
         self._extensions: set[str] | None = None
+        # The server's name as OpenSubsonic servers give it ("navidrome",
+        # "gonic", "lms"…), "" for a plain Subsonic server, None until known.
+        self.server_type: str | None = None
+        # Called when `server_type` becomes known or changes.
+        self.on_server_type: Callable[[str], None] | None = None
         # True once Navidrome rejected the stored password, until a call succeeds.
         self.credentials_rejected = False
         # Called when `credentials_rejected` changes.
@@ -62,6 +67,7 @@ class SubsonicClient:
         self.base_url = base_url.rstrip("/")
         self.username = username
         self._extensions = None
+        self.server_type = None
         self.set_credentials_rejected(False)
 
     def set_credentials_rejected(self, rejected: bool) -> None:
@@ -122,7 +128,20 @@ class SubsonicClient:
             raise SubsonicError(code, message)
         if password is None:
             self.set_credentials_rejected(False)
+            self._set_server_type(str(payload.get("type") or "").lower())
         return payload
+
+    def _set_server_type(self, server_type: str) -> None:
+        if server_type != self.server_type:
+            self.server_type = server_type
+            if self.on_server_type is not None:
+                self.on_server_type(server_type)
+
+    async def detect_server_type(self) -> str:
+        """The server's type, asking it once if no call has told it yet."""
+        if self.server_type is None:
+            await self.ping()
+        return self.server_type or ""
 
     # --- endpoints -----------------------------------------------------------
 

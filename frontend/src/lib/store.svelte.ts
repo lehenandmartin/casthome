@@ -51,12 +51,20 @@ function tabId(): string {
 
 type AuthState = 'unknown' | 'setup' | 'signed-out' | 'signed-in';
 
+/** See `capabilities` in backend/casthome/subsonic/library.py. */
+export interface Capabilities {
+  all_tracks: boolean;
+  play_history: boolean;
+}
+
 class AppStore {
   auth = $state<AuthState>('unknown');
   /** Who is signed in and how (set once signed in). */
   me = $state<Me | null>(null);
   /** Navidrome refused the saved password: ask to update it in Settings. */
   navidromeRejected = $state(false);
+  /** What the music server allows: everything but favorites needs Navidrome's own API. */
+  capabilities = $state<Capabilities>({ all_tracks: true, play_history: true });
   online = $state(false);
   /** True only after the live connection has been down for a while. */
   offlineNotice = $state(false);
@@ -322,6 +330,7 @@ class AppStore {
         this.queue = msg.data.queue;
         this.#setPlayer(msg.data.player);
         this.navidromeRejected = Boolean(msg.data.server?.navidrome_rejected);
+        if (msg.data.server?.capabilities) this.capabilities = msg.data.server.capabilities;
         // After a reload the server may still think this tab is playing.
         if (this.isThisBrowser && !browserPlayer.active) browserPlayer.reportIdle();
         break;
@@ -339,6 +348,7 @@ class AppStore {
         break;
       case 'server':
         this.navidromeRejected = Boolean(msg.data.navidrome_rejected);
+        if (msg.data.capabilities) this.capabilities = msg.data.capabilities;
         break;
       case 'notification':
         this.notify(msg.data.code, msg.data.params, msg.data.level);

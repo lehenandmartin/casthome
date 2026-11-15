@@ -33,8 +33,8 @@ then similar music, and keeps adding more as it plays. Started from the
 track being played, that track carries on without restarting. Tracks in
 *Next in queue* stay first; starting an album or a playlist ends the radio.
 
-Similar tracks come from Navidrome: AudioMuse-AI when that plugin is active
-(track radio only), else Last.fm and Navidrome's other agents, with
+Similar tracks come from the music server. On Navidrome: AudioMuse-AI when
+that plugin is active (track radio only), else Last.fm and its other agents, with
 fallbacks so the radio still works when one of them is down. The queue shows
 which source was used.
 

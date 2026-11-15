@@ -55,7 +55,7 @@ async def home(request: Request) -> dict[str, Any]:
         _safe("recently played", sub.get_album_list("recent", RECENT_POOL), []),
         _safe("recently added", sub.get_album_list("newest", ROW), []),
         _safe("favorites", ctx.starred_memo.get(sub.get_starred), None),
-        _safe("on repeat", ctx.on_repeat_memo.get(lambda: ctx.native.get_on_repeat(days=30, limit=5)), []),
+        _safe("on repeat", ctx.on_repeat_memo.get(lambda: ctx.library.get_on_repeat(days=30, limit=5)), []),
         _safe("playlists", sub.get_playlists(), []),
         _safe("most played", sub.get_album_list("frequent", 40), []),
     )

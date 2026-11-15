@@ -64,6 +64,11 @@ class AccessBody(BaseModel):
     remember: bool = True
 
 
+# Subsonic 41 (token auth not supported, e.g. LDAP users) and OpenSubsonic 42
+# (authentication mechanism not supported).
+TOKEN_AUTH_UNSUPPORTED = {41, 42}
+
+
 def _bad(code: str, **params: Any) -> HTTPException:
     return HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": code, "params": params})
 
@@ -113,6 +118,9 @@ async def resolve_navidrome(ctx: AppContext, body: NavidromeBody) -> tuple[Navid
     except NavidromeUnavailableError:
         raise _bad("navidrome_unreachable", url=url) from None
     except SubsonicError as exc:
+        if exc.code in TOKEN_AUTH_UNSUPPORTED:
+            # The Cast devices stream with a token URL: without it, nothing would play.
+            raise _bad("token_auth_unsupported") from None
         raise _bad("navidrome_error", message=exc.message) from None
     return NavidromeConfig(url=url, public_url=public_url, username=username), password
 

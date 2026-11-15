@@ -26,6 +26,9 @@ class Song(BaseModel):
     starred: bool = False
     user_rating: int = 0
     play_count: int = 0
+    # ISO dates, for sorting favorites on servers other than Navidrome.
+    created: str | None = None
+    played: str | None = None
 
     @classmethod
     def from_api(cls, d: dict[str, Any]) -> Song:
@@ -48,6 +51,8 @@ class Song(BaseModel):
             starred=bool(d.get("starred")),
             user_rating=int(d.get("userRating") or 0),
             play_count=int(d.get("playCount") or 0),
+            created=d.get("created"),
+            played=d.get("played"),
         )
 
 
@@ -62,6 +67,9 @@ class Album(BaseModel):
     duration: float = 0
     starred: bool = False
     user_rating: int = 0
+    play_count: int = 0
+    created: str | None = None
+    played: str | None = None
     songs: list[Song] | None = None
     # Names of the discs when they are tagged (OpenSubsonic discTitles), by
     # disc number: "The Fame Monster", "The Fame".
@@ -86,6 +94,9 @@ class Album(BaseModel):
             duration=float(d.get("duration") or 0),
             starred=bool(d.get("starred")),
             user_rating=int(d.get("userRating") or 0),
+            play_count=int(d.get("playCount") or 0),
+            created=d.get("created"),
+            played=d.get("played"),
             songs=[Song.from_api(s) for s in songs] if songs is not None else None,
             disc_titles=disc_titles,
         )

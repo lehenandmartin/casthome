@@ -3,6 +3,7 @@
   import type { MessageKey } from '../lib/i18n/en';
   import type { IconName } from '../lib/icons';
   import Icon from './Icon.svelte';
+  import { store } from '../lib/store.svelte';
 
   const ENTRIES: { href: string; label: MessageKey; icon: IconName }[] = [
     { href: '#/playlists', label: 'nav.playlists', icon: 'playlist' },
@@ -16,7 +17,7 @@
 <section>
   <h2>{t('nav.library')}</h2>
   <ul>
-    {#each ENTRIES as entry (entry.href)}
+    {#each ENTRIES.filter((e) => e.href !== '#/tracks' || store.capabilities.all_tracks) as entry (entry.href)}
       <li>
         <a href={entry.href}>
           <span class="icon"><Icon name={entry.icon} size={22} /></span>

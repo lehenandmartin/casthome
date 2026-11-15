@@ -26,6 +26,7 @@ from casthome.playback.radio import make_artist_radio_builder, make_radio_builde
 from casthome.scrobble.scrobbler import Scrobbler
 from casthome.subsonic.client import SubsonicClient
 from casthome.subsonic.models import SearchResult, Song
+from casthome.subsonic.library import Library, capabilities
 from casthome.subsonic.native import NativeClient
 from casthome.ws.hub import Hub
 
@@ -57,6 +58,8 @@ class AppContext:
     # Slow Navidrome answers the Home page reuses for a short while (api/home.py).
     starred_memo: Memo[SearchResult] = field(default_factory=lambda: Memo(STARRED_TTL_S))
     on_repeat_memo: Memo[list[Song]] = field(default_factory=lambda: Memo(ON_REPEAT_TTL_S))
+    # Lists only Navidrome's own API gives, with fallbacks for other servers.
+    library: Library = field(init=False)
 
     @classmethod
     def build(cls, settings: Settings) -> AppContext:
@@ -150,6 +153,13 @@ class AppContext:
 
         subsonic.on_credentials_state = credentials_state
         native.on_rejected = lambda: subsonic.set_credentials_rejected(True)
+        ctx.library = Library(subsonic, native, lambda: ctx.starred_memo.get(subsonic.get_starred))
+
+        def server_type(kind: str) -> None:
+            log.info("Music server: %s", kind or "Subsonic")
+            hub.publish("server", ctx.server_snapshot)
+
+        subsonic.on_server_type = server_type
         return ctx
 
     async def open(self) -> None:
@@ -182,7 +192,11 @@ class AppContext:
         return {"navidrome": navidrome, "access": self.config.access_mode is None}
 
     def server_snapshot(self) -> dict:
-        return {"navidrome_rejected": self.subsonic.credentials_rejected}
+        return {
+            "navidrome_rejected": self.subsonic.credentials_rejected,
+            "server_type": self.subsonic.server_type,
+            "capabilities": capabilities(self.subsonic.server_type),
+        }
 
     def player_snapshot(self) -> dict:
         uuid = self.coordinator.device_uuid

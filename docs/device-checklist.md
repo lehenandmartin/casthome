@@ -80,7 +80,7 @@ Do this once per browser below, in light and dark mode.
       device*, and Play resumes where it was.
 - [ ] Start something from the Google Home app or a phone: CastHome shows
       *Another app is now using the Cast device* and stops.
-- [ ] Scrobbles reach Navidrome (if scrobbling is on).
+- [ ] Scrobbles reach the music server (if scrobbling is on).
 
 ### A speaker group
 

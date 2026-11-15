@@ -429,3 +429,10 @@ img.fade-in {
     transition: none !important;
   }
 }
+
+/* No cover (servers other than Navidrome may have none): show the grey
+   placeholder behind the image, not the browser's broken-image icon. */
+img:not([src]),
+img[src=''] {
+  visibility: hidden;
+}

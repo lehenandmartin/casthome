@@ -1,7 +1,7 @@
 # Configuration
 
 Most of CastHome is configured from the browser: the first visit asks for the
-Navidrome connection and how to protect CastHome, then **Settings** covers the
+music server connection and how to protect CastHome, then **Settings** covers the
 rest. This page covers installation details, environment variables, access
 modes, reverse proxies and sessions.
 
@@ -11,6 +11,7 @@ modes, reverse proxies and sessions.
 - [Access](#access)
 - [Behind a reverse proxy](#behind-a-reverse-proxy)
 - [Sessions](#sessions)
+- [Other Subsonic servers](#other-subsonic-servers)
 
 ## Installation details
 
@@ -59,29 +60,29 @@ docker compose pull && docker compose up -d
 
 ## Environment variables
 
-The Navidrome connection, access and playback options are set in the browser
+The music server connection, access and playback options are set in the browser
 and apply from the next track, without a restart. Environment variables are
 optional, in `.env` or the container environment; see
-[`.env.example`](../.env.example). A Navidrome value set there wins over the
+[`.env.example`](../.env.example). A server value set there wins over the
 one saved from the browser and shows as locked in Settings (handy for
 scripted installs).
 
 | Variable | Purpose |
 |---|---|
-| `NAVIDROME_URL` | Navidrome URL used by the backend. |
-| `NAVIDROME_PUBLIC_URL_FOR_CAST` | Navidrome URL used by the Cast devices (defaults to `NAVIDROME_URL`). LAN IP or LAN-resolvable name, never `localhost` or a container name. |
-| `NAVIDROME_USERNAME`, `NAVIDROME_PASSWORD` | The Navidrome account to play with. |
-| `APP_SECRET_KEY` | Encryption key for the stored Navidrome password (≥ 32 chars). By default one is generated into `data/secret.key`; keep that file with the database. |
+| `NAVIDROME_URL` | Music server URL used by the backend (Navidrome or another Subsonic server). |
+| `NAVIDROME_PUBLIC_URL_FOR_CAST` | Music server URL used by the Cast devices (defaults to `NAVIDROME_URL`). LAN IP or LAN-resolvable name, never `localhost` or a container name. |
+| `NAVIDROME_USERNAME`, `NAVIDROME_PASSWORD` | The music server account to play with. |
+| `APP_SECRET_KEY` | Encryption key for the stored music server password (≥ 32 chars). By default one is generated into `data/secret.key`; keep that file with the database. |
 | `PORT` | Listening port (default `4577`). |
 | `PUID`, `PGID` | User and group CastHome runs as (default `1000`). |
 | `COOKIE_SECURE` | `true` when CastHome is behind HTTPS. |
 | `FORWARDED_ALLOW_IPS` | Reverse proxies trusted to give the visitor's address (IPs or networks, comma-separated; default `127.0.0.1,::1`). See [Behind a reverse proxy](#behind-a-reverse-proxy). |
 | `SESSION_REMEMBER_DAYS` / `SESSION_SHORT_HOURS` | Session lifetimes (both sliding). |
-| `STREAM_FORMAT`, `STREAM_MAX_BITRATE` | `raw` (default) streams original files; otherwise a Navidrome transcoding format (`mp3`, `aac`, `opus`) and a limit in kbps. Also in Settings. |
+| `STREAM_FORMAT`, `STREAM_MAX_BITRATE` | `raw` (default) streams original files; otherwise a transcoding format of the server (`mp3`, `aac`, `opus`) and a limit in kbps. Also in Settings. |
 | `TRANSCODE_FALLBACK_FORMAT` | Format for files Cast cannot play, and retry format after a playback error (default `mp3`). |
 | `CAST_PRELOAD_NEXT` | On by default: hand the next track to the device 20 s before the end of the current one to shorten the gap. `false` disables it. Also in Settings. |
 | `CAST_KNOWN_HOSTS` | Cast device IPs, when mDNS is blocked. Also in Settings. |
-| `SCROBBLE` | On by default: report plays to Navidrome ("now playing" and scrobbles). `false` disables it. Also in Settings. |
+| `SCROBBLE` | On by default: report plays to the music server ("now playing" and scrobbles). `false` disables it. Also in Settings. |
 | `SHOW_RATINGS` | On by default: show the 5-star ratings (album pages, action menus) on every device. `false` hides them. Also in Settings. |
 
 ## Access
@@ -98,9 +99,9 @@ current CastHome password is asked first):
 Setting a new password signs every other device out. Sign-in attempts are
 rate-limited per address.
 
-The CastHome password is separate from the Navidrome one. If Navidrome later
+The CastHome password is separate from the music server's. If the server later
 refuses the saved password (it was changed there), you stay signed in to
-CastHome: a banner asks you to update it in **Settings → Navidrome**, where
+CastHome: a banner asks you to update it in **Settings → Music server**, where
 the connection can be tested before saving. The saved password is only ever
 sent to the server and account it was saved for; pointing CastHome at another
 one asks for the password again.
@@ -142,3 +143,25 @@ Behind HTTPS, also set `COOKIE_SECURE: "true"`.
 - Signed-in devices are listed in Settings, where each can be signed out,
   alone or all others at once, effective immediately (not shown with **No
   password**).
+
+## Other Subsonic servers
+
+CastHome is made for Navidrome (0.50 or later), but works with any server
+that speaks the Subsonic API and accepts token sign-in (`t` and `s`
+parameters), such as Gonic (tested). It recognises the server from its answers;
+with a server other than Navidrome, what needs Navidrome's own API is left
+out:
+
+| Feature | Without Navidrome |
+|---|---|
+| **Tracks** page (every track, sorted) | Hidden: the Subsonic API cannot list every track. Favorite tracks still open from Home and artist pages. |
+| Favorite tracks and albums | From `getStarred2`, sorted by CastHome. Sorts by play count or last play depend on what the server reports. |
+| *On repeat* (Home) | Hidden: it needs the last play date of each track. |
+| *Popular* (artist page) | Only when the server answers `getTopSongs`. |
+| Radio | Depends on the server's `getSimilarSongs`/`getSimilarSongs2`; some servers have none. |
+
+The variables keep their `NAVIDROME_` names whatever the server.
+
+The Cast devices stream with a token URL, so a server or account that refuses
+token sign-in (an LDAP user, for example) cannot be used: the connection test
+says so.

@@ -107,7 +107,7 @@
   <aside class="sidebar">
     <div class="brand"><Icon name="cast" size={24} />{t('app.name')}</div>
     <nav>
-      {#each SIDEBAR as item (item.name)}
+      {#each SIDEBAR.filter((i) => i.name !== 'tracks' || store.capabilities.all_tracks) as item (item.name)}
         <a href={item.href} class:active={section === item.name}>
           <Icon name={item.icon} size={20} />{t(item.label)}
         </a>
@@ -148,7 +148,7 @@
         {:else if route.name === 'playlists'}
           <Playlists />
         {:else if route.name === 'tracks'}
-          <Tracks fav={favOnly} artist={tracksArtist} artistName={tracksArtistName} />
+          <Tracks fav={favOnly || !store.capabilities.all_tracks} artist={tracksArtist} artistName={tracksArtistName} />
         {:else if route.name === 'artists'}
           <Artists fav={favOnly} />
         {:else if route.name === 'genres'}

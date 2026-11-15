@@ -33,7 +33,7 @@ Cast device continues meanwhile; the app catches up when it reconnects.
 
 **Some files skip.** Cast cannot play WMA, APE, ALAC, DSD or > 96 kHz files.
 CastHome transcodes those (and retries after an error) with
-`TRANSCODE_FALLBACK_FORMAT`; make sure transcoding (ffmpeg) works in Navidrome.
+`TRANSCODE_FALLBACK_FORMAT`; make sure transcoding (ffmpeg) works on the music server.
 
 **"Open at home" asks for the password at home.** CastHome is behind a reverse
 proxy it does not trust. See

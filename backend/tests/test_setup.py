@@ -235,7 +235,7 @@ async def test_rejected_navidrome_password_keeps_browsers_signed_in(app_factory)
         await ctx.credentials.set_password("changed-on-navidrome")
         r = await http.get("/api/playlists")
         assert r.status_code == 502 and r.json()["code"] == "navidrome_credentials_rejected"
-        assert ctx.server_snapshot() == {"navidrome_rejected": True}
+        assert ctx.server_snapshot()["navidrome_rejected"] is True
         assert (await http.get("/api/auth/me")).status_code == 200
 
 
