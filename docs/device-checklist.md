@@ -1,7 +1,7 @@
 # Device checklist
 
 What the automated tests cannot see: real browsers, real phones, real Cast
-devices. Run it before tagging a release (see *Releases* in the README), or
+devices. Run it before tagging a release (see *Releases* in [CONTRIBUTING](../CONTRIBUTING.md#releases)), or
 after a change to playback, navigation or the layout. About 20 minutes.
 
 Copy the list into the release notes or an issue and tick as you go. A failed
