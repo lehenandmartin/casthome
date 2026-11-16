@@ -352,8 +352,14 @@ class PlaybackCoordinator(DeviceEvents):
         last_refresh = self._clock()
         while True:
             await asyncio.sleep(STATUS_POLL_INTERVAL_S)
-            if self.status == Status.STOPPED and self._clock() - last_refresh >= REMOTE_REFRESH_INTERVAL_S:
-                # Idle: pick up a play queue saved by another Subsonic client.
+            if (
+                self.status == Status.STOPPED
+                and self.has_viewers()
+                and self._clock() - last_refresh >= REMOTE_REFRESH_INTERVAL_S
+            ):
+                # Idle with a screen open: pick up a play queue saved by another
+                # Subsonic client. With none open, Navidrome is left alone (a
+                # screen opening checks at once, see api/ws.py).
                 last_refresh = self._clock()
                 await self.refresh_from_navidrome()
             try:

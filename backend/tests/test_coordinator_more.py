@@ -291,6 +291,18 @@ async def test_status_poll_picks_up_a_queue_saved_elsewhere_when_idle(h, monkeyp
     assert len(h.c.queue) == 4
 
 
+async def test_no_idle_check_of_navidrome_with_no_screen_open(h, monkeypatch):
+    monkeypatch.setattr(coordinator_module, "STATUS_POLL_INTERVAL_S", 0.001)
+    monkeypatch.setattr(coordinator_module, "REMOTE_REFRESH_INTERVAL_S", 0)
+    h.c._store = FlakyStore(elsewhere=loaded(n=4))
+    h.c.has_viewers = lambda: False
+    for task in h.c._tasks:
+        task.cancel()
+    await h.c.start()
+    await asyncio.sleep(0.05)
+    assert len(h.c.queue) == 0
+
+
 async def test_tracks_dropped_on_the_queue_go_where_they_were_dropped(h):
     await h.c.play_songs(songs(4), 0)
     loads = len(h.target.loads)

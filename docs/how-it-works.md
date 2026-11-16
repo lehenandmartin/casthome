@@ -19,8 +19,10 @@ Browser ◀── WebSocket: load / play / pause … ── CastHome
   every browser closed.
 - **The music server stays the source of truth.** The queue *is* its play
   queue (`savePlayQueue`), so other Subsonic clients can resume it, and it is
-  re-read every minute while idle, so a queue saved by another client is
-  picked up. No second library, no indexing.
+  re-read when a CastHome screen opens, then every minute while idle with a
+  screen open, so a queue saved by another client is picked up. With no
+  screen open and nothing playing, CastHome does not call the music server.
+  No second library, no indexing.
 
 ## Audio and credentials
 

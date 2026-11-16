@@ -65,6 +65,9 @@ class CoordinatorCore:
         self._media = media
         self._store = store
         self.notifier = notifier or Notifier()
+        # Is a CastHome screen open? The idle check for a queue saved elsewhere
+        # only runs then: each call shows CastHome as "seen" in Navidrome.
+        self.has_viewers: Callable[[], bool] = lambda: True
         self._clock = clock
 
         self.queue: QueueModel[Song] = QueueModel()

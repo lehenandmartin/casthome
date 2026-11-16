@@ -138,6 +138,7 @@ class AppContext:
             coordinator.on_devices_changed({d.uuid for d in cast.devices})
 
         cast.on_devices_changed = devices_changed
+        coordinator.has_viewers = lambda: hub.client_count > 0
 
         def client_gone(client_id: str) -> None:
             target = coordinator.target
