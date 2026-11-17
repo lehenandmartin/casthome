@@ -147,7 +147,7 @@
 <style>
   .card.form {
     display: grid;
-    gap: 14px;
+    gap: 12px;
     padding: 16px;
     margin-top: 8px;
     border-radius: 8px;
@@ -165,21 +165,21 @@
   }
   label > span {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   .row + small {
     margin-top: -8px;
   }
   small {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
   }
   .check {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: flex-start;
   }
   .check input {
-    margin-top: 3px;
+    margin-top: 4px;
     accent-color: var(--accent);
   }
   .check .text {
@@ -187,7 +187,7 @@
     gap: 2px;
   }
   .check strong {
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     font-weight: 600; /* same as the other field labels */
   }
   .buttons {

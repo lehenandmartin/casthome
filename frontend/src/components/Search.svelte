@@ -96,7 +96,7 @@
   }
   input {
     width: 100%;
-    font-size: 1.05rem;
+    font-size: var(--text-lg);
   }
   h3 {
     margin: 20px 0 8px;

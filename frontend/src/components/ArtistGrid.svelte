@@ -79,7 +79,7 @@
   }
   strong {
     max-width: 100%;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -108,7 +108,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     padding: 6px 12px;
     min-height: 34px;
   }
@@ -135,11 +135,11 @@
   .menu button {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: none;
     border-radius: 8px;
     text-align: left;
-    padding: 10px 12px;
+    padding: 12px 12px;
   }
   .menu button:hover {
     background: var(--surface-2);

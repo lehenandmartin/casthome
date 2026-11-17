@@ -224,11 +224,11 @@
   .sk-heading {
     width: 180px;
     height: 1.15rem;
-    margin: 30px 0 12px;
+    margin: 32px 0 12px;
   }
   .sk-row {
     display: flex;
-    gap: 14px;
+    gap: 12px;
     overflow: hidden;
   }
   .sk-row .card {
@@ -251,7 +251,7 @@
   @media (min-width: 900px) {
     .tiles {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      gap: 8px;
     }
   }
   .tile {
@@ -267,7 +267,7 @@
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     color: inherit;
     text-decoration: none;
@@ -291,7 +291,7 @@
   }
   .tile-label {
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     line-height: 1.2;
     overflow: hidden;
     display: -webkit-box;
@@ -352,11 +352,11 @@
     border-radius: 50%;
   }
   .card strong {
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   /* --- on repeat --- */
   .repeat {
-    margin-top: 26px;
+    margin-top: 24px;
   }
   .repeat-head {
     display: flex;
@@ -366,18 +366,18 @@
   }
   .repeat-head h3 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
   }
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     padding: 6px 12px;
     min-height: 32px;
   }
   .hint {
     margin: 2px 0 6px;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
   }
 </style>

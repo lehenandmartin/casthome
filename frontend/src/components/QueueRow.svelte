@@ -84,7 +84,7 @@
     min-height: 0;
   }
   .row.no-handle {
-    padding-left: 10px;
+    padding-left: 12px;
   }
   img,
   .thumb {
@@ -122,7 +122,7 @@
       height: 52px;
     }
     .row {
-      padding-left: 10px;
+      padding-left: 12px;
     }
   }
 </style>

@@ -27,7 +27,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   .fav.on {
     background: color-mix(in srgb, var(--star) 18%, transparent);

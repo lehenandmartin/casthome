@@ -69,7 +69,7 @@
 <style>
   .fields {
     display: grid;
-    gap: 14px;
+    gap: 12px;
   }
   .modes {
     display: grid;
@@ -90,7 +90,7 @@
     background: var(--accent-soft);
   }
   .mode input {
-    margin-top: 3px;
+    margin-top: 4px;
     accent-color: var(--accent);
   }
   .text {
@@ -98,7 +98,7 @@
     gap: 2px;
   }
   .text .muted {
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
   }
   .note {
     margin-top: 4px;
@@ -109,13 +109,13 @@
   }
   label:not(.mode) > span {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   .error {
     color: var(--danger);
   }
   .warning {
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     color: var(--danger);
   }
 </style>

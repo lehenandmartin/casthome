@@ -165,7 +165,7 @@
   }
   .sk-meta {
     width: 100%;
-    gap: 10px;
+    gap: 8px;
   }
   .sk-title {
     width: min(320px, 70%);
@@ -177,14 +177,14 @@
     border-radius: 999px;
   }
   .disc {
-    margin: 18px 8px 4px;
-    font-size: 0.8rem;
+    margin: 16px 8px 4px;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
   .more-title {
-    margin: 28px 0 10px;
-    font-size: 1.15rem;
+    margin: 28px 0 12px;
+    font-size: var(--text-lg);
   }
   header {
     display: grid;
@@ -216,7 +216,7 @@
     min-width: 0;
   }
   .eyebrow {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
@@ -236,7 +236,7 @@
     text-decoration: underline;
   }
   .actions {
-    margin-top: 10px;
+    margin-top: 12px;
     align-items: center;
     justify-content: center;
   }
@@ -244,7 +244,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 22px;
+    padding: 12px 24px;
   }
   .ring {
     background: var(--surface-2);

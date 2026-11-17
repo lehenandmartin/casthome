@@ -101,7 +101,7 @@
   }
   .badge {
     margin-left: 6px;
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     padding: 2px 8px;
     border-radius: 999px;
     background: var(--accent);

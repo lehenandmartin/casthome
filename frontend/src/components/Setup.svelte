@@ -145,7 +145,7 @@
   .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     font-weight: 600;
     color: var(--text);
   }
@@ -161,7 +161,7 @@
   }
   h2 {
     margin: 0 0 4px;
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
   }
   section > p {
     margin: 0 0 16px;
@@ -170,7 +170,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 14px;
+    margin-top: 16px;
   }
   .error {
     color: var(--danger);

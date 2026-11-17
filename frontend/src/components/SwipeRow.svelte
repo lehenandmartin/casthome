@@ -148,11 +148,11 @@
     inset: 0;
     display: flex;
     align-items: center;
-    padding: 0 18px;
+    padding: 0 16px;
     background: var(--surface-3);
     color: var(--text);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     transition: background 0.12s;
   }
   .bg.to-left {

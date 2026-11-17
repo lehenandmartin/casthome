@@ -42,8 +42,8 @@
     max-width: 100%;
     min-width: 0;
     background: var(--surface-2);
-    font-size: 0.9rem;
-    padding: 6px 14px;
+    font-size: var(--text-sm);
+    padding: 6px 16px;
   }
   .glyph {
     position: relative;

@@ -34,18 +34,18 @@
 
 <style>
   .row {
-    margin: 26px 0 0;
+    margin: 24px 0 0;
   }
   .head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
   h3 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
   }
   .tools {
     display: flex;
@@ -54,7 +54,7 @@
   }
   .see-all {
     color: var(--muted);
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     text-decoration: none;
     margin-right: 4px;
@@ -74,7 +74,7 @@
   }
   .track {
     display: flex;
-    gap: 14px;
+    gap: 12px;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;

@@ -261,7 +261,7 @@
     min-width: 0;
   }
   .eyebrow {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
@@ -276,7 +276,7 @@
     margin: 0;
   }
   .hero .actions {
-    margin: 10px 0 0;
+    margin: 12px 0 0;
     align-items: center;
     justify-content: center;
   }
@@ -284,7 +284,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 22px;
+    padding: 12px 24px;
   }
   .ring {
     background: var(--surface-2);
@@ -314,11 +314,11 @@
   }
   h3 {
     margin: 24px 0 8px;
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
   }
   .hint {
     margin: -4px 0 8px;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
   }
   .actions {
     display: flex;
@@ -335,7 +335,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
+    padding: 12px 12px;
     border-radius: 10px;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -361,7 +361,7 @@
     min-width: 0;
   }
   .chevron {
-    font-size: 1.5rem;
+    font-size: var(--text-xl);
     line-height: 1;
   }
   .link {
@@ -370,7 +370,7 @@
     min-height: 0;
     color: var(--muted);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   .link:hover {
     color: var(--text);

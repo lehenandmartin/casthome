@@ -142,7 +142,7 @@
     align-items: center;
     gap: 2px;
     height: var(--player-h);
-    padding: 0 8px 0 10px;
+    padding: 0 8px 0 12px;
   }
 
 
@@ -162,7 +162,7 @@
     min-width: 0;
     display: grid;
     gap: 2px;
-    padding: 5px 8px;
+    padding: 4px 8px;
     border-radius: 8px;
     background: #141312;
     border: 1px solid rgb(255 255 255 / 0.06);
@@ -215,7 +215,7 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: none;
     padding: 0;
     border-radius: 8px;

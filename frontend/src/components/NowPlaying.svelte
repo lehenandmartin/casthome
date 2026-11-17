@@ -176,8 +176,11 @@
       <SeekBar dots showTimes={false} bind:shown />
       <div class="line small">
         <span aria-hidden="true">{formatTime(shown)}</span>
-        <button class="lcd-btn" aria-label={showTotal ? t('lcd.showRemaining') : t('lcd.showTotal')} onclick={toggleTotal}>
-          {showTotal ? formatTime(duration) : `-${formatTime(Math.max(0, duration - shown))}`}
+        <!-- Its name starts with the time shown (WCAG 2.5.3), then what a press does. -->
+        <button class="lcd-btn" title={showTotal ? t('lcd.showRemaining') : t('lcd.showTotal')} onclick={toggleTotal}>
+          {showTotal ? formatTime(duration) : `-${formatTime(Math.max(0, duration - shown))}`}<span class="sr-only"
+            >, {showTotal ? t('lcd.showRemaining') : t('lcd.showTotal')}</span
+          >
         </button>
       </div>
     </div>
@@ -186,7 +189,8 @@
     <PlayerControls size="large" />
 
     <div class="bottom">
-      <DeviceButton />
+      <!-- The device's name is on the display (which opens the picker too): the icon is enough. -->
+      <DeviceButton compact />
       <div class="vol"><VolumeSlider /></div>
       <!-- Under the repeat button, as in Spotify. -->
       <button class="icon-btn queue-btn" aria-label={t('nav.queue')} title={t('nav.queue')} onclick={() => store.openQueue()}>
@@ -214,7 +218,7 @@
     background: var(--bg);
     /* The blurred backdrop overflows on purpose: it never makes the page scroll. */
     overflow: hidden;
-    padding: calc(env(safe-area-inset-top) + 10px) 0 env(safe-area-inset-bottom);
+    padding: calc(env(safe-area-inset-top) + 12px) 0 env(safe-area-inset-bottom);
     transition: transform 0.05s;
     animation: rise 0.22s ease-out;
   }
@@ -289,8 +293,9 @@
     font-size: 14px;
   }
 
+  /* Not lit (this browser): dimmed like the artist line, still readable. */
   .display .source {
-    color: var(--ghost);
+    color: color-mix(in srgb, var(--lit) 62%, transparent);
     min-width: 0;
   }
   .display .source.lit {
@@ -418,7 +423,7 @@
     line-height: 1.2;
   }
   .eyebrow {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
@@ -431,7 +436,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 14px;
+    gap: 12px;
     min-height: 0;
     /* Only a very short screen (a phone on its side) scrolls the content. */
     overflow: hidden auto;
@@ -464,7 +469,7 @@
 
 
   .status {
-    margin: -10px 0 0;
+    margin: -12px 0 0;
     text-align: center;
   }
   .bottom {
@@ -492,11 +497,11 @@
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     text-align: left;
     border-radius: 12px;
     background: color-mix(in srgb, var(--surface) 70%, transparent);
-    padding: 10px 14px;
+    padding: 12px 16px;
     min-width: 0;
   }
 </style>

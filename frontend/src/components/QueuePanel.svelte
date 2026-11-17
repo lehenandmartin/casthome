@@ -80,7 +80,7 @@
     display: flex;
     flex-direction: column;
     background: var(--bg);
-    padding-top: calc(env(safe-area-inset-top) + 10px);
+    padding-top: calc(env(safe-area-inset-top) + 12px);
     animation: rise 0.22s ease-out;
     transition: transform 0.05s;
   }
@@ -99,7 +99,7 @@
   }
   .grab-title {
     text-align: center;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
@@ -134,11 +134,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 12px 0 20px;
+    padding: 16px 12px 0 20px;
   }
   .side-head h2 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
   }
   .side .scroll {
     padding: 0 12px 16px 16px;

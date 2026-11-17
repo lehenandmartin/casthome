@@ -158,7 +158,7 @@
     margin-bottom: 2px;
   }
   .count {
-    margin: 0 0 10px;
+    margin: 0 0 12px;
   }
   .tabs {
     display: flex;
@@ -174,7 +174,7 @@
   }
   .tabs button {
     flex: none;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   .tabs .active {
     background: var(--accent);

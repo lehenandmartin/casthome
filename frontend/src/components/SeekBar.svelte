@@ -104,7 +104,7 @@
   .times {
     display: flex;
     justify-content: space-between;
-    font-size: 0.78rem;
+    font-size: var(--text-xs);
     font-variant-numeric: tabular-nums;
     margin-top: -2px;
   }

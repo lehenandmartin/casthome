@@ -155,11 +155,11 @@
   }
   h3 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: var(--text-lg);
   }
   .section {
     margin: 16px 4px 4px;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
@@ -180,11 +180,11 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     text-align: left;
     background: none;
     border-radius: 12px;
-    padding: 10px 12px;
+    padding: 12px 12px;
     min-height: 60px;
   }
   .choice:hover:not(:disabled) {
@@ -220,30 +220,30 @@
     vertical-align: 1px;
   }
   .detail {
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     color: var(--muted);
   }
   .check {
     color: var(--accent);
   }
   .vol {
-    padding: 0 16px 10px 66px;
+    padding: 0 16px 12px 64px;
   }
   .disconnect {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 0 12px 10px 66px;
-    padding: 6px 14px;
+    margin: 0 12px 12px 64px;
+    padding: 6px 16px;
     min-height: 34px;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     background: var(--surface);
     color: var(--danger);
   }
   .searching {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin: 8px 4px;
   }
   .spinner {

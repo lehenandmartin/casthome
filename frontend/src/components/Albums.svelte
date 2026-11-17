@@ -131,7 +131,7 @@
   .tabs button {
     flex: none;
     border-radius: 999px;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   .tabs .active {
     background: var(--accent);

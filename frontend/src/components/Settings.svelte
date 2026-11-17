@@ -275,7 +275,7 @@
   }
   .block h3 {
     margin: 0 0 4px;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
@@ -291,7 +291,7 @@
   }
   .card.form {
     display: grid;
-    gap: 14px;
+    gap: 12px;
     padding: 16px;
   }
   .avatar {
@@ -334,12 +334,12 @@
   }
   label > span {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   .intro,
   .note {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
   }
   .note {
     margin-top: 8px;
@@ -349,7 +349,7 @@
   }
   .alert {
     margin: 8px 0 0;
-    padding: 10px 12px;
+    padding: 12px 12px;
     border-radius: 8px;
     border: 1px solid var(--danger);
   }

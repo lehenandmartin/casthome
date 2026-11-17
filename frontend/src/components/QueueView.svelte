@@ -318,14 +318,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 22px 0 8px;
-    font-size: 0.8rem;
+    margin: 24px 0 8px;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
   .radio-hint {
     margin: -4px 0 8px;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
   }
   .split {
     justify-content: space-between;
@@ -334,7 +334,7 @@
     background: none;
     min-height: 0;
     padding: 2px 8px;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
@@ -382,7 +382,7 @@
   }
   .button {
     display: inline-block;
-    padding: 9px 18px;
+    padding: 8px 16px;
     border-radius: 999px;
     text-decoration: none;
     font-weight: 600;
@@ -395,9 +395,9 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     text-align: left;
-    padding: 10px;
+    padding: 12px;
     border-radius: var(--radius);
     background: var(--accent-soft);
     min-height: 0;

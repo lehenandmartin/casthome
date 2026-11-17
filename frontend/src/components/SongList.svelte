@@ -104,12 +104,12 @@
     flex: 1;
     min-width: 0;
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
     text-align: left;
     background: none;
     border: 0;
-    padding: 10px 8px;
+    padding: 12px 8px;
   }
   .num {
     width: 2em;

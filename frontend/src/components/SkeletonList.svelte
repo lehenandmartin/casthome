@@ -38,7 +38,7 @@
   .text {
     flex: 1;
     display: grid;
-    gap: 7px;
+    gap: 8px;
   }
   .small {
     height: 0.75em;

@@ -92,7 +92,7 @@
 <style>
   .fields {
     display: grid;
-    gap: 14px;
+    gap: 12px;
   }
   label {
     display: grid;
@@ -100,19 +100,19 @@
   }
   label > span {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   small {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
   }
   summary {
     cursor: pointer;
     color: var(--muted);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     padding: 4px 0;
   }
   details[open] summary {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 </style>

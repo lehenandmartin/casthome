@@ -70,7 +70,7 @@
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    padding: 10px 8px;
+    padding: 12px 8px;
     border-radius: 6px;
     color: inherit;
     text-decoration: none;

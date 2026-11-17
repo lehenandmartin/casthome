@@ -54,8 +54,8 @@
   a {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 12px 14px;
+    gap: 12px;
+    padding: 12px 16px;
     text-decoration: none;
     color: var(--muted);
   }

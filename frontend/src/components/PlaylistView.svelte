@@ -145,7 +145,7 @@
   .sk-title {
     width: min(280px, 70%);
     height: 1.6rem;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
   .sk-pill {
     width: 100px;

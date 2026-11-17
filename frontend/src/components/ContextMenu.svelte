@@ -163,7 +163,7 @@
   .sheet-actions > * {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     background: none;
     border: 0;
     border-radius: 10px;
@@ -171,7 +171,7 @@
     text-align: left;
     text-decoration: none;
     color: inherit;
-    font-size: 1rem;
+    font-size: var(--text-md);
   }
   /* Mouse only: on touch screens the hover would stick to the entry under the
      finger that opened the menu with a long-press. */
@@ -208,10 +208,10 @@
     padding: 6px 8px 8px;
   }
   .popover .sheet-actions > * {
-    gap: 10px;
-    padding: 7px 8px;
+    gap: 8px;
+    padding: 8px 8px;
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
   .popover .sheet-actions > :focus-visible {
     background: var(--surface-2);

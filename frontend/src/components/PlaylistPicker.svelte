@@ -84,7 +84,7 @@
     text-align: left;
     background: none;
     border: 0;
-    padding: 10px 8px;
+    padding: 12px 8px;
     border-radius: 8px;
   }
   li button:hover {

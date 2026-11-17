@@ -256,7 +256,7 @@
     justify-content: space-between;
     gap: 8px 16px;
     margin-bottom: 20px;
-    padding: 12px 14px;
+    padding: 12px 16px;
     border-radius: 10px;
     border: 1px solid var(--danger);
     color: var(--text);
@@ -270,7 +270,7 @@
 
   /* A count, not an alert: quiet text that follows the row colour. */
   .badge {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-variant-numeric: tabular-nums;
     opacity: 0.75;
   }
@@ -297,7 +297,7 @@
     justify-items: center;
     align-content: center;
     gap: 2px;
-    font-size: 0.7rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     color: var(--muted);
     text-decoration: none;
@@ -330,9 +330,9 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       font-weight: 600;
-      font-size: 1.15rem;
+      font-size: var(--text-lg);
       padding: 0 12px 16px;
       color: var(--text);
     }
@@ -348,7 +348,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 12px;
+      padding: 8px 12px;
       border-radius: 10px;
       color: var(--muted);
       text-decoration: none;
@@ -363,7 +363,7 @@
       align-items: center;
       gap: 12px;
       width: 100%;
-      padding: 10px 12px;
+      padding: 8px 12px;
       border-radius: 10px;
       background: none;
       color: var(--muted);

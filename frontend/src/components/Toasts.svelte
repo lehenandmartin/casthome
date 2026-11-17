@@ -28,7 +28,7 @@
   .toast {
     pointer-events: auto;
     max-width: 480px;
-    padding: 10px 14px;
+    padding: 12px 16px;
     border-radius: 8px;
     border: 0;
     background: var(--surface-2);
