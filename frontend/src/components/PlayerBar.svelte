@@ -114,6 +114,7 @@
     right: 0;
     background: var(--surface);
     border-top: 1px solid var(--border);
+    box-shadow: var(--bar-shadow);
   }
   /* The cover set into the bar: the same lip and inner shadow as the display. */
   .well {
