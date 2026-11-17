@@ -3,8 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f3f3f0" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#131413" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3f3f0" />
+    <!-- The theme before the first paint, so a dark page never flashes light:
+         this device's choice, else the system's (kept up to date by
+         src/lib/theme.svelte.ts). -->
+    <script>
+      (function () {
+        var pref;
+        try {
+          pref = localStorage.getItem('casthome.theme');
+        } catch (e) {}
+        var dark = pref === 'dark' || (pref !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#131413' : '#f3f3f0';
+      })();
+    </script>
     <meta name="description" content="Play your Navidrome library on Google Cast devices." />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- The mark on the LCD's grey-green; the PNG for browsers without SVG favicons. -->

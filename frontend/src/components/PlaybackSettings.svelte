@@ -75,54 +75,57 @@
   }
 </script>
 
-<form class="card form" onsubmit={save}>
-  <div class="row">
-    <label>
-      <span>{t('playback.format')}</span>
-      <select bind:value={format} disabled={isLocked('stream_format')}>
-        {#each FORMATS as f (f)}<option value={f}>{t(`playback.format.${f}`)}</option>{/each}
-      </select>
-    </label>
-    {#if format !== 'raw'}
+<!-- One card, its rows split by hairlines, like the rest of Settings. -->
+<form class="group" onsubmit={save}>
+  <div class="item">
+    <div class="row">
       <label>
-        <span>{t('playback.bitrate')}</span>
-        <select bind:value={bitrate} disabled={isLocked('max_bitrate')}>
-          {#each BITRATES as b (b)}
-            <option value={b}>{b === 0 ? t('playback.bitrateNone') : t('playback.kbps', { n: b })}</option>
-          {/each}
+        <span>{t('playback.format')}</span>
+        <select bind:value={format} disabled={isLocked('stream_format')}>
+          {#each FORMATS as f (f)}<option value={f}>{t(`playback.format.${f}`)}</option>{/each}
         </select>
       </label>
+      {#if format !== 'raw'}
+        <label>
+          <span>{t('playback.bitrate')}</span>
+          <select bind:value={bitrate} disabled={isLocked('max_bitrate')}>
+            {#each BITRATES as b (b)}
+              <option value={b}>{b === 0 ? t('playback.bitrateNone') : t('playback.kbps', { n: b })}</option>
+            {/each}
+          </select>
+        </label>
+      {/if}
+    </div>
+    {#if format !== 'raw' || isLocked('stream_format')}
+      <small class="muted">{isLocked('stream_format') ? t('navidrome.locked') : t('playback.formatHint')}</small>
     {/if}
   </div>
-  <small class="muted">
-    {isLocked('stream_format') ? t('navidrome.locked') : t('playback.formatHint')}
-  </small>
 
-  <label class="check">
+  <label class="item check">
     <input type="checkbox" bind:checked={preload} disabled={isLocked('preload_next')} />
     <span class="text">
-      <strong>{t('playback.preload')}</strong>
+      <span class="name">{t('playback.preload')}</span>
       <small class="muted">{isLocked('preload_next') ? t('navidrome.locked') : t('playback.preloadHint')}</small>
     </span>
   </label>
 
-  <label class="check">
+  <label class="item check">
     <input type="checkbox" bind:checked={scrobble} disabled={isLocked('scrobble')} />
     <span class="text">
-      <strong>{t('playback.scrobble')}</strong>
+      <span class="name">{t('playback.scrobble')}</span>
       <small class="muted">{isLocked('scrobble') ? t('navidrome.locked') : t('playback.scrobbleHint')}</small>
     </span>
   </label>
 
-  <label class="check">
+  <label class="item check">
     <input type="checkbox" bind:checked={showRatings} disabled={isLocked('show_ratings')} />
     <span class="text">
-      <strong>{t('playback.showRatings')}</strong>
+      <span class="name">{t('playback.showRatings')}</span>
       <small class="muted">{isLocked('show_ratings') ? t('navidrome.locked') : t('playback.showRatingsHint')}</small>
     </span>
   </label>
 
-  <label>
+  <label class="item">
     <span>{t('playback.hosts')}</span>
     <input
       type="text"
@@ -135,24 +138,32 @@
     <small class="muted">{isLocked('known_hosts') ? t('navidrome.locked') : t('playback.hostsHint')}</small>
   </label>
 
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
-  <div class="buttons">
-    <small class="muted">{dirty ? t('playback.appliesNext') : ''}</small>
-    <button class="primary" type="submit" disabled={busy || !dirty}>
-      {busy ? t('settings.saving') : t('settings.save')}
-    </button>
-  </div>
+  {#if error}<p class="item error" role="alert">{error}</p>{/if}
+  <!-- Save appears once something changed. -->
+  {#if dirty || busy}
+    <div class="item buttons">
+      <small class="muted">{t('playback.appliesNext')}</small>
+      <button class="primary" type="submit" disabled={busy}>
+        {busy ? t('settings.saving') : t('settings.save')}
+      </button>
+    </div>
+  {/if}
 </form>
 
 <style>
-  .card.form {
-    display: grid;
-    gap: 12px;
-    padding: 16px;
-    margin-top: 8px;
-    border-radius: 8px;
+  .group {
+    border-radius: 12px;
     background: var(--surface);
     border: 1px solid var(--border);
+  }
+  .item {
+    display: grid;
+    gap: 6px;
+    padding: 12px 16px;
+    margin: 0;
+  }
+  .item + .item {
+    border-top: 1px solid var(--border);
   }
   .row {
     display: grid;
@@ -163,32 +174,27 @@
     display: grid;
     gap: 6px;
   }
-  label > span {
-    font-weight: 600;
+  label > span,
+  .name {
+    font-weight: 500;
     font-size: var(--text-sm);
-  }
-  .row + small {
-    margin-top: -8px;
   }
   small {
     font-size: var(--text-xs);
   }
   .check {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: flex-start;
+    cursor: pointer;
   }
   .check input {
-    margin-top: 4px;
+    margin-top: 3px;
     accent-color: var(--accent);
   }
   .check .text {
     display: grid;
     gap: 2px;
-  }
-  .check strong {
-    font-size: var(--text-sm);
-    font-weight: 600; /* same as the other field labels */
   }
   .buttons {
     display: flex;
@@ -198,6 +204,5 @@
   }
   .error {
     color: var(--danger);
-    margin: 0;
   }
 </style>

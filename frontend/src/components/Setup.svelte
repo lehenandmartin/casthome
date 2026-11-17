@@ -6,7 +6,6 @@
   import { store } from '../lib/store.svelte';
   import type { AccessMode, ClientInfo, LockedField, NavidromeForm } from '../lib/types';
   import AccessFields from './AccessFields.svelte';
-  import AppMark from './AppMark.svelte';
   import NavidromeFields from './NavidromeFields.svelte';
 
   type Step = 'navidrome' | 'access';
@@ -79,7 +78,6 @@
 <main class="setup">
   <form onsubmit={submit}>
     <header>
-      <div class="brand"><AppMark size={40} boot />{t('app.name')}</div>
       <h1>{t('setup.title')}</h1>
       {#if steps.length > 1}<p class="muted">{t('setup.step', { n: index + 1, total: steps.length })}</p>{/if}
     </header>
@@ -142,16 +140,8 @@
     display: grid;
     gap: 6px;
   }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 600;
-    font-size: var(--text-lg);
-    color: var(--text);
-  }
   h1 {
-    margin: 4px 0 0;
+    margin: 0;
   }
   header p {
     margin: 0;

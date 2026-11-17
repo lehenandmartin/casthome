@@ -4,6 +4,7 @@ import './app.css';
 import { reportErrors } from './lib/errorReport';
 import { watchIntent } from './lib/intent';
 import { fadeInCovers } from './lib/fade';
+import './lib/theme.svelte';
 
 reportErrors();
 

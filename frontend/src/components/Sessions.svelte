@@ -41,10 +41,13 @@
 </script>
 
 <section>
-  {#if !embedded}<h2>{t('sessions.title')}</h2>{/if}
-  <p class="muted intro">{t('sessions.intro')}</p>
+  {#if !embedded}
+    <h2>{t('sessions.title')}</h2>
+    <p class="muted intro">{t('sessions.intro')}</p>
+  {/if}
 
-  <ul role="list">
+  <!-- In Settings: one card, rows split by hairlines, one line of detail. -->
+  <ul role="list" class:embedded>
     {#each sessions as session (session.id)}
       <li>
         <div class="text">
@@ -55,11 +58,13 @@
           <span class="muted">
             {t('sessions.lastSeen', { date: fmt.format(session.last_seen_at * 1000) })} · {session.ip || '—'}
           </span>
-          <span class="muted">
-            {session.persistent
-              ? t('sessions.expiresSliding', { date: fmt.format(session.expires_at * 1000) })
-              : t('sessions.browserSession')}
-          </span>
+          {#if !embedded}
+            <span class="muted">
+              {session.persistent
+                ? t('sessions.expiresSliding', { date: fmt.format(session.expires_at * 1000) })
+                : t('sessions.browserSession')}
+            </span>
+          {/if}
         </div>
         {#if session.current}
           <!-- In Settings, this device signs out from the Account section above. -->
@@ -109,6 +114,28 @@
     vertical-align: middle;
     display: inline-block;
     white-space: nowrap;
+  }
+  ul.embedded {
+    margin: 0 0 12px;
+    gap: 0;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .embedded li {
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .embedded li + li {
+    border-top: 1px solid var(--border);
+  }
+  .embedded strong {
+    font-weight: 500;
+  }
+  .embedded .muted {
+    font-size: var(--text-sm);
   }
   button {
     flex: none;

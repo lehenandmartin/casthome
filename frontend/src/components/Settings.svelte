@@ -3,15 +3,18 @@
   import { ApiError, api } from '../lib/api';
   import { LANGUAGES, browserLanguage, languageState, setLanguage, t, tCode, type LanguagePref } from '../lib/i18n';
   import { store } from '../lib/store.svelte';
+  import { setTheme, themeState, type ThemePref } from '../lib/theme.svelte';
   import type { AccessMode, NavidromeForm, ServerSettings } from '../lib/types';
   import AccessFields from './AccessFields.svelte';
-  import AppMark from './AppMark.svelte';
+  import AppMark, { BOOT_END } from './AppMark.svelte';
   import Icon from './Icon.svelte';
   import NavidromeFields from './NavidromeFields.svelte';
   import PlaybackSettings from './PlaybackSettings.svelte';
   import Sessions from './Sessions.svelte';
 
   let settings = $state<ServerSettings | null>(null);
+  // How far the About screen's mark is in switching on (AppMark): its text follows.
+  let bootElapsed = $state(0);
 
   // Navidrome form
   let editingNavidrome = $state(false);
@@ -121,7 +124,6 @@
   const autoLanguage = browserLanguage();
 
   const MODE_LABEL = { password: 'access.password', lan: 'access.lan', open: 'access.open' } as const;
-  const MODE_DETAIL = { password: 'access.passwordDetail', lan: 'access.lanDetail', open: 'access.openDetail' } as const;
 
   const REPO_URL = 'https://github.com/lehenandmartin/casthome';
 
@@ -131,11 +133,28 @@
 <section>
   <h2>{t('settings.title')}</h2>
 
+  <!-- An LCD set into the case, like Now Playing's: the mark switching on,
+       the name and version (a link to the code, underlined), the credit. -->
+  <div class="about lcd lcd-screen recessed">
+    <AppMark size={56} boot bare bind:elapsed={bootElapsed} />
+    <span class="lines">
+      <a
+        class:off={bootElapsed < BOOT_END + 150}
+        href={REPO_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={t('settings.sourceCode') + (settings?.revision ? ` (${settings.revision})` : '')}
+        >CastHome{settings ? ` v${settings.version}` : ''}<span class="sr-only">, {t('settings.sourceCode')}</span></a
+      >
+      <span class="credit" class:off={bootElapsed < BOOT_END + 350}>{t('settings.credit')}</span>
+    </span>
+  </div>
+
   <section class="block">
     <h3>{t('settings.navidrome')}</h3>
     {#if store.navidromeRejected}<p class="alert" role="alert">{t('navidrome.rejected')}</p>{/if}
     {#if editingNavidrome && settings}
-      <form class="card form" onsubmit={saveNavidrome}>
+      <form class="group form" onsubmit={saveNavidrome}>
         <NavidromeFields bind:value={navidrome} locked={settings.locked} keepPassword={settings.navidrome.has_password} focusPublicUrl={publicUrlError} />
         {#if navidromeMessage}
           <p class:ok={navidromeMessage.ok} class:error={!navidromeMessage.ok} role="status">{navidromeMessage.text}</p>
@@ -154,13 +173,14 @@
         </div>
       </form>
     {:else}
-      <div class="card">
-        <span class="avatar"><Icon name="account" size={24} /></span>
-        <span class="text">
-          <strong>{settings?.navidrome.username ?? '…'}</strong>
-          <span class="muted ellipsis">{settings?.navidrome.url ?? t('settings.navidromeIntro')}</span>
-        </span>
-        <button onclick={editNavidrome} disabled={!settings}>{t('settings.edit')}</button>
+      <div class="group">
+        <div class="item">
+          <span class="text">
+            <strong class="ellipsis">{settings?.navidrome.username ?? '…'}</strong>
+            <span class="muted ellipsis">{settings?.navidrome.url ?? t('settings.navidromeIntro')}</span>
+          </span>
+          <button onclick={editNavidrome} disabled={!settings}>{t('settings.edit')}</button>
+        </div>
       </div>
     {/if}
   </section>
@@ -173,24 +193,9 @@
   {/if}
 
   <section class="block">
-    <h3>{t('settings.language')}</h3>
-    <div class="card language">
-      <select
-        value={languageState.pref}
-        onchange={(e) => setLanguage(e.currentTarget.value as LanguagePref)}
-        aria-label={t('settings.language')}
-      >
-        <option value="auto">{t('settings.languageAuto', { language: t(`language.${autoLanguage}`) })}</option>
-        {#each LANGUAGES as lang (lang)}<option value={lang}>{t(`language.${lang}`)}</option>{/each}
-      </select>
-      <small class="muted">{t('settings.languageHint')}</small>
-    </div>
-  </section>
-
-  <section class="block">
     <h3>{t('settings.access')}</h3>
     {#if editingAccess && settings}
-      <form class="card form" onsubmit={saveAccess}>
+      <form class="group form" onsubmit={saveAccess}>
         <p class="muted intro">{t('settings.accessIntro')}</p>
         <AccessFields
           bind:mode
@@ -218,30 +223,22 @@
         </div>
       </form>
     {:else}
-      <div class="card">
-        <span class="avatar"><Icon name={settings?.access.mode === 'open' ? 'unlock' : 'lock'} size={22} /></span>
-        <span class="text">
-          {#if settings}
-            <strong>{t(MODE_LABEL[settings.access.mode])}</strong>
-            <span class="muted">{t(MODE_DETAIL[settings.access.mode])}</span>
-          {:else}
-            <strong>…</strong>
-          {/if}
-        </span>
-        <button onclick={editAccess} disabled={!settings}>{t('settings.edit')}</button>
+      <div class="group">
+        <div class="item">
+          <Icon name={settings?.access.mode === 'open' ? 'unlock' : 'lock'} size={18} />
+          <strong class="text">{settings ? t(MODE_LABEL[settings.access.mode]) : '…'}</strong>
+          <button onclick={editAccess} disabled={!settings}>{t('settings.edit')}</button>
+        </div>
+        {#if store.me && !store.me.open_session}
+          <div class="item">
+            <Icon name="logout" size={18} />
+            <span class="text">{t('sessions.current')}</span>
+            <button onclick={signOut}>{t('nav.signOut')}</button>
+          </div>
+        {/if}
       </div>
       {#if settings?.access.mode === 'lan' && settings.untrusted_proxy}
         <p class="alert" role="alert">{t('access.untrustedProxy', { address: settings.client_address })}</p>
-      {/if}
-      {#if store.me && !store.me.open_session}
-        <div class="card">
-          <span class="text">
-            <strong>{t('sessions.current')}</strong>
-          </span>
-          <button onclick={signOut}><Icon name="logout" size={18} />{t('nav.signOut')}</button>
-        </div>
-      {:else if store.me?.open_session}
-        <p class="muted note">{t('settings.signedInOpen')}</p>
       {/if}
     {/if}
   </section>
@@ -253,72 +250,90 @@
     </section>
   {/if}
 
+  <!-- Kept on this device only, not on the server. -->
   <section class="block">
-    <!-- An LCD set into the case, like Now Playing's: the mark switching on,
-         the name and version (a link to the code, underlined), the credit. -->
-    <div class="about lcd lcd-screen recessed">
-      <AppMark size={56} boot bare />
-      <span class="lines">
-        <a
-          href={REPO_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={t('settings.sourceCode') + (settings?.revision ? ` (${settings.revision})` : '')}
-          >CastHome{settings ? ` v${settings.version}` : ''}<span class="sr-only">, {t('settings.sourceCode')}</span></a
-        >
-        <span class="credit">{t('settings.credit')}</span>
-      </span>
+    <h3>{t('settings.device')}</h3>
+    <div class="group">
+      <label class="item">
+        <span class="text">{t('settings.language')}</span>
+        <select value={languageState.pref} onchange={(e) => setLanguage(e.currentTarget.value as LanguagePref)}>
+          <option value="auto">{t('settings.languageAuto', { language: t(`language.${autoLanguage}`) })}</option>
+          {#each LANGUAGES as lang (lang)}<option value={lang}>{t(`language.${lang}`)}</option>{/each}
+        </select>
+      </label>
+      <label class="item">
+        <span class="text">{t('settings.theme')}</span>
+        <select value={themeState.pref} onchange={(e) => setTheme(e.currentTarget.value as ThemePref)}>
+          <option value="auto">{t('settings.themeAuto')}</option>
+          <option value="light">{t('settings.themeLight')}</option>
+          <option value="dark">{t('settings.themeDark')}</option>
+        </select>
+      </label>
     </div>
   </section>
 </section>
 
 <style>
+  /* Grouped like the iPod's menus: one card per topic, its rows split by
+     hairlines, the topic's name above in small muted text. */
   .block {
     margin-top: 24px;
   }
   .block h3 {
-    margin: 0 0 4px;
+    margin: 0 0 8px;
     font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
   }
-  .card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    margin-top: 8px;
-    border-radius: 8px;
+  .group {
+    border-radius: 12px;
     background: var(--surface);
     border: 1px solid var(--border);
   }
-  .card.form {
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 8px 16px;
+    color: var(--muted);
+  }
+  .item + .item {
+    border-top: 1px solid var(--border);
+  }
+  /* A setting's name on its row, in the row's own size. */
+  label.item > .text {
+    font-size: inherit;
+    font-weight: 400;
+  }
+  .item .text {
+    flex: 1;
+    display: grid;
+    min-width: 0;
+    color: var(--text);
+  }
+  .item strong {
+    font-weight: 500;
+  }
+  .item > button {
+    flex: none;
+  }
+  .item select {
+    flex: 0 1 220px;
+    min-width: 0;
+  }
+  .group.form {
     display: grid;
     gap: 12px;
     padding: 16px;
   }
-  .avatar {
-    display: grid;
-    place-items: center;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: var(--accent-soft);
-    color: var(--accent);
-    flex: none;
-  }
-  .text {
-    flex: 1;
-    display: grid;
-    min-width: 0;
-  }
-  /* The LCD, in Chicago at Now Playing's size; room above for its lip. */
+  /* The LCD, in Chicago at Now Playing's size; room around it for its lip. */
   .about {
     --radius-w: 10px;
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-top: 12px;
+    margin-top: 16px;
     padding: 16px;
     border-radius: var(--radius-w);
     font-size: 20px;
@@ -328,6 +343,11 @@
     display: grid;
     gap: 4px;
     min-width: 0;
+  }
+  /* Once the mark is on, the text appears line by line, each line snapping
+     on like the pixels (still read by screen readers meanwhile). */
+  .about .lines > .off {
+    opacity: 0;
   }
   /* The name and version lead to the code: underlined, a 2px rule of ink. */
   .about a {
@@ -350,12 +370,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .card > button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex: none;
-  }
   .buttons {
     display: flex;
     flex-wrap: wrap;
@@ -369,7 +383,7 @@
     gap: 6px;
   }
   label > span {
-    font-weight: 600;
+    font-weight: 500;
     font-size: var(--text-sm);
   }
   .intro,
@@ -377,17 +391,14 @@
     margin: 0;
     font-size: var(--text-sm);
   }
-  .note {
-    margin-top: 8px;
-  }
-  .form .note {
-    margin-top: 0;
-  }
   .alert {
-    margin: 8px 0 0;
-    padding: 12px 12px;
+    margin: 0 0 8px;
+    padding: 12px;
     border-radius: 8px;
     border: 1px solid var(--danger);
+  }
+  .group + .alert {
+    margin: 8px 0 0;
   }
   .error {
     color: var(--danger);
@@ -396,10 +407,5 @@
   .ok {
     color: var(--accent);
     margin: 0;
-  }
-  .card.language {
-    display: grid;
-    gap: 8px;
-    justify-items: start;
   }
 </style>
