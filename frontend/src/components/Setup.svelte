@@ -6,7 +6,7 @@
   import { store } from '../lib/store.svelte';
   import type { AccessMode, ClientInfo, LockedField, NavidromeForm } from '../lib/types';
   import AccessFields from './AccessFields.svelte';
-  import Icon from './Icon.svelte';
+  import AppMark from './AppMark.svelte';
   import NavidromeFields from './NavidromeFields.svelte';
 
   type Step = 'navidrome' | 'access';
@@ -79,7 +79,7 @@
 <main class="setup">
   <form onsubmit={submit}>
     <header>
-      <div class="brand"><Icon name="cast" size={26} />{t('app.name')}</div>
+      <div class="brand"><AppMark size={40} boot />{t('app.name')}</div>
       <h1>{t('setup.title')}</h1>
       {#if steps.length > 1}<p class="muted">{t('setup.step', { n: index + 1, total: steps.length })}</p>{/if}
     </header>
@@ -145,13 +145,10 @@
   .brand {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     font-weight: 600;
+    font-size: var(--text-lg);
     color: var(--text);
-  }
-  /* The name in the text colour, the Cast mark lit like the amp's power light. */
-  .brand :global(svg) {
-    color: var(--accent);
   }
   h1 {
     margin: 4px 0 0;

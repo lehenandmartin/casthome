@@ -5,6 +5,7 @@
   import { store } from '../lib/store.svelte';
   import type { AccessMode, NavidromeForm, ServerSettings } from '../lib/types';
   import AccessFields from './AccessFields.svelte';
+  import AppMark from './AppMark.svelte';
   import Icon from './Icon.svelte';
   import NavidromeFields from './NavidromeFields.svelte';
   import PlaybackSettings from './PlaybackSettings.svelte';
@@ -254,15 +255,17 @@
 
   <section class="block">
     <h3>{t('settings.about')}</h3>
-    <div class="card">
-      <span class="avatar"><Icon name="cast" size={22} /></span>
+    <!-- Like the front of the device: its icon switching on, its name, and the
+         version on a small display, as a firmware version would be. -->
+    <div class="card about">
+      <AppMark size={64} boot />
       <span class="text">
         <strong>CastHome</strong>
-        <span class="muted">
-          {settings
-            ? t('settings.version', { version: settings.version }) + (settings.revision ? ` (${settings.revision})` : '')
-            : '…'}
-        </span>
+        <span class="firmware lcd"
+          >{settings
+            ? t('settings.version', { version: settings.version }) + (settings.revision ? ` · ${settings.revision}` : '')
+            : '…'}</span
+        >
         <a href={REPO_URL} target="_blank" rel="noopener noreferrer">{t('settings.sourceCode')}</a>
       </span>
     </div>
@@ -308,6 +311,23 @@
     flex: 1;
     display: grid;
     min-width: 0;
+  }
+  .about {
+    gap: 16px;
+  }
+  .about .text {
+    justify-items: start;
+    gap: 4px;
+  }
+  /* The version on a strip of the display's glass, in its amber. */
+  .firmware {
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #141312;
+    color: #f2a43a;
+    text-transform: uppercase;
+    font-size: 14px;
+    line-height: 16px;
   }
   .ellipsis {
     overflow: hidden;

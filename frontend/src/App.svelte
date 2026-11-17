@@ -19,6 +19,7 @@
   import Dialog from './components/Dialog.svelte';
   import GenreView from './components/GenreView.svelte';
   import Genres from './components/Genres.svelte';
+  import AppMark from './components/AppMark.svelte';
   import Icon from './components/Icon.svelte';
   import Home from './components/Home.svelte';
   import Library from './components/Library.svelte';
@@ -154,7 +155,8 @@
   <!-- Hash routing: a "#main" link would change the page, so this moves the focus itself. -->
   <button class="skip-link" onclick={() => document.getElementById('main')?.focus()}>{t('nav.skip')}</button>
   <aside class="sidebar">
-    <div class="brand"><Icon name="cast" size={24} />{t('app.name')}</div>
+    <!-- The app's icon, small, next to its name. -->
+    <div class="brand"><AppMark size={28} />{t('app.name')}</div>
     <nav>
       {#each SIDEBAR.filter((i) => i.name !== 'tracks' || store.capabilities.all_tracks) as item (item.name)}
         <a href={item.href} class:active={section === item.name}>
@@ -330,15 +332,12 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
       font-weight: 600;
       font-size: var(--text-lg);
-      padding: 0 12px 16px;
+      /* The icon's left edge on the nav icons' column. */
+      padding: 0 12px 20px 8px;
       color: var(--text);
-    }
-    /* The name in the text colour, the Cast mark lit like the amp's power light. */
-    .brand :global(svg) {
-      color: var(--accent);
     }
     .sidebar nav {
       display: grid;
