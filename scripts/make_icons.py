@@ -1,33 +1,41 @@
-"""Generate the PWA icons (no dependencies): python3 scripts/make_icons.py [out_dir]
+"""Generate the app icons: python3 scripts/make_icons.py [out_dir]
 
-The Cast mark (the corner of a screen with waves coming out of it) lit in
-amber on the dark glass of the app's hi-fi display, drawn with the display's
-square dots: the mark's dots are lit, the others faintly visible like unlit
-segments. The screen's frame is what tells it apart from an RSS feed icon.
-The favicon is too small for dots: the same mark, solid and without the
-glass around it so it fills the tab: an SVG in dark amber on light tabs and
-bright amber on dark ones, and a PNG in a mid amber for browsers without SVG
-favicons.
-Maskable variants keep the mark inside the 80% safe zone and fill the canvas.
+The Cast mark (the corner of a screen with waves coming out of it) on a small
+grey-green reflective LCD, set in a matte white case: a Braun clock or a first
+iPod rather than a glossy hi-fi front. The case has a fine grain, a soft bevel
+and a soft shadow; the window is milled into it, the LCD sits behind with a
+soft inner shadow, and its dark pixels cast a faint shadow on the reflector.
+The unlit pixels are faintly visible, as on a real LCD. The screen's frame is
+what tells the mark apart from an RSS feed icon.
+
+Each icon is written as an SVG, then rasterised with the Chromium that
+Playwright installs for the frontend's e2e tests (frontend/node_modules).
+- icon-192/512: the case as drawn, rounded, with its shadow (purpose "any").
+- maskable-512: the case fills the canvas, the LCD inside the 80% safe zone.
+- apple-touch-icon: the case fills the canvas (iOS rounds the corners).
+- icon.svg: the same as icon-512, as a vector, for other uses.
+- favicon.svg / favicon-32.png: too small for pixels, the solid mark on the
+  LCD's grey-green, the same on light and dark tabs.
 """
 
 from __future__ import annotations
 
+import json
 import math
-import struct
+import random
+import subprocess
 import sys
-import zlib
+import tempfile
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "frontend" / "public" / "icons"
-BG = (20, 19, 18)  # the display's glass, #141312
-FG = (242, 164, 58)  # amber, #f2a43a (--lamp in the app)
-GHOST = 0.07  # unlit dots: a trace of the amber
-GRID = 24  # dots across the icon; the mark is 18 dots wide
-DOT = 0.78  # dot size, as a share of its cell
-FAVICON_LIGHT = "#b45309"  # amber that reads on a light tab (--lamp, light theme)
-FAVICON_DARK = "#f2a43a"  # amber on a dark tab
-FAVICON_PNG = (200, 112, 16)  # in between, for the PNG that cannot switch
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / "frontend" / "public" / "icons"
+GRID = 24  # the mark's grid; the mark is 18 dots wide
+LCD_GRID = 26  # pixels across the LCD, a margin of unlit pixels around the mark
+CASE = [(0, "#fbfaf7"), (1, "#e6e4df")]  # matte white, lit from above
+LCD = ("#c4cbb2", "#a9b195")  # the reflector, lighter in the middle
+PIXEL = ("#2b3328", "#1b2219")  # a dark pixel, a little lighter at the top
+BEZEL = "#8d9384"
 
 
 def mark(grid: int) -> set[tuple[int, int]]:
@@ -50,81 +58,93 @@ def mark(grid: int) -> set[tuple[int, int]]:
     return {(i + off, j + off) for i, j in cells}
 
 
-def coverage(distance: float) -> float:
-    """Anti-aliased coverage for a signed distance (negative = inside)."""
-    return max(0.0, min(1.0, 0.5 - distance))
+def grad(id_: str, stops: list[tuple[float, str]]) -> str:
+    s = "".join(f'<stop offset="{o}" stop-color="{c}"/>' for o, c in stops)
+    return f'<linearGradient id="{id_}" x1="0" y1="0" x2="0" y2="1">{s}</linearGradient>'
 
 
-def render(size: int, bleed: bool, safe_zone: bool, dots: bool = True) -> list[list[tuple[int, int, int, int]]]:
-    """bleed: a full square (the platform rounds it); safe_zone: the mark kept
-    inside the central 80% (maskable icons, cropped to any shape); dots: the
-    dot matrix, else solid cells (to be reduced for the favicon)."""
-    radius = 0 if bleed else 112 * size / 512
-    grid = GRID + 6 if safe_zone else GRID
-    cell = size / grid
-    lit = mark(grid)
-    half = cell * (DOT if dots else 1) / 2
-    rows = []
-    for y in range(size):
-        py = y + 0.5
-        row = []
-        for x in range(size):
-            px = x + 0.5
-            # Rounded-square background alpha.
-            if radius:
-                qx = max(abs(px - size / 2) - (size / 2 - radius), 0)
-                qy = max(abs(py - size / 2) - (size / 2 - radius), 0)
-                bg_alpha = coverage(math.hypot(qx, qy) - radius)
-            else:
-                bg_alpha = 1.0
-            i, j = min(int(px / cell), grid - 1), min(int(py / cell), grid - 1)
-            # Square dot centred in its cell.
-            ox = abs(px - (i + 0.5) * cell) - half
-            oy = abs(py - (j + 0.5) * cell) - half
-            fg = coverage(max(ox, oy)) * (1.0 if (i, j) in lit else GHOST if dots else 0.0) * bg_alpha
-            r_, g_, b_ = (round(BG[k] * (1 - fg) + FG[k] * fg) for k in range(3))
-            row.append((r_, g_, b_, round(255 * bg_alpha)))
-        rows.append(row)
-    return rows
+def icon(size: int, bleed: bool, window: float) -> str:
+    """bleed: the case fills the square canvas, unrounded and without shadow
+    (the platform crops it); otherwise a rounded case with a margin for its
+    shadow. window: the LCD's side as a share of the case's."""
+    if bleed:
+        bx, by, bw, br = 0.0, 0.0, float(size), 0.0
+    else:
+        k = size / 512
+        bx, by, bw = 28 * k, 22 * k, 456 * k
+        br = 104 * k
+    u = bw / 456  # the design's unit: everything was drawn on a 456 case
+    dw = bw * window
+    dx, dy = bx + (bw - dw) / 2, by + (bw - dw) / 2
+    dr = 20 * u
+    lit = mark(LCD_GRID)
+    pad = dw * 0.06
+    cell = (dw - 2 * pad) / LCD_GRID
+    dot = cell * 0.8
+    o = (cell - dot) / 2
 
+    def pixels(on: bool) -> str:
+        return "".join(
+            f'<rect x="{dx + pad + i * cell + o:.2f}" y="{dy + pad + j * cell + o:.2f}" '
+            f'width="{dot:.2f}" height="{dot:.2f}" rx="{dot * 0.25:.2f}"/>'
+            for j in range(LCD_GRID)
+            for i in range(LCD_GRID)
+            if ((i, j) in lit) == on
+        )
 
-def reduce(rows: list[list[tuple[int, int, int, int]]], factor: int) -> list[list[tuple[int, int, int, int]]]:
-    """Average blocks of factor x factor pixels (a smooth small version)."""
-    size = len(rows) // factor
-    out = []
-    for y in range(size):
-        row = []
-        for x in range(size):
-            block = [rows[y * factor + b][x * factor + a] for b in range(factor) for a in range(factor)]
-            alpha = sum(p[3] for p in block)
-            if alpha == 0:
-                row.append((0, 0, 0, 0))
-                continue
-            rgb = tuple(round(sum(p[k] * p[3] for p in block) / alpha) for k in range(3))
-            row.append((*rgb, round(alpha / len(block))))
-        out.append(row)
-    return out
-
-
-def favicon_rows(size: int) -> list[list[tuple[int, int, int, int]]]:
-    """The mark alone, solid, filling a transparent square (drawn 4x larger,
-    then reduced)."""
-    lit = mark(GRID)
-    x0, y0, span = 3, 3, 18  # the mark's 18 dots, centred vertically
-    big = size * 4
-    cell = big / span
-    rows = []
-    for y in range(big):
-        row = []
-        for x in range(big):
-            on = (x0 + int(x / cell), y0 + int(y / cell)) in lit
-            row.append((*FAVICON_PNG, 255) if on else (0, 0, 0, 0))
-        rows.append(row)
-    return reduce(rows, 4)
+    rnd = random.Random(5)
+    grain = "".join(
+        f'<circle cx="{rnd.uniform(bx, bx + bw):.1f}" cy="{rnd.uniform(by, by + bw):.1f}" r="{0.8 * u:.2f}" '
+        f'fill="{rnd.choice(("#000", "#fff"))}" opacity=".06"/>'
+        for _ in range(1600)
+    )
+    lip = 7 * u
+    defs = [
+        grad("case", CASE),
+        f'<radialGradient id="lcd" cx=".5" cy=".55" r=".75"><stop offset="0" stop-color="{LCD[0]}"/>'
+        f'<stop offset="1" stop-color="{LCD[1]}"/></radialGradient>',
+        grad("pixel", [(0, PIXEL[0]), (1, PIXEL[1])]),
+        grad("bevel", [(0, "rgba(255,255,255,.9)"), (0.12, "rgba(255,255,255,0)"), (0.88, "rgba(0,0,0,0)"), (1, "rgba(0,0,0,.25)")]),
+        grad("lip", [(0, "rgba(0,0,0,.35)"), (0.5, "rgba(0,0,0,.05)"), (1, "rgba(255,255,255,.9)")]),
+        grad("sheen", [(0, "rgba(255,255,255,.25)"), (1, "rgba(255,255,255,0)")]),
+        f'<filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="{6 * u:.2f}"/></filter>',
+        f'<filter id="drop" x="-15%" y="-15%" width="130%" height="135%"><feGaussianBlur in="SourceAlpha" stdDeviation="{10 * u:.2f}"/>'
+        f'<feOffset dy="{9 * u:.2f}"/><feComponentTransfer><feFuncA type="linear" slope=".32"/></feComponentTransfer>'
+        "<feMerge><feMergeNode/><feMergeNode in=\"SourceGraphic\"/></feMerge></filter>",
+        f'<clipPath id="body"><rect x="{bx}" y="{by}" width="{bw}" height="{bw}" rx="{br}"/></clipPath>',
+        f'<clipPath id="win"><rect x="{dx}" y="{dy}" width="{dw}" height="{dw}" rx="{dr}"/></clipPath>',
+    ]
+    case = f'<rect x="{bx}" y="{by}" width="{bw}" height="{bw}" rx="{br}" fill="url(#case)"/>'
+    parts = [case if bleed else f'<g filter="url(#drop)">{case}</g>', f'<g clip-path="url(#body)">{grain}</g>']
+    if not bleed:  # soft bevel: lit top edge, shaded bottom edge
+        parts.append(
+            f'<rect x="{bx + u}" y="{by + u}" width="{bw - 2 * u}" height="{bw - 2 * u}" rx="{br - u}" '
+            f'fill="none" stroke="url(#bevel)" stroke-width="{3 * u:.2f}"/>'
+            f'<rect x="{bx + 0.5}" y="{by + 0.5}" width="{bw - 1}" height="{bw - 1}" rx="{br}" fill="none" stroke="#000" stroke-opacity=".18"/>'
+        )
+    parts += [
+        # the window milled into the case, its bezel, the LCD
+        f'<rect x="{dx - lip}" y="{dy - lip}" width="{dw + 2 * lip}" height="{dw + 2 * lip}" rx="{dr + lip}" fill="url(#lip)" opacity=".9"/>',
+        f'<rect x="{dx - 2 * u}" y="{dy - 2 * u}" width="{dw + 4 * u}" height="{dw + 4 * u}" rx="{dr + 2 * u}" fill="{BEZEL}"/>',
+        f'<rect x="{dx}" y="{dy}" width="{dw}" height="{dw}" rx="{dr}" fill="url(#lcd)"/>',
+        '<g clip-path="url(#win)">',
+        f'<g fill="{PIXEL[1]}" opacity=".07">{pixels(False)}</g>',
+        f'<g fill="#000" opacity=".18" transform="translate({1.5 * u:.2f} {2 * u:.2f})">{pixels(True)}</g>',
+        f'<g fill="url(#pixel)">{pixels(True)}</g>',
+        f'<rect x="{dx - 8 * u}" y="{dy - 5 * u}" width="{dw + 16 * u}" height="{dw + 16 * u}" rx="{dr + 8 * u}" '
+        f'fill="none" stroke="#000" stroke-opacity=".25" stroke-width="{16 * u:.2f}" filter="url(#soft)"/>',
+        f'<rect x="{dx}" y="{dy}" width="{dw}" height="{dw / 2:.2f}" fill="url(#sheen)"/>',
+        "</g>",
+    ]
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" width="{size}" height="{size}">'
+        f'<defs>{"".join(defs)}</defs>{"".join(parts)}</svg>\n'
+    )
 
 
 def favicon_svg() -> str:
-    """The mark as squares, one rectangle per run of lit dots in a row."""
+    """The mark as solid squares, one rectangle per run of lit dots in a row,
+    on a rounded square of the LCD's grey-green."""
     lit = mark(GRID)
     rects = []
     for j in range(GRID):
@@ -138,38 +158,53 @@ def favicon_svg() -> str:
             else:
                 i += 1
     return (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="3 3 18 18" shape-rendering="crispEdges">'
-        f"<style>rect{{fill:{FAVICON_LIGHT}}}"
-        f"@media (prefers-color-scheme:dark){{rect{{fill:{FAVICON_DARK}}}}}</style>"
-        + "".join(rects)
-        + "</svg>\n"
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        f'<rect width="24" height="24" rx="4" fill="{LCD[0]}"/>'
+        f'<g fill="{PIXEL[1]}" shape-rendering="crispEdges">' + "".join(rects) + "</g></svg>\n"
     )
 
 
-def png(rows: list[list[tuple[int, int, int, int]]]) -> bytes:
-    def chunk(kind: bytes, data: bytes) -> bytes:
-        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
-
-    height, width = len(rows), len(rows[0])
-    raw = b"".join(b"\x00" + b"".join(bytes(p) for p in row) for row in rows)
-    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b"")
+RASTERISE = """
+const { chromium } = require('playwright');
+(async () => {
+  const jobs = JSON.parse(process.argv[1]);
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  for (const [svg, png, size] of jobs) {
+    await page.setViewportSize({ width: size, height: size });
+    await page.goto('file://' + svg);
+    await page.screenshot({ path: png, omitBackground: true });
+  }
+  await browser.close();
+})();
+"""
 
 
 def main() -> None:
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else OUT
     out.mkdir(parents=True, exist_ok=True)
-    icons = {
-        "icon-192.png": render(192, bleed=False, safe_zone=False),
-        "icon-512.png": render(512, bleed=False, safe_zone=False),
-        "maskable-512.png": render(512, bleed=True, safe_zone=True),
-        # iOS only rounds the corners: a full-bleed square, no safe zone.
-        "apple-touch-icon.png": render(180, bleed=True, safe_zone=False),
-        "favicon-32.png": favicon_rows(32),
+    sources = {
+        "icon-192.png": icon(192, bleed=False, window=316 / 456),
+        "icon-512.png": icon(512, bleed=False, window=316 / 456),
+        # The LCD and its lip inside the central 80% circle.
+        "maskable-512.png": icon(512, bleed=True, window=0.53),
+        # iOS only rounds the corners: a full-bleed square.
+        "apple-touch-icon.png": icon(180, bleed=True, window=316 / 456),
+        "favicon-32.png": favicon_svg().replace('viewBox="0 0 24 24"', 'viewBox="0 0 24 24" width="32" height="32"'),
     }
-    for name, rows in icons.items():
-        (out / name).write_bytes(png(rows))
+    sizes = {"icon-192.png": 192, "icon-512.png": 512, "maskable-512.png": 512, "apple-touch-icon.png": 180, "favicon-32.png": 32}
+    with tempfile.TemporaryDirectory() as tmp:
+        jobs = []
+        for name, svg in sources.items():
+            src = Path(tmp) / name.replace(".png", ".svg")
+            src.write_text(svg)
+            jobs.append([str(src), str((out / name).resolve()), sizes[name]])
+        subprocess.run(["node", "-e", RASTERISE, json.dumps(jobs)], cwd=ROOT / "frontend", check=True)
+    for name in sources:
         print("wrote", out / name)
+    # The full icon as a vector, kept for other uses (docs, store pages).
+    (out / "icon.svg").write_text(icon(512, bleed=False, window=316 / 456))
+    print("wrote", out / "icon.svg")
     (out / "favicon.svg").write_text(favicon_svg())
     print("wrote", out / "favicon.svg")
 

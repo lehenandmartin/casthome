@@ -3,7 +3,7 @@
 // network, because playback state must never be stale.
 // Bump the version when cached files keep their name but change (the icons):
 // the new worker deletes the old cache on activation.
-const CACHE = 'casthome-shell-v5';
+const CACHE = 'casthome-shell-v6';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
