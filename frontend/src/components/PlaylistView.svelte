@@ -92,7 +92,7 @@
         {:else}
           <h2>{playlist.name}</h2>
         {/if}
-        <p class="muted">{t('playlists.tracks', { count: playlist.song_count })} · {formatTime(playlist.duration)}</p>
+        <p class="muted figures">{t('playlists.tracks', { count: playlist.song_count })} · {formatTime(playlist.duration)}</p>
         <div class="actions">
           <button
             class="primary"

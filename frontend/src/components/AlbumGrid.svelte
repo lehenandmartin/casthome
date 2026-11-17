@@ -34,7 +34,7 @@
           <div class="cover-placeholder"></div>
         {/if}
         <strong>{album.name}</strong>
-        <span class="muted">{showArtist ? album.artist : (album.year ?? '')}</span>
+        <span class="muted" class:figures={!showArtist}>{showArtist ? album.artist : (album.year ?? '')}</span>
       </a>
     </li>
   {/each}

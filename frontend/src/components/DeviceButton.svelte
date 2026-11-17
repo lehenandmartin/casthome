@@ -27,7 +27,10 @@
     store.devicePickerOpen = true;
   }}
 >
-  <Icon name={p?.device_uuid ? deviceIcon(p.device_type) : 'cast'} size={compact ? 22 : 18} />
+  <span class="glyph">
+    <Icon name={p?.device_uuid ? deviceIcon(p.device_type) : 'cast'} size={compact ? 22 : 18} />
+    {#if casting}<span class="live-dot" class:lost={warn}></span>{/if}
+  </span>
   {#if !compact}<span class="ellipsis">{label}</span>{/if}
 </button>
 
@@ -42,9 +45,20 @@
     font-size: 0.9rem;
     padding: 6px 14px;
   }
-  .device.casting {
-    color: var(--accent);
-    background: var(--accent-soft);
+  .glyph {
+    position: relative;
+    display: inline-grid;
+    flex: none;
+  }
+  /* On the speaker's corner, cut out of the button behind it. */
+  .glyph .live-dot {
+    position: absolute;
+    right: -3px;
+    top: -2px;
+    box-shadow: 0 0 0 2px var(--ring, var(--surface-2));
+  }
+  .compact .glyph .live-dot {
+    --ring: var(--surface);
   }
   .device.warn {
     color: var(--danger);

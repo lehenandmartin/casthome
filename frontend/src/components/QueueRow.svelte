@@ -53,7 +53,7 @@
       <span class="ellipsis">{item.title}</span>
       <span class="muted ellipsis">{item.artist}</span>
     </span>
-    <span class="muted time">{formatTime(item.duration)}</span>
+    <span class="muted time figures">{formatTime(item.duration)}</span>
   </button>
   <button class="icon-btn remove" aria-label={t('queue.remove')} title={t('queue.remove')} onclick={onremove}
     ><Icon name="close" size={18} /></button

@@ -68,12 +68,12 @@
     width: 36px;
     height: 36px;
     border-radius: 10px;
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--surface-2);
+    color: var(--muted);
   }
   .label {
     flex: 1;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text);
   }
 </style>

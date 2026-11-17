@@ -11,7 +11,7 @@ reportErrors();
 const PLACEHOLDER =
   'data:image/svg+xml,' +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="none" stroke="#8d97a3" stroke-opacity=".45" stroke-width="2"><circle cx="24" cy="24" r="12"/><circle cx="24" cy="24" r="3"/></g></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="none" stroke="#9a948c" stroke-opacity=".45" stroke-width="2"><circle cx="24" cy="24" r="12"/><circle cx="24" cy="24" r="3"/></g></svg>',
   );
 document.addEventListener(
   'error',

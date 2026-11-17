@@ -194,7 +194,7 @@ export const fr: Record<MessageKey, string> = {
   'genre.summary': '{albums} albums · {songs} titres',
 
   'search.title': 'Rechercher',
-  'search.placeholder': 'Artistes, albums, titres…',
+  'search.placeholder': 'Rechercher',
   'search.artists': 'Artistes',
   'search.albums': 'Albums',
   'search.songs': 'Titres',
@@ -268,12 +268,13 @@ export const fr: Record<MessageKey, string> = {
   'player.volumeUp': 'Monter le volume',
   'player.nothing': 'Aucune lecture',
   'player.seek': 'Position',
-  'player.onDevice': 'Lecture sur {device}',
 
   'nowPlaying.title': 'En cours de lecture',
   'nowPlaying.open': 'Ouvrir le lecteur',
   'nowPlaying.close': 'Fermer le lecteur',
   'player.loading': 'Chargement…',
+  'lcd.showTotal': 'Afficher la durée totale',
+  'lcd.showRemaining': 'Afficher le temps restant',
 
   'queue.title': 'File d’attente',
   'queue.close': 'Fermer la file d’attente',

@@ -146,7 +146,11 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font-weight: 800;
+    font-weight: 600;
+    color: var(--text);
+  }
+  /* The name in the text colour, the Cast mark lit like the amp's power light. */
+  .brand :global(svg) {
     color: var(--accent);
   }
   h1 {

@@ -94,7 +94,7 @@
             <a href={`#/artist/${encodeURIComponent(album.artist_id)}`}>{album.artist}</a>
           {:else}{album.artist}{/if}
         </p>
-        <p class="muted">
+        <p class="muted figures">
           {[album.year, album.song_count === 1 ? t('album.oneTrack') : t('album.tracks', { count: album.song_count }), formatTime(album.duration)]
             .filter(Boolean)
             .join(' · ')}
@@ -179,9 +179,7 @@
   .disc {
     margin: 18px 8px 4px;
     font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-weight: 500;
     color: var(--muted);
   }
   .more-title {
@@ -218,10 +216,8 @@
     min-width: 0;
   }
   .eyebrow {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 500;
     color: var(--muted);
   }
   h2 {

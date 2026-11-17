@@ -99,10 +99,8 @@
   }
   .grab-title {
     text-align: center;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 500;
     color: var(--muted);
   }
   .scroll {

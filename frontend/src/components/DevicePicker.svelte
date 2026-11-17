@@ -85,6 +85,7 @@
       <span class="text">
         <span class="name ellipsis">{choice.name}</span>
         <span class="detail ellipsis">
+          {#if active && busy !== choice.uuid && choice.uuid !== store.browserUuid}<span class="live-dot" class:lost={!p?.connected}></span>{/if}
           {#if busy === choice.uuid}
             {t('devices.connecting')}
           {:else if active && !p?.connected}
@@ -158,10 +159,8 @@
   }
   .section {
     margin: 16px 4px 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 500;
     color: var(--muted);
   }
   ul {
@@ -175,7 +174,7 @@
     border-radius: 12px;
   }
   li.active {
-    background: var(--accent-soft);
+    background: var(--surface-2);
   }
   .choice {
     width: 100%;
@@ -205,8 +204,8 @@
     flex: none;
   }
   .active .icon {
-    background: var(--accent);
-    color: var(--on-accent);
+    background: var(--surface-3);
+    color: var(--text);
   }
   .text {
     flex: 1;
@@ -216,9 +215,9 @@
   .name {
     font-weight: 600;
   }
-  .active .name,
-  .active .detail {
-    color: var(--accent);
+  .detail .live-dot {
+    margin-right: 6px;
+    vertical-align: 1px;
   }
   .detail {
     font-size: 0.85rem;

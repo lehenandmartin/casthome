@@ -195,7 +195,7 @@ export const en = {
   'genre.summary': '{albums} albums · {songs} tracks',
 
   'search.title': 'Search',
-  'search.placeholder': 'Artists, albums, tracks…',
+  'search.placeholder': 'Search',
   'search.artists': 'Artists',
   'search.albums': 'Albums',
   'search.songs': 'Tracks',
@@ -269,12 +269,13 @@ export const en = {
   'player.volumeUp': 'Volume up',
   'player.nothing': 'Nothing playing',
   'player.seek': 'Position',
-  'player.onDevice': 'Playing on {device}',
 
   'nowPlaying.title': 'Now playing',
   'nowPlaying.open': 'Open the player',
   'nowPlaying.close': 'Close the player',
   'player.loading': 'Loading…',
+  'lcd.showTotal': 'Show track length',
+  'lcd.showRemaining': 'Show time remaining',
 
   'queue.title': 'Queue',
   'queue.close': 'Close the queue',

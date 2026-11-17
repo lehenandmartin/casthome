@@ -233,7 +233,7 @@
       {#if playing}
         <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
       {:else}
-        <span class="muted">{formatTime(current.duration)}</span>
+        <span class="muted figures">{formatTime(current.duration)}</span>
       {/if}
     </button>
   {/if}
@@ -271,7 +271,7 @@
 
   {#if queuedRows.length > 0 || (dragging && contextRows.length > 0)}
     <div class="section split">
-      <span>{t('queue.nextInQueue')} <span class="count">{queuedRows.length}</span></span>
+      <span>{t('queue.nextInQueue')} <span class="count figures">{queuedRows.length}</span></span>
       {#if queuedRows.length > 0}
         <button class="link-btn" aria-label={t('queue.clearQueuedLabel')} onclick={() => store.run(api.clearQueued)}>
           {t('queue.clearQueued')}
@@ -284,7 +284,7 @@
   {#if contextRows.length > 0 || (dragging && queuedRows.length > 0)}
     <p class="section">
       {#if store.queue.radio}<Icon name="radio" size={14} />{/if}
-      <span class="ellipsis">{contextTitle}</span> <span class="count">{contextRows.length}</span>
+      <span class="ellipsis">{contextTitle}</span> <span class="count figures">{contextRows.length}</span>
     </p>
     {#if store.queue.radio}
       <p class="radio-hint muted">{t('queue.radioHint')}{radioSource ? ` · ${radioSource}` : ''}</p>
@@ -298,7 +298,7 @@
 
   {#if history.length > 0}
     <button class="section toggle" aria-expanded={showHistory} onclick={() => (showHistory = !showHistory)}>
-      {t('queue.history')} <span class="count">{history.length}</span>
+      {t('queue.history')} <span class="count figures">{history.length}</span>
       <Icon name={showHistory ? 'chevronDown' : 'chevronRight'} size={16} />
     </button>
     {#if showHistory}
@@ -319,10 +319,8 @@
     align-items: center;
     gap: 8px;
     margin: 22px 0 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 500;
     color: var(--muted);
   }
   .radio-hint {
@@ -337,7 +335,7 @@
     min-height: 0;
     padding: 2px 8px;
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
     color: var(--accent);
@@ -366,11 +364,7 @@
     border-radius: 12px;
   }
   .count {
-    font-weight: 600;
-    letter-spacing: 0;
-    padding: 1px 8px;
-    border-radius: 999px;
-    background: var(--surface-2);
+    font-variant-numeric: tabular-nums;
   }
   .toggle {
     background: none;
@@ -414,7 +408,7 @@
     height: 56px;
   }
   .current .title {
-    font-weight: 700;
+    font-weight: 600;
     color: var(--accent);
   }
   /* Each part of the queue is one block, rounded at its top and bottom only. */

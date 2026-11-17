@@ -11,12 +11,19 @@
   import SeekBar from './SeekBar.svelte';
   import StarButton from './StarButton.svelte';
   import VolumeSlider from './VolumeSlider.svelte';
+  import { formatTime } from '../lib/format';
+  import { marquee } from '../lib/marquee';
+
 
   const song = $derived(store.player?.current ?? null);
   const duration = $derived(store.player?.duration ?? song?.duration ?? 0);
   const progress = $derived(duration ? Math.min(100, (store.position / duration) * 100) : 0);
   const songMenu = () => (song ? currentSongMenu(song) : null);
   const casting = $derived(Boolean(store.player?.device_uuid) && !store.isThisBrowser);
+  const source = $derived(
+    !store.player?.device_uuid ? '' : store.isThisBrowser ? t('devices.thisBrowser') : (store.player.device_name ?? ''),
+  );
+  const title = $derived(song?.title ?? t('player.nothing'));
 </script>
 
 <footer class="player">
@@ -24,7 +31,7 @@
   <div class="mini">
     <div class="mini-progress" style:width={`${progress}%`}></div>
     <button class="mini-main" use:menu={songMenu} disabled={!song} onclick={() => store.openNowPlaying()}>
-      <!-- The visible title and artist are part of the button's name (WCAG 2.5.3). -->
+      <!-- The visible title and source are part of the button's name (WCAG 2.5.3). -->
       <span class="sr-only">{t('nowPlaying.open')}:</span>
       <!-- A new track: its cover and title fade in. -->
       {#key song?.id}
@@ -33,10 +40,13 @@
         {:else}
           <span class="thumb"><Icon name="disc" size={20} /></span>
         {/if}
-        <span class="text" in:fadeIn>
-          <span class="title ellipsis">{song?.title ?? t('player.nothing')}</span>
-          <span class="sub ellipsis" class:casting>
-            {#if casting}{t('player.onDevice', { device: store.player?.device_name ?? '' })}{:else if song}{song.artist}{/if}
+        <!-- A small version of Now Playing's display: the title scrolling dot by
+             dot, then where it plays and the time. -->
+        <span class="mini-display lcd" in:fadeIn>
+          <span class="scroll" use:marquee={title}><span>{title}</span></span>
+          <span class="row">
+            <span class="source ellipsis" class:lit={casting && store.player?.connected} class:lost={casting && !store.player?.connected}>{source}</span>
+            <span aria-hidden="true">{formatTime(store.position)}</span>
           </span>
         </span>
       {/key}
@@ -57,16 +67,14 @@
           {/if}
         {/key}
       </button>
-      {#key song?.id}
-        <div class="text" in:fadeIn>
-          <span class="title ellipsis">{song?.title ?? t('player.nothing')}</span>
-          {#if song}
-            <span class="sub ellipsis">
-              {#if song.artist_id}<a href={`#/artist/${encodeURIComponent(song.artist_id)}`}>{song.artist}</a>{:else}{song.artist}{/if}
-            </span>
-          {/if}
-        </div>
-      {/key}
+      <!-- The same small display as on phones; it opens Now Playing too. -->
+      <button class="mini-display lcd" disabled={!song} onclick={() => store.openNowPlaying()}>
+        <span class="sr-only">{t('nowPlaying.open')}:</span>
+        <span class="scroll" use:marquee={title}><span>{title}</span></span>
+        <span class="row">
+          <span class="source ellipsis" class:lit={casting && store.player?.connected} class:lost={casting && !store.player?.connected}>{source}</span>
+        </span>
+      </button>
       {#if song}
         {#key song.id}<StarButton kind="song" id={song.id} starred={song.starred} />{/key}
       {/if}
@@ -77,7 +85,8 @@
     </div>
     <div class="right">
       <div class="vol"><VolumeSlider /></div>
-      <DeviceButton />
+      <!-- Its name is on the display: the icon is enough, as on phones. -->
+      <DeviceButton compact />
       <button
         class="icon-btn"
         class:on={store.queuePanel}
@@ -113,27 +122,12 @@
     place-items: center;
     flex: none;
   }
-  .text {
-    display: grid;
-    min-width: 0;
-    text-align: left;
-  }
-  .title {
-    font-weight: 600;
-  }
-  .sub {
-    color: var(--muted);
-    font-size: 0.85rem;
-  }
-  .sub a {
-    text-decoration: none;
-  }
-  .sub a:hover {
-    text-decoration: underline;
-  }
-  .sub.casting {
-    color: var(--accent);
-  }
+
+
+
+
+
+
 
   /* --- mobile --- */
   .player {
@@ -150,6 +144,9 @@
     height: var(--player-h);
     padding: 0 8px 0 10px;
   }
+
+
+
   .mini-progress {
     position: absolute;
     top: -1px;
@@ -158,6 +155,61 @@
     background: var(--accent);
     transition: width 0.5s linear;
   }
+
+  /* A small display, the same dark glass as Now Playing's. */
+  .mini-display {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: #141312;
+    border: 1px solid rgb(255 255 255 / 0.06);
+    color: #ece6dc;
+    text-transform: uppercase;
+    font-size: 14px;
+    line-height: 16px;
+    text-align: left;
+  }
+  .mini-display .scroll {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .mini-display .scroll > span {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
+  }
+  .mini-display .scroll:global(.scrolling) > span {
+    max-width: none;
+    overflow: visible;
+  }
+  .mini-display .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    color: rgb(236 230 220 / 0.62);
+  }
+  /* A long device name is cut, the time stays whole. */
+  .mini-display .source {
+    flex: 1;
+    min-width: 0;
+  }
+  .mini-display .row > :not(.source) {
+    flex: none;
+  }
+  .mini-display .source.lit {
+    color: #f2a43a;
+  }
+  .mini-display .source.lost {
+    color: #ec7a76;
+  }
+
+
   .mini-main {
     flex: 1;
     min-width: 0;
@@ -193,7 +245,8 @@
     }
     .full {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(300px, 480px) minmax(0, 1fr);
+      /* The left side holds the display: a little more room than the right. */
+      grid-template-columns: minmax(0, 1.6fr) minmax(300px, 440px) minmax(200px, 1fr);
       align-items: center;
       gap: 24px;
       height: var(--player-desktop-h);
@@ -228,13 +281,30 @@
       min-width: 0;
     }
     .vol {
-      width: 120px;
+      width: 104px;
     }
     .vol:empty {
       display: none;
     }
-    .right :global(.device) {
-      max-width: 200px;
+    .full .mini-display {
+      max-width: 340px;
+      min-height: 0;
+      cursor: pointer;
+    }
+    .full .mini-display:disabled {
+      opacity: 1;
+      cursor: default;
+    }
+  }
+
+  /* A narrow desktop window: the display keeps its room, the controls give some up. */
+  @media (min-width: 900px) and (max-width: 1279px) {
+    .full {
+      grid-template-columns: minmax(200px, 1.2fr) minmax(220px, 320px) minmax(192px, 1fr);
+      gap: 16px;
+    }
+    .vol {
+      width: 96px;
     }
   }
 </style>

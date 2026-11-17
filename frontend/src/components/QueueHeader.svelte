@@ -45,7 +45,7 @@
   <div>
     {#if !embedded}<h2>{t('queue.title')}</h2>{/if}
     {#if count > 0}
-      <p class="muted">{t('queue.summary', { count, time: formatTime(remaining) })}</p>
+      <p class="muted figures">{t('queue.summary', { count, time: formatTime(remaining) })}</p>
     {/if}
   </div>
   {#if count > 0}

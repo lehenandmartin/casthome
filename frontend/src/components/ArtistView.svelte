@@ -113,7 +113,7 @@
       <div class="meta">
         <span class="eyebrow">{t('artist.label')}</span>
         <h2>{artist.name} <StarButton kind="artist" id={artist.id} bind:starred={artist.starred} /></h2>
-        <p class="muted">{t('album.count', { count: artist.albums?.length ?? artist.album_count })}</p>
+        <p class="muted figures">{t('album.count', { count: artist.albums?.length ?? artist.album_count })}</p>
         <div class="actions">
           <button class="primary play" onclick={playAll}><Icon name="play" size={18} />{t('artist.playAll')}</button>
           <button class="radio" onclick={() => artist && startArtistRadio(artist)}>
@@ -261,10 +261,8 @@
     min-width: 0;
   }
   .eyebrow {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 500;
     color: var(--muted);
   }
   h2 {

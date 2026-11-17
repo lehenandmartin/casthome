@@ -57,6 +57,13 @@ export interface Capabilities {
   play_history: boolean;
 }
 
+
+/** A history entry's state without one of the overlay marks (nowPlaying, queue). */
+function withoutFlag(state: unknown, flag: 'nowPlaying' | 'queue'): Record<string, unknown> {
+  const { [flag]: _removed, ...rest } = (state ?? {}) as Record<string, unknown>;
+  return rest;
+}
+
 class AppStore {
   auth = $state<AuthState>('unknown');
   /** Who is signed in and how (set once signed in). */
@@ -134,14 +141,40 @@ class AppStore {
 
   openNowPlaying(): void {
     if (this.nowPlayingOpen) return;
-    history.pushState({ ...(history.state ?? {}), nowPlaying: true }, '');
+    // An entry still marked open while it is closed (left by a reload or an
+    // interrupted close) is cleared first: entries marked open never stack up.
+    const state = withoutFlag(history.state, 'nowPlaying');
+    history.replaceState(state, '');
+    history.pushState({ ...state, nowPlaying: true }, '');
     this.nowPlayingOpen = true;
   }
 
-  closeNowPlaying(): void {
-    if (!this.nowPlayingOpen) return;
-    if (history.state?.nowPlaying) history.back();
-    else this.nowPlayingOpen = false;
+  /**
+   * Close Now Playing. It closes by going back in history, which happens later:
+   * the promise resolves once it has, so a page can be opened after it without
+   * the late "back" undoing it (and Now Playing showing again over that page).
+   */
+  closeNowPlaying(): Promise<void> {
+    if (!this.nowPlayingOpen) return Promise.resolve();
+    if (!history.state?.nowPlaying) {
+      this.nowPlayingOpen = false;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const done = () => {
+        window.removeEventListener('popstate', done);
+        clearTimeout(timer);
+        // Back on an entry that is marked open too (an old one): this is a
+        // close, so it stays closed and that entry loses its mark.
+        if (history.state?.nowPlaying) history.replaceState(withoutFlag(history.state, 'nowPlaying'), '');
+        this.nowPlayingOpen = false;
+        resolve();
+      };
+      // The browser may never report it (e.g. no entry to go back to).
+      const timer = setTimeout(done, 500);
+      window.addEventListener('popstate', done);
+      history.back();
+    });
   }
 
   /** Is the queue visible (sheet on mobile, side panel on desktop)? */

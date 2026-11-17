@@ -63,13 +63,13 @@
     >
       <SwipeRow right={{ label: t('song.addToQueue'), icon: 'queue', action: () => addToQueue(song) }}>
       <button class="row" onclick={() => onplay(i)}>
-        {#if ranked}<span class="num muted">{i + 1}</span>
-        {:else if numbered}<span class="num muted">{song.track ?? i + 1}</span>{/if}
+        {#if ranked}<span class="num muted figures">{i + 1}</span>
+        {:else if numbered}<span class="num muted figures">{song.track ?? i + 1}</span>{/if}
         <span class="text">
           <span class="title">{song.title}</span>
           {#if showAlbum}<span class="muted">{song.artist} · {song.album}</span>{/if}
         </span>
-        <span class="muted">{formatTime(song.duration)}</span>
+        <span class="muted figures">{formatTime(song.duration)}</span>
       </button>
       <StarButton kind="song" id={song.id} bind:starred={song.starred} />
       <button

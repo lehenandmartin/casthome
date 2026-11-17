@@ -275,10 +275,8 @@
   }
   .block h3 {
     margin: 0 0 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 500;
     color: var(--muted);
   }
   .card {

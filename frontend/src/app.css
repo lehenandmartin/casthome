@@ -1,18 +1,23 @@
+/* Hi-fi living room: neutral surfaces with a faint warmth, and one amber accent,
+   like the power light of an amplifier. The colour itself belongs to the covers. */
 :root {
-  --bg: #f5f6f8;
+  --bg: #f6f5f3;
   --surface: #ffffff;
-  --surface-2: #eceef2;
-  --surface-3: #e1e4ea;
-  --border: #dde1e7;
-  --text: #14181d;
-  --muted: #5a626d;
-  --accent: #1f5bbd;
-  --accent-soft: rgb(31 91 189 / 0.12);
+  --surface-2: #eeece8;
+  --surface-3: #e3e0db;
+  --border: #e0ddd7;
+  --text: #1a1816;
+  --muted: #5e5952;
+  --accent: #b45309;
+  --accent-soft: rgb(180 83 9 / 0.1);
+  /* The power light (live dot): amber always, even where the accent takes an album's colour. */
+  --lamp: #b45309;
   --on-accent: #ffffff;
   --danger: #b83030;
   --on-danger: #ffffff;
-  --star: #d99a00;
-  --shadow: 0 8px 28px rgb(15 20 30 / 0.16);
+  /* A favourite is marked, not lit: the star takes the text colour. */
+  --star: var(--text);
+  --shadow: 0 8px 28px rgb(26 24 22 / 0.14);
   --radius: 12px;
   --tabbar-h: calc(58px + env(safe-area-inset-bottom));
   --player-h: 64px;
@@ -24,19 +29,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1115;
-    --surface: #171b21;
-    --surface-2: #20262e;
-    --surface-3: #2a313a;
-    --border: #262d36;
-    --text: #e9edf1;
-    --muted: #9ba5b1;
-    --accent: #6aa0ff;
-    --accent-soft: rgb(106 160 255 / 0.14);
-    --on-accent: #0b1220;
+    --bg: #121110;
+    --surface: #1a1918;
+    --surface-2: #242220;
+    --surface-3: #2f2c29;
+    --border: #2a2826;
+    --text: #edeae6;
+    --muted: #a39e97;
+    --accent: #f2a43a;
+    --accent-soft: rgb(242 164 58 / 0.13);
+    --lamp: #f2a43a;
+    --on-accent: #1c1206;
     --danger: #ec7a76;
     --on-danger: #1a0b0b;
-    --star: #f2b63c;
+    --star: var(--text);
     --shadow: 0 10px 34px rgb(0 0 0 / 0.5);
     color-scheme: dark;
   }
@@ -44,6 +50,18 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Like a native app: text is not selectable, except where it is typed. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* The document must always be at least as tall as the screen: in an installed
@@ -80,6 +98,46 @@ body {
   line-height: 1.4;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
+}
+
+/* The hi-fi display: what a CD player or an amplifier would show (time, track,
+   source, modes) is set in Doto, a dot-matrix face, and nothing else is. An
+   element is all Doto or all system font, never both. The file is Doto at its
+   heaviest weight (the most legible), Latin scripts only. Doto: SIL OFL, assets/fonts. */
+@font-face {
+  font-family: 'CastHome Display';
+  src: url('./assets/fonts/doto-display.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+/* Central European letters (ř, ł, ő…), loaded only when a title has them. */
+@font-face {
+  font-family: 'CastHome Display';
+  src: url('./assets/fonts/doto-display-ext.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF;
+}
+.lcd {
+  font-family: 'CastHome Display', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  /* Each character already ends with a blank column of dots: no extra spacing,
+     so text stays on the dot grid. */
+  letter-spacing: 0;
+}
+
+/* Figures in the interface: system font, aligned in columns. */
+.figures {
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3,
+strong,
+b {
+  font-weight: 600;
 }
 
 h2 {
@@ -120,6 +178,21 @@ button {
   transition:
     background 0.15s,
     transform 0.1s;
+}
+
+/* The signature: where the music plays. A small steady dot next to a speaker
+   that is connected (the amp's power light), red when the link is lost.
+   Used only for the playing device, nowhere else. */
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lamp);
+  flex: none;
+}
+.live-dot.lost {
+  background: var(--danger);
 }
 
 /* Keyboard focus: one clear ring everywhere (mouse clicks do not show it). */

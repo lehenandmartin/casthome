@@ -64,7 +64,7 @@
           {/if}
           <span class="text">
             <span>{playlist.name}</span>
-            <span class="muted">
+            <span class="muted figures">
               {t('playlists.tracks', { count: playlist.song_count })} · {formatTime(playlist.duration)}
             </span>
           </span>

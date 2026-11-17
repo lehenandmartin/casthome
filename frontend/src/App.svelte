@@ -93,6 +93,16 @@
     document.documentElement.classList.toggle('locked', locked);
   });
 
+  // A link followed from Now Playing or the queue sheet (a song's menu, "Go to
+  // album"...) opens a page: the overlay leaves with it instead of staying on top.
+  // Back still returns to it, as its history entry is kept.
+  $effect(() => {
+    void hash;
+    const state = history.state as { nowPlaying?: boolean; queue?: boolean } | null;
+    if (store.nowPlayingOpen && !state?.nowPlaying) store.nowPlayingOpen = false;
+    if (store.queueOpen && !state?.queue) store.queueOpen = false;
+  });
+
   // On load: first-run setup, sign-in, or the app. If the server is briefly
   // unreachable, the cached state stays on screen while the connection retries.
   store.checkStatus();
@@ -113,14 +123,18 @@
       if (store.queue.items.length > 0) togglePlayback();
       return;
     }
-    if (store.nowPlayingOpen) store.closeNowPlaying();
-    if (route.name === 'search') {
-      const input = document.querySelector<HTMLInputElement>('main input[type="search"]');
-      input?.focus();
-      input?.select();
-    } else {
-      location.hash = '#/search';
-    }
+    const search = () => {
+      if (route.name === 'search') {
+        const input = document.querySelector<HTMLInputElement>('main input[type="search"]');
+        input?.focus();
+        input?.select();
+      } else {
+        location.hash = '#/search';
+      }
+    };
+    // After Now Playing has closed (a history "back"), or that back would undo the change of page.
+    if (store.nowPlayingOpen) store.closeNowPlaying().then(search);
+    else search();
   }
 </script>
 
@@ -150,7 +164,7 @@
       <!-- The queue is a panel next to the page, not a page. -->
       <button class="nav-btn" class:active={store.queuePanel} aria-pressed={store.queuePanel} onclick={() => store.toggleQueue()}>
         <Icon name="queue" size={20} />{t('nav.queue')}
-        {#if upcoming > 0}<span class="badge">{upcoming}</span>{/if}
+        {#if upcoming > 0}<span class="badge figures">{upcoming}</span>{/if}
       </button>
     </nav>
     <a class="settings-link" href="#/settings" class:active={section === 'settings'}>
@@ -254,17 +268,11 @@
     white-space: nowrap;
   }
 
+  /* A count, not an alert: quiet text that follows the row colour. */
   .badge {
-    display: inline-grid;
-    place-items: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--on-accent);
-    font-size: 0.68rem;
-    font-weight: 700;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
   }
 
   /* --- mobile tab bar --- */
@@ -323,9 +331,13 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-weight: 800;
+      font-weight: 600;
       font-size: 1.15rem;
       padding: 0 12px 16px;
+      color: var(--text);
+    }
+    /* The name in the text colour, the Cast mark lit like the amp's power light. */
+    .brand :global(svg) {
       color: var(--accent);
     }
     .sidebar nav {

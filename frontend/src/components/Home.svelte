@@ -286,11 +286,11 @@
     color: var(--muted);
   }
   .tile-icon.fav {
-    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--star)));
-    color: #fff;
+    background: var(--surface-3);
+    color: var(--accent);
   }
   .tile-label {
-    font-weight: 700;
+    font-weight: 600;
     font-size: 0.85rem;
     line-height: 1.2;
     overflow: hidden;

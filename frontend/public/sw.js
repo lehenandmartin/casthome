@@ -1,11 +1,14 @@
 // CastHome service worker: makes the app installable and opens it instantly.
 // It only caches the app shell; the API and the WebSocket always go to the
 // network, because playback state must never be stale.
-const CACHE = 'casthome-shell-v1';
+// Bump the version when cached files keep their name but change (the icons):
+// the new worker deletes the old cache on activation.
+const CACHE = 'casthome-shell-v5';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
+  // From the server, not the browser's HTTP cache, which may still hold the old files.
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL.map((url) => new Request(url, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
