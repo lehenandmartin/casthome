@@ -103,9 +103,9 @@
     margin-left: 6px;
     font-size: var(--text-xs);
     padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--on-accent);
+    border-radius: 4px;
+    background: var(--accent-soft);
+    color: var(--text);
     vertical-align: middle;
     display: inline-block;
     white-space: nowrap;

@@ -57,6 +57,7 @@
   {#each songs as song, i (`${song.id}-${i}`)}
     <li
       class:current={song.id === currentId}
+      class:now-bar={song.id === currentId}
       use:menu={() => menuFor(i)}
       draggable={draggable ? 'true' : undefined}
       ondragstart={(e) => startSongDrag(e, song)}
@@ -125,9 +126,13 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* The track that is playing: the inverted bar (app.css), hover included. */
+  li.current,
+  li.current:hover {
+    background: var(--now-bg);
+  }
   .current .title {
-    color: var(--accent);
-    font-weight: 600;
+    font-weight: 500;
   }
   .more {
     display: grid;

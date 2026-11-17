@@ -112,7 +112,7 @@
   .artists a {
     display: block;
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: 8px;
     background: var(--surface-2);
     color: inherit;
     text-decoration: none;

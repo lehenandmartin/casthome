@@ -1,26 +1,46 @@
-/* Hi-fi living room: neutral surfaces with a faint warmth, and one amber accent,
-   like the power light of an amplifier. The colour itself belongs to the covers. */
+/* A first-generation iPod: a matte white polycarbonate case (light) or the
+   polished steel of its back (dark), neutral surfaces with no colour of their
+   own, and the grey-green reflective LCD with its dark pixels. The colour
+   itself belongs to the covers. The accent is the LCD's ink on light, its
+   grey-green on dark. */
 :root {
-  --bg: #f6f5f3;
-  --surface: #ffffff;
-  --surface-2: #eeece8;
-  --surface-3: #e3e0db;
-  --border: #e0ddd7;
-  --text: #1a1816;
-  --muted: #5e5952;
-  /* Dark enough for text on its own 10% tint (4.5:1, axe). */
-  --accent: #9c4707;
-  --accent-soft: rgb(156 71 7 / 0.1);
-  /* The power light (live dot): amber always, even where the accent takes an album's colour. */
-  --lamp: #b45309;
-  --on-accent: #ffffff;
-  --danger: #b83030;
+  --bg: #f3f3f0;
+  --surface: #fbfbf9;
+  --surface-2: #ebebe7;
+  --surface-3: #dfdfda;
+  --border: #dcdcd6;
+  --text: #1c1e1b;
+  --muted: #5b5f58;
+  --accent: #1b2219;
+  /* The selection: a faint wash of the LCD's grey-green. */
+  --accent-soft: rgb(169 177 149 / 0.3);
+  --on-accent: #f3f5ec;
+  /* The live dot (where the music plays): the LCD's ink. */
+  --lamp: var(--accent);
+  --danger: #b42d2d;
   --on-danger: #ffffff;
+  /* The track that is playing: the inverted bar of the iPod's menus. */
+  --now-bg: #1b2219;
+  --now-fg: #c4cbb2;
+  --now-muted: rgb(196 203 178 / 0.72);
   /* A favourite is marked, not lit: the star takes the text colour. */
   --star: var(--text);
-  --shadow: 0 8px 28px rgb(26 24 22 / 0.14);
-  /* Six text sizes for the whole interface (the displays use their own whole
-     pixels, on Doto's dot grid). */
+  --shadow: 0 8px 24px rgb(28 30 27 / 0.12);
+  /* The LCD, the same object in both themes: grey-green reflector, dark
+     pixels, the unlit ones faintly visible, set in the case behind a bezel. */
+  --lcd-bg: radial-gradient(120% 140% at 50% 40%, #c4cbb2, #a9b195);
+  --lcd-flat: #b9c1a5;
+  --lcd-ink: #1b2219;
+  --lcd-dim: rgb(27 34 25 / 0.66);
+  --lcd-ghost: rgb(27 34 25 / 0.1);
+  --lcd-bezel: #8d9384;
+  /* Set into the case, as on the icon: the lip milled around a window (in
+     shadow at the top, catching the light at the bottom), and the soft
+     shadow the case casts inside it. */
+  --lip: linear-gradient(rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.04) 50%, rgb(255 255 255 / 0.95));
+  --well-shadow: inset 0 3px 8px rgb(0 0 0 / 0.3), inset 0 0 14px rgb(0 0 0 / 0.12);
+  /* Six text sizes for the whole interface (the LCD uses Chicago at its own
+     whole-pixel sizes). */
   --text-xs: 12px;
   --text-sm: 13px;
   --text-md: 15px;
@@ -31,28 +51,31 @@
   --tabbar-h: calc(58px + env(safe-area-inset-bottom));
   --player-h: 64px;
   --player-desktop-h: 100px; /* controls and seek bar, with room above and below */
-  --sidebar-w: 232px;
+  --sidebar-w: 240px;
   --queue-w: 360px;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121110;
-    --surface: #1a1918;
-    --surface-2: #242220;
-    --surface-3: #2f2c29;
-    --border: #2a2826;
-    --text: #edeae6;
-    --muted: #a39e97;
-    --accent: #f2a43a;
-    --accent-soft: rgb(242 164 58 / 0.13);
-    --lamp: #f2a43a;
-    --on-accent: #1c1206;
-    --danger: #ec7a76;
+    --bg: #131413;
+    --surface: #1a1b1a;
+    --surface-2: #242524;
+    --surface-3: #2f302e;
+    --border: #2a2b29;
+    --text: #ecede8;
+    --muted: #a2a59d;
+    --accent: #c4cbb2;
+    --accent-soft: rgb(196 203 178 / 0.12);
+    --on-accent: #1b2219;
+    --danger: #e5726e;
     --on-danger: #1a0b0b;
-    --star: var(--text);
-    --shadow: 0 10px 34px rgb(0 0 0 / 0.5);
+    --now-bg: #c4cbb2;
+    --now-fg: #1b2219;
+    --now-muted: rgb(27 34 25 / 0.7);
+    --shadow: 0 10px 32px rgb(0 0 0 / 0.5);
+    --lip: linear-gradient(rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.15) 50%, rgb(255 255 255 / 0.12));
+    --well-shadow: inset 0 3px 8px rgb(0 0 0 / 0.45), inset 0 0 14px rgb(0 0 0 / 0.2);
     color-scheme: dark;
   }
 }
@@ -108,32 +131,65 @@ body {
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
 }
-
-/* The hi-fi display: what a CD player or an amplifier would show (time, track,
-   source, modes) is set in Doto, a dot-matrix face, and nothing else is. An
-   element is all Doto or all system font, never both. The file is Doto at its
-   heaviest weight (the most legible), Latin scripts only. Doto: SIL OFL, assets/fonts. */
-@font-face {
-  font-family: 'CastHome Display';
-  src: url('./assets/fonts/doto-display.woff2') format('woff2');
-  font-weight: 100 900;
-  font-display: swap;
+/* The page's colour is the root's alone: a background on body would be drawn
+   over the lip of a recessed screen (.recessed), which sits behind it. */
+body {
+  background: none;
 }
-/* Central European letters (ř, ł, ő…), loaded only when a title has them. */
+
+/* The LCD: what the iPod's screen would show (time, track, source, modes) is
+   set in Chicago, the bitmap face of the early Macs and the first iPods, and
+   nothing else is. An element is all Chicago or all system font, never both.
+   Chicago Kare, a faithful copy of the bitmap Chicago: MIT, assets/fonts.
+   Its pixels fall on the screen's pixels at 12px and its multiples. */
 @font-face {
-  font-family: 'CastHome Display';
-  src: url('./assets/fonts/doto-display-ext.woff2') format('woff2');
-  font-weight: 100 900;
+  font-family: 'CastHome LCD';
+  src: url('./assets/fonts/chicago-kare.woff2') format('woff2');
   font-display: swap;
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF;
 }
 .lcd {
-  font-family: 'CastHome Display', ui-monospace, monospace;
+  font-family: 'CastHome LCD', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   font-weight: 400;
-  /* Each character already ends with a blank column of dots: no extra spacing,
-     so text stays on the dot grid. */
   letter-spacing: 0;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+/* A screen: the LCD behind its bezel, with a soft sheen on the upper half,
+   as on the icon. */
+.lcd-screen {
+  background:
+    linear-gradient(rgb(255 255 255 / 0.22), rgb(255 255 255 / 0) 50%),
+    var(--lcd-bg);
+  color: var(--lcd-ink);
+  border: 1px solid var(--lcd-bezel);
+}
+
+/* Set into the case (screens, the cover): the lip around it, drawn behind
+   (its parent's stacking context must be the one with the background), and
+   the case's shadow falling inside it, drawn over the content. --radius-w is
+   the element's own radius, --lip-w the lip's width. */
+.recessed {
+  --lip-w: 6px;
+  position: relative;
+}
+.recessed::before,
+.recessed::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+.recessed::before {
+  inset: calc(var(--lip-w) * -1 - 1px);
+  border-radius: calc(var(--radius-w) + var(--lip-w));
+  background: var(--lip);
+  z-index: -1;
+}
+.recessed::after {
+  inset: -1px;
+  border-radius: var(--radius-w);
+  box-shadow: var(--well-shadow);
 }
 
 /* Figures in the interface: system font, aligned in columns. */
@@ -147,6 +203,16 @@ h3,
 strong,
 b {
   font-weight: 600;
+}
+
+/* The track that is playing, in a list: the inverted bar of the iPod's menus,
+   the one place it appears. */
+.now-bar {
+  background: var(--now-bg);
+  color: var(--now-fg);
+  --muted: var(--now-muted);
+  --text: var(--now-fg);
+  --star: var(--now-fg);
 }
 
 h1 {
@@ -185,17 +251,16 @@ button {
   cursor: pointer;
   background: var(--surface-2);
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 8px 16px;
   min-height: 38px;
   transition:
-    background 0.15s,
-    transform 0.1s;
+    background-color 0.15s var(--ease-out),
+    transform 0.12s var(--ease-out);
 }
 
-/* The signature: where the music plays. A small steady dot next to a speaker
-   that is connected (the amp's power light), red when the link is lost.
-   Used only for the playing device, nowhere else. */
+/* Where the music plays: a small steady dot next to the speaker that is
+   connected, red when the link is lost. Used only for the playing device. */
 .live-dot {
   display: inline-block;
   width: 7px;
@@ -234,7 +299,7 @@ button {
   left: 8px;
   z-index: 100;
   padding: 12px 16px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 600;
@@ -261,7 +326,7 @@ button:disabled {
 button.primary {
   background: var(--accent);
   color: var(--on-accent);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Round icon-only button */
@@ -505,7 +570,7 @@ input[type='range']:disabled {
    than by the browser's view transitions, whose snapshot of a scrolled page
    showed its top for a moment on iOS. */
 :root {
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 .page {
   animation: page-in 200ms ease-out;

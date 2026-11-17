@@ -35,14 +35,17 @@
       <span class="sr-only">{t('nowPlaying.open')}:</span>
       <!-- A new track: its cover and title fade in. -->
       {#key song?.id}
-        {#if song?.cover_art}
-          <img src={coverUrl(song.cover_art, 96)} alt="" in:fadeIn />
-        {:else}
-          <span class="thumb"><Icon name="disc" size={20} /></span>
-        {/if}
+        <!-- The cover set into the bar, like the display next to it. -->
+        <span class="well recessed">
+          {#if song?.cover_art}
+            <img src={coverUrl(song.cover_art, 96)} alt="" in:fadeIn />
+          {:else}
+            <span class="thumb"><Icon name="disc" size={20} /></span>
+          {/if}
+        </span>
         <!-- A small version of Now Playing's display: the title scrolling dot by
              dot, then where it plays and the time. -->
-        <span class="mini-display lcd" in:fadeIn>
+        <span class="mini-display lcd lcd-screen recessed" in:fadeIn>
           <span class="scroll" use:marquee={title}><span>{title}</span></span>
           <span class="row">
             <span class="source ellipsis" class:lit={casting && store.player?.connected} class:lost={casting && !store.player?.connected}>{source}</span>
@@ -60,15 +63,17 @@
     <div class="now" use:menu={songMenu}>
       <button class="cover" disabled={!song} onclick={() => store.openNowPlaying()} aria-label={t('nowPlaying.open')}>
         {#key song?.id}
-          {#if song?.cover_art}
-            <img src={coverUrl(song.cover_art, 128)} alt="" in:fadeIn />
-          {:else}
-            <span class="thumb"><Icon name="disc" size={22} /></span>
-          {/if}
+          <span class="well recessed">
+            {#if song?.cover_art}
+              <img src={coverUrl(song.cover_art, 128)} alt="" in:fadeIn />
+            {:else}
+              <span class="thumb"><Icon name="disc" size={22} /></span>
+            {/if}
+          </span>
         {/key}
       </button>
       <!-- The same small display as on phones; it opens Now Playing too. -->
-      <button class="mini-display lcd" disabled={!song} onclick={() => store.openNowPlaying()}>
+      <button class="mini-display lcd lcd-screen recessed" disabled={!song} onclick={() => store.openNowPlaying()}>
         <span class="sr-only">{t('nowPlaying.open')}:</span>
         <span class="scroll" use:marquee={title}><span>{title}</span></span>
         <span class="row">
@@ -101,26 +106,35 @@
 
 <style>
   .player {
+    /* The cover and the display share one height. */
+    --well-h: 44px;
     position: fixed;
     z-index: 30;
     left: 0;
     right: 0;
-    background: color-mix(in srgb, var(--surface) 92%, transparent);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: var(--surface);
     border-top: 1px solid var(--border);
+  }
+  /* The cover set into the bar: the same lip and inner shadow as the display. */
+  .well {
+    --radius-w: 6px;
+    --lip-w: 3px;
+    display: block;
+    flex: none;
+    width: var(--well-h);
+    height: var(--well-h);
+    border-radius: var(--radius-w);
   }
   img,
   .thumb {
-    width: 44px;
-    height: 44px;
-    border-radius: 6px;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-w);
     object-fit: cover;
     background: var(--surface-2);
     color: var(--muted);
     display: grid;
     place-items: center;
-    flex: none;
   }
 
 
@@ -156,19 +170,19 @@
     transition: width 0.5s linear;
   }
 
-  /* A small display, the same dark glass as Now Playing's. */
+  /* A small LCD, the same as Now Playing's, as tall as the cover. */
   .mini-display {
     flex: 1;
     min-width: 0;
+    height: var(--well-h);
     display: grid;
+    align-content: center;
     gap: 2px;
     padding: 4px 8px;
-    border-radius: 8px;
-    background: #141312;
-    border: 1px solid rgb(255 255 255 / 0.06);
-    color: #ece6dc;
-    text-transform: uppercase;
-    font-size: 14px;
+    --radius-w: 8px;
+    --lip-w: 3px;
+    border-radius: var(--radius-w);
+    font-size: 16px;
     line-height: 16px;
     text-align: left;
   }
@@ -192,7 +206,9 @@
     justify-content: space-between;
     gap: 8px;
     min-width: 0;
-    color: rgb(236 230 220 / 0.62);
+    /* Always two lines, the second empty when there is nothing to show. */
+    min-height: 16px;
+    color: var(--lcd-dim);
   }
   /* A long device name is cut, the time stays whole. */
   .mini-display .source {
@@ -203,10 +219,10 @@
     flex: none;
   }
   .mini-display .source.lit {
-    color: #f2a43a;
+    color: var(--lcd-ink);
   }
   .mini-display .source.lost {
-    color: #ec7a76;
+    color: #9b2a20;
   }
 
 
@@ -233,12 +249,7 @@
     .player {
       bottom: 0;
       left: var(--sidebar-w);
-      /* Solid, without the blur: on a large window the blur is redrawn on every
-         scrolled frame, and Firefox then fell behind, leaving an unpainted band
-         at the bottom while a heavy page was opening. */
-      background: var(--surface);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
+      --well-h: 56px;
     }
     .mini {
       display: none;
@@ -263,11 +274,6 @@
       background: none;
       border-radius: 6px;
       min-height: 0;
-    }
-    .cover img,
-    .cover .thumb {
-      width: 56px;
-      height: 56px;
     }
     .center {
       display: grid;

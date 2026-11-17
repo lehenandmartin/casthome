@@ -130,7 +130,6 @@
   }
   .tabs button {
     flex: none;
-    border-radius: 999px;
     font-size: var(--text-sm);
   }
   .tabs .active {

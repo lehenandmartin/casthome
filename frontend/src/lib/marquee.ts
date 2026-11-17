@@ -1,16 +1,16 @@
-// Text too long for its line scrolls by like on a dot-matrix display: it jumps
-// one column of dots at a time instead of gliding. It waits, steps to its end,
+// Text too long for its line scrolls by like on the iPod's LCD: it moves one
+// column of pixels at a time instead of gliding. It waits, steps to its end,
 // waits, then starts again. Text that fits stays still. With reduced motion it
 // does not move and ends with "…" instead.
 //
-// Doto draws every character on a grid of dots 0.1em apart, so one column is
-// 0.1em of the text's font size. The line is clipped on a whole column too, so
-// no half dot shows at its edge.
+// Chicago draws every character on a grid of 16 pixels to the em, so one
+// column is 1/16 of the text's font size. The line is clipped on a whole
+// column too, so no half pixel shows at its edge.
 //
 // Use on the line (overflow hidden, one line); the text is its first child.
 // The parameter is the text itself, so a new track restarts the scroll.
 
-const COLUMNS_PER_SECOND = 18;
+const COLUMNS_PER_SECOND = 40;
 const HOLD = 1600; // ms at each end
 
 export function marquee(line: HTMLElement, _text?: string) {
@@ -26,7 +26,7 @@ export function marquee(line: HTMLElement, _text?: string) {
     const overflow = text.scrollWidth - line.clientWidth;
     if (overflow <= 1) return;
 
-    const pitch = parseFloat(getComputedStyle(text).fontSize) * 0.1;
+    const pitch = parseFloat(getComputedStyle(text).fontSize) / 16;
     const visible = Math.floor(line.clientWidth / pitch) * pitch;
     const steps = Math.ceil((text.scrollWidth - visible) / pitch);
     const shift = -steps * pitch;
@@ -38,7 +38,7 @@ export function marquee(line: HTMLElement, _text?: string) {
     animation = text.animate(
       [
         { transform: 'translateX(0)', offset: 0 },
-        // One jump per column of dots between the two holds.
+        // One jump per column of pixels between the two holds.
         { transform: 'translateX(0)', offset: hold, easing: `steps(${steps}, end)` },
         { transform: `translateX(${shift}px)`, offset: 1 - hold },
         { transform: `translateX(${shift}px)`, offset: 1 },

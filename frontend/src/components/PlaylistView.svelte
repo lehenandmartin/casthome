@@ -150,7 +150,7 @@
   .sk-pill {
     width: 100px;
     height: 38px;
-    border-radius: 999px;
+    border-radius: 8px;
   }
   header {
     display: grid;

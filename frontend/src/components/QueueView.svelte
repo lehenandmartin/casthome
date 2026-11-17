@@ -216,7 +216,7 @@
     <p class="section">{t('queue.nowPlaying')}</p>
     <!-- Drop line under it: first in "Next in queue" (still empty, so not shown). -->
     <button
-      class="current"
+      class="current now-bar"
       class:drop-after={drop?.zone === 'queued' && queuedRows.length === 0}
       onclick={openPlayer}
       use:menu={() => currentSongMenu(current)}
@@ -383,9 +383,9 @@
   .button {
     display: inline-block;
     padding: 8px 16px;
-    border-radius: 999px;
+    border-radius: 8px;
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 500;
   }
   .button.primary {
     background: var(--accent);
@@ -399,7 +399,6 @@
     text-align: left;
     padding: 12px;
     border-radius: var(--radius);
-    background: var(--accent-soft);
     min-height: 0;
   }
   .current img,
@@ -408,8 +407,7 @@
     height: 56px;
   }
   .current .title {
-    font-weight: 600;
-    color: var(--accent);
+    font-weight: 500;
   }
   /* Each part of the queue is one block, rounded at its top and bottom only. */
   .list {
@@ -462,7 +460,7 @@
     align-items: flex-end;
     gap: 2px;
     height: 16px;
-    color: var(--accent);
+    color: inherit;
     flex: none;
   }
   .eq i {

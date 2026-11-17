@@ -40,9 +40,9 @@ export const fr: Record<MessageKey, string> = {
   'settings.language': 'Langue',
   'settings.languageAuto': 'Automatique ({language})',
   'settings.languageHint': 'Automatique suit la langue de ce navigateur. Enregistré sur cet appareil.',
-  'settings.about': 'À propos',
-  'settings.version': 'Version {version}',
   'settings.sourceCode': 'Code source et mises à jour sur GitHub',
+  // Kept in English in every language, like "Designed by Apple in California".
+  'settings.credit': 'Designed by Martin Le Hénand in Paris',
   'language.en': 'English',
   'language.fr': 'Français',
   'language.de': 'Deutsch',
@@ -275,6 +275,7 @@ export const fr: Record<MessageKey, string> = {
   'player.loading': 'Chargement…',
   'lcd.showTotal': 'Afficher la durée totale',
   'lcd.showRemaining': 'Afficher le temps restant',
+  'lcd.position': '{n} sur {total}',
 
   'queue.title': 'File d’attente',
   'queue.close': 'Fermer la file d’attente',

@@ -174,7 +174,7 @@
   .sk-pill {
     width: 120px;
     height: 42px;
-    border-radius: 999px;
+    border-radius: 8px;
   }
   .disc {
     margin: 16px 8px 4px;

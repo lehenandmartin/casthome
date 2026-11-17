@@ -2,7 +2,6 @@
   import { modal } from '../lib/modal';
   import { fadeIn } from '../lib/motion';
   import { coverUrl } from '../lib/api';
-  import { albumColor, type AlbumColor } from '../lib/albumColor';
   import { contextMenu, menu } from '../lib/contextMenu.svelte';
   import { currentSongMenu } from '../lib/menus';
   import { startRadio } from '../lib/radio';
@@ -21,28 +20,18 @@
   const p = $derived(store.player);
   const song = $derived(p?.current ?? null);
   const cover = $derived(song?.cover_art ? coverUrl(song.cover_art, 800) : null);
-  // The album's own colour for the seek bar and play button (amber if the cover is grey).
-  let tint = $state<AlbumColor | null>(null);
-  $effect(() => {
-    const url = song?.cover_art ? coverUrl(song.cover_art, 96) : null;
-    let current = true;
-    if (!url) tint = null;
-    else albumColor(url).then((color) => current && (tint = color));
-    return () => (current = false);
-  });
   const index = $derived(store.queue.index);
   const next = $derived(index !== null ? (store.queue.items[index + 1] ?? null) : null);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const position = $derived(index !== null ? `${pad(index + 1)}/${pad(store.queue.items.length)}` : '');
+  const position = $derived(index !== null ? t('lcd.position', { n: index + 1, total: store.queue.items.length }) : '');
 
-  // The hi-fi display: what the amplifier would show, in Doto.
+  // The LCD: what the iPod's screen would show, in Chicago.
   let shown = $state(0);
   const duration = $derived(p?.duration ?? song?.duration ?? 0);
   const casting = $derived(Boolean(p?.device_uuid) && !store.isThisBrowser);
-  // Doto draws Latin scripts only: a title in another script keeps the system font, whole line.
+  // Chicago draws Latin scripts only: a title in another script keeps the system font, whole line.
   const latin = (text: string) => /^[\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u20A0-\u20CF\u2212]*$/.test(text);
   const title = $derived(song?.title ?? t('player.nothing'));
-  const byline = $derived(song ? [song.artist, song.album].filter(Boolean).join(' · ') : '');
+  const byline = $derived(song ? [song.artist, song.album].filter(Boolean).join(' / ') : '');
 
   const albumHref = $derived(song?.album_id ? `#/album/${encodeURIComponent(song.album_id)}` : null);
 
@@ -100,16 +89,11 @@
   aria-modal="true"
   aria-label={t('nowPlaying.title')}
   tabindex="-1"
-  class:tinted={tint}
-  style:--album-h={tint?.h}
-  style:--album-s={tint ? `${tint.s}%` : undefined}
   style:transform={dragY ? `translateY(${dragY}px)` : undefined}
   ontouchstart={touchStart}
   ontouchmove={touchMove}
   ontouchend={touchEnd}
 >
-  {#if cover}<div class="backdrop" style:background-image={`url("${cover}")`}></div>{/if}
-
   <header>
     <button class="icon-btn" aria-label={t('nowPlaying.close')} title={t('nowPlaying.close')} onclick={() => store.closeNowPlaying()}>
       <Icon name="chevronDown" size={26} />
@@ -130,18 +114,12 @@
   </header>
 
   <div class="body">
-    <div class="art" use:menu={() => (song ? currentSongMenu(song) : null)}>
-      {#if cover}
-        {#key cover}<img src={cover} alt="" in:fadeIn={{ duration: 220 }} />{/key}
-      {:else}
-        <div class="art-placeholder"><Icon name="disc" size={72} /></div>
-      {/if}
-    </div>
-
-    <!-- The amplifier's display: the track, its progress, the source and the modes.
-         Long lines scroll column by column, like a real dot matrix. -->
-    <div class="display lcd glass">
-      <div class="line small">
+    <!-- The LCD, laid out like the iPod's Now Playing screen: the track's
+         place in the queue and where it plays, then title, artist and album
+         centred, the progress bar and the times. Long lines scroll pixel
+         column by pixel column. -->
+    <div class="display lcd lcd-screen recessed">
+      <div class="top">
         <span aria-hidden="true">{position}</span>
         {#if source}
           <button
@@ -153,28 +131,27 @@
           >
         {/if}
       </div>
-      <h2 class="scroll title" class:sys={!latin(title)} use:menu={() => (song ? currentSongMenu(song) : null)} use:marquee={title}>
+      <h2 class="scroll" class:sys={!latin(title)} use:menu={() => (song ? currentSongMenu(song) : null)} use:marquee={title}>
         {#if albumHref}
           <button class="lcd-btn" onclick={() => go(albumHref)}>{title}</button>
         {:else}
           <span>{title}</span>
         {/if}
       </h2>
-      {#if song}
-        <p class="scroll byline" class:sys={!latin(byline)} use:marquee={byline}>
+      {#if song && byline}
+        <!-- Artist / album on one line, each a link. -->
+        <p class="scroll" class:sys={!latin(byline)} use:marquee={byline}>
           <span>
-            {#if song.artist_id}
-              <button class="lcd-btn" onclick={() => go(`#/artist/${encodeURIComponent(song.artist_id ?? '')}`)}>{song.artist}</button>
-            {:else}{song.artist}{/if}{#if song.album}
-              {' · '}{#if song.album_id}
+            {#if song.artist}{#if song.artist_id}
+                <button class="lcd-btn" onclick={() => go(`#/artist/${encodeURIComponent(song.artist_id ?? '')}`)}>{song.artist}</button>
+              {:else}{song.artist}{/if}{/if}{#if song.artist && song.album}{' / '}{/if}{#if song.album}{#if song.album_id}
                 <button class="lcd-btn" onclick={() => go(`#/album/${encodeURIComponent(song.album_id ?? '')}`)}>{song.album}</button>
-              {:else}{song.album}{/if}
-            {/if}
+              {:else}{song.album}{/if}{/if}
           </span>
         </p>
       {/if}
       <SeekBar dots showTimes={false} bind:shown />
-      <div class="line small">
+      <div class="times">
         <span aria-hidden="true">{formatTime(shown)}</span>
         <!-- Its name starts with the time shown (WCAG 2.5.3), then what a press does. -->
         <button class="lcd-btn" title={showTotal ? t('lcd.showRemaining') : t('lcd.showTotal')} onclick={toggleTotal}>
@@ -182,6 +159,17 @@
             >, {showTotal ? t('lcd.showRemaining') : t('lcd.showTotal')}</span
           >
         </button>
+      </div>
+    </div>
+
+    <div class="art" use:menu={() => (song ? currentSongMenu(song) : null)}>
+      <!-- The cover set into the case, like the screen. -->
+      <div class="well recessed">
+        {#if cover}
+          {#key cover}<img src={cover} alt="" in:fadeIn={{ duration: 220 }} />{/key}
+        {:else}
+          <div class="art-placeholder"><Icon name="disc" size={72} /></div>
+        {/if}
       </div>
     </div>
     {#if statusLabel}<p class="status muted">{statusLabel}</p>{/if}
@@ -216,96 +204,77 @@
     display: flex;
     flex-direction: column;
     background: var(--bg);
-    /* The blurred backdrop overflows on purpose: it never makes the page scroll. */
     overflow: hidden;
     padding: calc(env(safe-area-inset-top) + 12px) 0 env(safe-area-inset-bottom);
     transition: transform 0.05s;
-    animation: rise 0.22s ease-out;
+    animation: rise 0.3s var(--ease-out);
   }
   @keyframes rise {
     from {
       opacity: 0;
     }
   }
-  /* The album's colour replaces the amber here only, at a lightness that keeps
-     the play button's icon readable in each theme. */
-  .np.tinted {
-    --accent: hsl(var(--album-h) var(--album-s) 38%);
-    --on-accent: #ffffff;
-  }
-  @media (prefers-color-scheme: dark) {
-    .np.tinted {
-      --accent: hsl(var(--album-h) var(--album-s) 70%);
-      --on-accent: #1a1816;
-    }
-  }
   .np :global(.play) {
     background: var(--accent);
     color: var(--on-accent);
-    transition: background-color 0.4s ease-out;
   }
-  /* The display. Lit words in full, unlit ones faintly visible like the ghost
-     segments of a real display; the source lamp is amber, red when lost. */
+  /* The LCD. Dark pixels on the grey-green reflector, all one size as on the
+     iPod: 20px, a quarter more than Chicago's own 16px. The source in full
+     ink when the music plays there, dimmed on this browser, red when lost. */
   .display {
-    --lit: var(--text);
-    --ghost: color-mix(in srgb, var(--text) 18%, transparent);
-    --lost: var(--danger);
+    /* The hover underline: a dotted row of pixels. */
+    --lcd-pitch: 2.5px;
+    --lcd-dot: 1.25px;
+    --lcd-lit: var(--lcd-ink);
+    --lost: #9b2a20;
     display: grid;
-    /* Tight rows, as on a real display: one line of dots after another.
-       Sizes in whole pixels keep the dots below on the screen's pixel grid. */
-    gap: 4px;
-    line-height: 16px;
     min-width: 0;
-    text-transform: uppercase;
+    padding: 8px 12px;
+    --radius-w: 10px;
+    border-radius: var(--radius-w);
+    font-size: 20px;
+    line-height: 22px;
   }
-  /* The seek bar: a little room above and below, for fingers. */
-  .display :global(.dots) {
-    height: 27px;
+  .display > * {
     margin: 0;
   }
-  /* Dark glass in both themes, like a real display. */
-  .display.glass {
-    /* Dots drawn by the page (seek bar, underline): 2px squares 1px apart,
-       whole pixels so they stay apart on every screen. */
-    --lcd-pitch: 3px;
-    --lcd-dot: 2px;
-    --lcd-lit: var(--lit);
-    --lcd-ghost: var(--ghost);
-    --lit: #ece6dc;
-    --ghost: rgb(236 230 220 / 0.16);
-    --lamp: #f2a43a;
-    --lost: #ec7a76;
-    padding: 12px 16px;
-    border-radius: 12px;
-    background: #141312;
-    border: 1px solid rgb(255 255 255 / 0.06);
-    color: var(--lit);
+  .display h2 {
+    font-size: inherit;
+    font-weight: 400;
+    letter-spacing: 0;
   }
-
-  .display .line {
+  /* The first line: the place in the queue, and where it plays. */
+  .top {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     gap: 16px;
     min-width: 0;
+    color: var(--lcd-dim);
   }
-  .display .small {
-    font-size: 14px;
-  }
-
-  /* Not lit (this browser): dimmed like the artist line, still readable. */
-  .display .source {
-    color: color-mix(in srgb, var(--lit) 62%, transparent);
+  .top .source {
     min-width: 0;
   }
-  .display .source.lit {
-    color: var(--lamp);
+  .top .source.lit {
+    color: var(--lcd-ink);
   }
-  .display .source.lost {
+  .top .source.lost {
     color: var(--lost);
   }
-
-
+  .display .scroll {
+    text-align: center;
+  }
+  .display .scroll:global(.scrolling) {
+    text-align: left;
+  }
+  /* The seek bar: a little room above and below, for fingers. */
+  .display :global(.dots) {
+    height: 28px;
+  }
+  .times {
+    display: flex;
+    justify-content: space-between;
+  }
 
   /* Title and artist on the display: one line each, scrolling when too long
      (lib/marquee.ts), cut with "…" when motion is reduced. */
@@ -330,22 +299,14 @@
     max-width: none;
     overflow: visible;
   }
-  .display .title {
-    font-size: 20px;
-    font-weight: 400;
-    line-height: 22px;
-  }
-  .display .byline {
-    font-size: 14px;
-    color: rgb(236 230 220 / 0.62);
-  }
-  /* A title in a script Doto does not draw: the system font, the whole line. */
+  /* A title in a script Chicago does not draw: the system font, the whole line. */
   .display .sys {
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    text-transform: none;
+    font-size: var(--text-md);
+    -webkit-font-smoothing: antialiased;
     letter-spacing: 0;
   }
-  /* Words on the display that are buttons: still just lit dots, with a touch
+  /* Words on the display that are buttons: still just pixels, with a touch
      area a little larger than the letters. */
   .lcd-btn {
     --pad-x: 4px;
@@ -353,7 +314,6 @@
     position: relative;
     font: inherit;
     letter-spacing: inherit;
-    text-transform: inherit;
     color: inherit;
     background: none;
     border: 0;
@@ -375,7 +335,7 @@
     opacity: 1;
   }
   /* One hover for every word that does something (device, title, artist,
-     album, time): a dotted underline, a row of dots lit under the word. */
+     album, time): a dotted row of pixels lit under the word. */
   @media (hover: hover) {
     /* Square dots of one size everywhere (the display's pitch, like the seek
        bar), whatever the size of the word: a row of the same matrix, one
@@ -398,19 +358,6 @@
     justify-content: flex-end;
   }
 
-  .backdrop {
-    position: absolute;
-    inset: -40px;
-    background-size: cover;
-    background-position: center;
-    filter: blur(60px) saturate(1.4);
-    opacity: 0.35;
-    pointer-events: none;
-  }
-  header,
-  .body {
-    position: relative;
-  }
   header {
     display: grid;
     grid-template-columns: 96px 1fr 96px;
@@ -450,33 +397,41 @@
     display: grid;
     place-items: center;
   }
+  /* Room for the lip all around. */
+  .well {
+    --radius-w: 12px;
+    width: min(100cqw - 16px, 100cqh - 16px, 420px);
+    aspect-ratio: 1;
+    border-radius: var(--radius-w);
+  }
   .art img,
   .art-placeholder {
-    width: min(100cqw, 100cqh, 420px);
-    height: auto;
-    aspect-ratio: 1;
-    object-fit: cover;
-    border-radius: 14px;
-    box-shadow: var(--shadow);
-    background: var(--surface-2);
-    color: var(--muted);
     display: grid;
     place-items: center;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--radius-w);
+    background: var(--surface-2);
+    color: var(--muted);
   }
-
-
-
-
 
   .status {
     margin: -12px 0 0;
     text-align: center;
+  }
+  /* Even space around the controls: the play button is a full 72px disc,
+     the icons around it and in the row below sit in larger boxes than they
+     look, so the controls get more room above and the row below comes closer. */
+  .body > :global(.controls) {
+    margin-top: 12px;
   }
   .bottom {
     display: flex;
     align-items: center;
     gap: 16px;
     min-width: 0;
+    margin-top: -8px;
   }
   .bottom :global(.device) {
     flex: none;
@@ -500,7 +455,8 @@
     gap: 8px;
     text-align: left;
     border-radius: 12px;
-    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    background: var(--surface);
+    border: 1px solid var(--border);
     padding: 12px 16px;
     min-width: 0;
   }

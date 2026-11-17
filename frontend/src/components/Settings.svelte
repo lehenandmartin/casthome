@@ -254,19 +254,19 @@
   {/if}
 
   <section class="block">
-    <h3>{t('settings.about')}</h3>
-    <!-- Like the front of the device: its icon switching on, its name, and the
-         version on a small display, as a firmware version would be. -->
-    <div class="card about">
-      <AppMark size={64} boot />
-      <span class="text">
-        <strong>CastHome</strong>
-        <span class="firmware lcd"
-          >{settings
-            ? t('settings.version', { version: settings.version }) + (settings.revision ? ` · ${settings.revision}` : '')
-            : '…'}</span
+    <!-- An LCD set into the case, like Now Playing's: the mark switching on,
+         the name and version (a link to the code, underlined), the credit. -->
+    <div class="about lcd lcd-screen recessed">
+      <AppMark size={56} boot bare />
+      <span class="lines">
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={t('settings.sourceCode') + (settings?.revision ? ` (${settings.revision})` : '')}
+          >CastHome{settings ? ` v${settings.version}` : ''}<span class="sr-only">, {t('settings.sourceCode')}</span></a
         >
-        <a href={REPO_URL} target="_blank" rel="noopener noreferrer">{t('settings.sourceCode')}</a>
+        <span class="credit">{t('settings.credit')}</span>
       </span>
     </div>
   </section>
@@ -312,22 +312,38 @@
     display: grid;
     min-width: 0;
   }
+  /* The LCD, in Chicago at Now Playing's size; room above for its lip. */
   .about {
+    --radius-w: 10px;
+    display: flex;
+    align-items: center;
     gap: 16px;
+    margin-top: 12px;
+    padding: 16px;
+    border-radius: var(--radius-w);
+    font-size: 20px;
+    line-height: 22px;
   }
-  .about .text {
-    justify-items: start;
+  .about .lines {
+    display: grid;
     gap: 4px;
+    min-width: 0;
   }
-  /* The version on a strip of the display's glass, in its amber. */
-  .firmware {
-    padding: 2px 8px;
-    border-radius: 4px;
-    background: #141312;
-    color: #f2a43a;
-    text-transform: uppercase;
-    font-size: 14px;
-    line-height: 16px;
+  /* The name and version lead to the code: underlined, a 2px rule of ink. */
+  .about a {
+    justify-self: start;
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  @media (hover: hover) {
+    .about a:hover {
+      color: var(--lcd-dim);
+    }
+  }
+  .credit {
+    color: var(--lcd-dim);
   }
   .ellipsis {
     overflow: hidden;

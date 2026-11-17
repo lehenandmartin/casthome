@@ -40,9 +40,9 @@ export const en = {
   'settings.language': 'Language',
   'settings.languageAuto': 'Automatic ({language})',
   'settings.languageHint': 'Automatic follows this browser’s language. Saved on this device.',
-  'settings.about': 'About',
-  'settings.version': 'Version {version}',
   'settings.sourceCode': 'Source code and updates on GitHub',
+  // Kept in English in every language, like "Designed by Apple in California".
+  'settings.credit': 'Designed by Martin Le Hénand in Paris',
   // Language names stay in their own language.
   'language.en': 'English',
   'language.fr': 'Français',
@@ -276,6 +276,7 @@ export const en = {
   'player.loading': 'Loading…',
   'lcd.showTotal': 'Show track length',
   'lcd.showRemaining': 'Show time remaining',
+  'lcd.position': '{n} of {total}',
 
   'queue.title': 'Queue',
   'queue.close': 'Close the queue',

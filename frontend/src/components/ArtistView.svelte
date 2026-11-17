@@ -202,7 +202,7 @@
   .pill {
     width: 110px;
     height: 38px;
-    border-radius: 999px;
+    border-radius: 8px;
   }
   .skeleton.heading {
     width: 140px;

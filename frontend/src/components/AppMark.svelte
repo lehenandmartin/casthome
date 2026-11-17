@@ -6,8 +6,11 @@
   //
   // boot: the mark's pixels darken column by column when it appears, like an
   // LCD switching on (not with reduced motion).
+  //
+  // bare: the mark's pixels alone, cropped to the mark, for a place that is
+  // already an LCD (About).
 
-  let { size = 32, boot = false }: { size?: number; boot?: boolean } = $props();
+  let { size = 32, boot = false, bare = false }: { size?: number; boot?: boolean; bare?: boolean } = $props();
 
   // The mark on its 24-dot grid: '#' is lit (rows 3 to 20, columns 3 to 20).
   const ROWS = [
@@ -36,8 +39,8 @@
   const id = `mark-dots-${Math.random().toString(36).slice(2, 8)}`;
 </script>
 
-<svg class="mark" class:boot width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-  <defs>
+<svg class="mark" class:boot width={size} height={size} viewBox={bare ? '3 3 18 18' : '0 0 24 24'} aria-hidden="true">
+  {#if !bare}<defs>
     <pattern {id} width="1" height="1" patternUnits="userSpaceOnUse">
       <rect x="0.11" y="0.11" width="0.78" height="0.78" rx="0.2" class="ghost" />
     </pattern>
@@ -52,12 +55,14 @@
     </linearGradient>
   </defs>
   <rect width="24" height="24" rx="4" fill={`url(#${id}-lcd)`} />
-  <rect width="24" height="24" rx="4" fill={`url(#${id})`} />
+  <rect width="24" height="24" rx="4" fill={`url(#${id})`} />{/if}
   {#each lit as dot (dot.x * 24 + dot.y)}
     <rect x={dot.x + 0.11} y={dot.y + 0.11} width="0.78" height="0.78" rx="0.2" class="dot" style:--col={dot.x - 3} />
   {/each}
-  <rect width="24" height="24" rx="4" fill={`url(#${id}-shade)`} />
-  <rect x="0.25" y="0.25" width="23.5" height="23.5" rx="3.75" class="bezel" />
+  {#if !bare}
+    <rect width="24" height="24" rx="4" fill={`url(#${id}-shade)`} />
+    <rect x="0.25" y="0.25" width="23.5" height="23.5" rx="3.75" class="bezel" />
+  {/if}
 </svg>
 
 <style>

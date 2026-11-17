@@ -19,7 +19,6 @@
   import Dialog from './components/Dialog.svelte';
   import GenreView from './components/GenreView.svelte';
   import Genres from './components/Genres.svelte';
-  import AppMark from './components/AppMark.svelte';
   import Icon from './components/Icon.svelte';
   import Home from './components/Home.svelte';
   import Library from './components/Library.svelte';
@@ -156,7 +155,7 @@
   <button class="skip-link" onclick={() => document.getElementById('main')?.focus()}>{t('nav.skip')}</button>
   <aside class="sidebar">
     <!-- The app's icon, small, next to its name. -->
-    <div class="brand"><AppMark size={28} />{t('app.name')}</div>
+    <div class="brand">{t('app.name')}</div>
     <nav>
       {#each SIDEBAR.filter((i) => i.name !== 'tracks' || store.capabilities.all_tracks) as item (item.name)}
         <a href={item.href} class:active={section === item.name}>
@@ -300,7 +299,7 @@
     align-content: center;
     gap: 2px;
     font-size: var(--text-xs);
-    font-weight: 600;
+    font-weight: 500;
     color: var(--muted);
     text-decoration: none;
   }
@@ -335,8 +334,8 @@
       gap: 12px;
       font-weight: 600;
       font-size: var(--text-lg);
-      /* The icon's left edge on the nav icons' column. */
-      padding: 0 12px 20px 8px;
+      /* The name's left edge on the nav icons' column. */
+      padding: 0 12px 20px;
       color: var(--text);
     }
     .sidebar nav {
@@ -351,7 +350,7 @@
       border-radius: 10px;
       color: var(--muted);
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 500;
     }
     .sidebar a:hover {
       background: var(--surface-2);
@@ -366,7 +365,7 @@
       border-radius: 10px;
       background: none;
       color: var(--muted);
-      font-weight: 600;
+      font-weight: 500;
       text-align: left;
       min-height: 0;
     }

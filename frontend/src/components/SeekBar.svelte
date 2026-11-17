@@ -5,7 +5,7 @@
   import { store } from '../lib/store.svelte';
 
   // shown: the time on display, the dragged one while seeking (Now Playing's display reads it).
-  // dots: drawn as a row of a dot-matrix display (Now Playing), lit one column at a time.
+  // dots: drawn as the iPod's progress bar on the LCD (Now Playing): a hollow bar filling with ink.
   let {
     showTimes = true,
     shown = $bindable(0),
@@ -31,7 +31,7 @@
 
 <div class="seek" class:dots style:--progress={ratio}>
   {#if dots}
-    <!-- The dots under the slider, which stays on top (invisible) for touch, mouse and keyboard. -->
+    <!-- The bar under the slider, which stays on top (invisible) for touch, mouse and keyboard. -->
     <div class="matrix" aria-hidden="true"><div class="lit"></div></div>
   {/if}
   <input
@@ -59,36 +59,28 @@
   .seek {
     width: 100%;
   }
-  /* Dot-matrix row: unlit dots everywhere, lit ones up to the position, whole
-     columns only. Dots and gaps are whole pixels, so the matrix stays visible
-     on any screen (--lcd-pitch / --lcd-dot from the display). */
+  /* The iPod's progress bar: a hollow bar with round ends in the LCD's ink,
+     filling up to the position in whole pixels. */
   .dots {
-    --pitch: var(--lcd-pitch, 3px);
-    --dot: var(--lcd-dot, 2px);
-    --dot-on: var(--lcd-lit, var(--text));
-    --dot-off: var(--lcd-ghost, color-mix(in srgb, var(--text) 18%, transparent));
+    --ink: var(--lcd-lit, var(--text));
     position: relative;
     display: grid;
     align-items: center;
     height: 24px;
   }
-  .matrix,
-  .lit {
-    /* Two rows of dots. */
-    height: calc(var(--pitch) + var(--dot));
-    background-size: var(--pitch) var(--pitch);
-    background-position: 0 0;
-  }
   .matrix {
-    width: 100%;
-    width: round(down, 100%, var(--pitch));
-    /* Square dots, like Doto's. */
-    background-image: conic-gradient(at var(--dot) var(--dot), transparent 75%, var(--dot-off) 0);
+    height: 12px;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    overflow: hidden;
   }
+  /* Filled to the full height; the bar's round end clips its start, its own
+     end stays straight, as on the iPod. */
   .lit {
+    height: 100%;
     width: calc(var(--progress) * 100%);
-    width: round(down, calc(var(--progress) * 100%), var(--pitch));
-    background-image: conic-gradient(at var(--dot) var(--dot), transparent 75%, var(--dot-on) 0);
+    width: round(down, calc(var(--progress) * 100%), 1px);
+    background: var(--ink);
   }
   .dots input {
     position: absolute;
