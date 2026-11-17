@@ -220,7 +220,10 @@ class AppContext:
             target.report_volume(data)
 
     def devices_snapshot(self) -> list[dict]:
-        return [d.__dict__ for d in self.cast.devices]
+        """The devices on the network; the hidden ones are flagged (the picker
+        leaves them out, Settings lists them to show them again)."""
+        hidden = self.config.hidden_devices
+        return [{**d.__dict__, "hidden": d.uuid in hidden} for d in self.cast.devices]
 
     def full_snapshot(self) -> dict:
         return {

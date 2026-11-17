@@ -54,6 +54,14 @@ class PlaybackBody(BaseModel):
     show_ratings: bool = True
 
 
+class DeviceVisibilityBody(BaseModel):
+    hidden: bool
+
+
+# Cast device UUIDs (and the e2e fake's ids): letters, digits and dashes.
+DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+
+
 class AccessBody(BaseModel):
     mode: AccessMode
     # New CastHome password; optional when one is already set.
@@ -154,6 +162,8 @@ async def get_settings(request: Request, _session: Annotated[Session, Depends(re
         "locked": ctx.config.locked,
         "access": {"mode": ctx.config.access_mode, "has_password": ctx.config.has_password},
         "playback": {**asdict(ctx.config.playback), "locked": ctx.config.playback_locked},
+        # Hidden Cast devices, with the name last seen (they may be off).
+        "hidden_devices": [{"uuid": u, "name": n} for u, n in ctx.config.hidden_devices.items()],
         # How this browser is seen: whether LAN mode would let it in without a password.
         **client_info(request),
         "version": __version__,
@@ -245,4 +255,24 @@ async def update_playback(
         )
     )
     ctx.apply_playback()
+    return {"ok": True}
+
+
+@router.put("/devices/{uuid}")
+async def set_device_visibility(
+    uuid: str, body: DeviceVisibilityBody, request: Request, _session: Annotated[Session, Depends(require_session)]
+) -> dict:
+    """Hide a Cast device from the picker on every device, or show it again."""
+    ctx = get_ctx(request)
+    if not DEVICE_ID_RE.match(uuid):
+        raise _bad("unknown_device")
+    info = ctx.cast.get(uuid)
+    name = info.name if info else ctx.config.hidden_devices.get(uuid)
+    if name is None:
+        if body.hidden:
+            raise _bad("unknown_device")
+        return {"ok": True}  # already shown
+    await ctx.config.set_device_hidden(uuid, name, body.hidden)
+    # Every open browser updates its picker and its Settings.
+    ctx.hub.publish("devices", ctx.devices_snapshot)
     return {"ok": True}

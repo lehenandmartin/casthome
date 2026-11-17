@@ -51,6 +51,8 @@ export interface Device {
   cast_type: 'cast' | 'audio' | 'group' | string;
   host: string;
   port: number;
+  /** Hidden from the device picker, on every device (Settings). */
+  hidden?: boolean;
 }
 
 export type PlayerStatus = 'stopped' | 'loading' | 'buffering' | 'playing' | 'paused';
@@ -232,6 +234,8 @@ export interface ServerSettings extends ClientInfo {
   playback: PlaybackOptions & { locked: (keyof PlaybackOptions)[] };
   locked: LockedField[];
   access: { mode: AccessMode; has_password: boolean };
+  /** Hidden Cast devices, with the name last seen (they may be off). */
+  hidden_devices: { uuid: string; name: string }[];
   version: string;
   revision: string;
 }

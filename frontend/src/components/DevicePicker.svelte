@@ -2,7 +2,7 @@
   import { modal } from '../lib/modal';
   import { fadeOut, sheetOut } from '../lib/motion';
   import { api } from '../lib/api';
-  import { deviceIcon } from '../lib/devices';
+  import { deviceDetail, deviceIcon } from '../lib/devices';
   import { t } from '../lib/i18n';
   import type { IconName } from '../lib/icons';
   import { store } from '../lib/store.svelte';
@@ -22,9 +22,6 @@
   const activeUuid = $derived(p?.device_uuid ?? null);
   const playing = $derived(p?.status === 'playing' || p?.status === 'buffering' || p?.status === 'loading');
 
-  const typeLabel = (type: string, model: string) =>
-    type === 'group' ? t('devices.group') : type === 'audio' ? model || t('devices.speaker') : model || t('devices.tv');
-
   const thisBrowser = $derived<Choice>({
     uuid: store.browserUuid,
     name: t('devices.thisBrowser'),
@@ -37,12 +34,15 @@
       ? { uuid: activeUuid, name: p.device_name ?? t('devices.otherBrowser'), detail: t('devices.otherBrowser'), icon: deviceIcon('browser') }
       : null,
   );
-  const groups = $derived(store.devices.filter((d) => d.cast_type === 'group'));
-  const singles = $derived(store.devices.filter((d) => d.cast_type !== 'group'));
+  // Devices hidden in Settings are left out, unless the music plays on one.
+  const shown = $derived(store.devices.filter((d) => !d.hidden || d.uuid === activeUuid));
+  const groups = $derived(shown.filter((d) => d.cast_type === 'group'));
+  const singles = $derived(shown.filter((d) => d.cast_type !== 'group'));
+  const found = $derived(store.devices.some((d) => d.cast_type !== 'group'));
   const toChoice = (d: (typeof store.devices)[number]): Choice => ({
     uuid: d.uuid,
     name: d.name,
-    detail: typeLabel(d.cast_type, d.model),
+    detail: deviceDetail(d.cast_type, d.model),
     icon: deviceIcon(d.cast_type),
   });
 
@@ -137,13 +137,14 @@
     </ul>
   {/if}
 
-  <p class="section">{t('devices.castDevices')}</p>
-  {#if singles.length === 0}
-    <p class="searching muted"><span class="spinner small" aria-hidden="true"></span>{t('devices.none')}</p>
-  {:else}
+  {#if singles.length > 0}
+    <p class="section">{t('devices.castDevices')}</p>
     <ul role="list">
       {#each singles as device (device.uuid)}{@render row(toChoice(device))}{/each}
     </ul>
+  {:else if !found}
+    <p class="section">{t('devices.castDevices')}</p>
+    <p class="searching muted"><span class="spinner small" aria-hidden="true"></span>{t('devices.none')}</p>
   {/if}
 </div>
 

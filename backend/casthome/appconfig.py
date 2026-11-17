@@ -26,6 +26,8 @@ log = logging.getLogger(__name__)
 NAVIDROME_KEY = "config.navidrome"
 ACCESS_KEY = "config.access"
 PLAYBACK_KEY = "config.playback"
+# Cast devices hidden from the device picker, on every device: uuid -> last name seen.
+HIDDEN_DEVICES_KEY = "config.hidden_devices"
 
 
 class AccessMode(StrEnum):
@@ -135,6 +137,7 @@ class ConfigStore:
         self.access_mode: AccessMode | None = None
         self._password_hash: str | None = None
         self._saved_playback: dict[str, object] = {}
+        self.hidden_devices: dict[str, str] = {}
 
     async def load(self) -> None:
         self._saved_navidrome = dict(await self._db.get_state(NAVIDROME_KEY, {}) or {})
@@ -145,6 +148,7 @@ class ConfigStore:
             self.access_mode = None
         self._password_hash = access.get("password_hash")
         self._saved_playback = dict(await self._db.get_state(PLAYBACK_KEY, {}) or {})
+        self.hidden_devices = dict(await self._db.get_state(HIDDEN_DEVICES_KEY, {}) or {})
         await self._import_environment()
 
     async def _import_environment(self) -> None:
@@ -229,6 +233,19 @@ class ConfigStore:
             saved.pop(field, None)
         self._saved_playback = saved
         await self._db.set_state(PLAYBACK_KEY, saved)
+
+    # --- hidden devices -------------------------------------------------------
+
+    async def set_device_hidden(self, uuid: str, name: str, hidden: bool) -> None:
+        """Hide a Cast device from the picker, or show it again. Its name is kept
+        so it can be listed (and shown again) while it is off."""
+        devices = dict(self.hidden_devices)
+        if hidden:
+            devices[uuid] = name
+        else:
+            devices.pop(uuid, None)
+        await self._db.set_state(HIDDEN_DEVICES_KEY, devices)
+        self.hidden_devices = devices
 
     # --- access ----------------------------------------------------------------
 

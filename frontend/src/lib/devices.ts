@@ -1,5 +1,12 @@
 import type { IconName } from './icons';
 import { isIOS } from './browserPlayer';
+import { t } from './i18n';
+
+/** What a Cast device is: a group, its model, or a speaker / TV. */
+export function deviceDetail(type: string, model: string): string {
+  if (type === 'group') return t('devices.group');
+  return model || (type === 'audio' ? t('devices.speaker') : t('devices.tv'));
+}
 
 export function deviceIcon(type: string | null | undefined): IconName {
   switch (type) {

@@ -146,6 +146,8 @@ export const api = {
   updateNavidrome: (navidrome: NavidromeForm) => request<{ ok: true }>('PUT', '/settings/navidrome', navidrome),
   updatePlayback: (playback: PlaybackOptions) => request<{ ok: true }>('PUT', '/settings/playback', playback),
   updateAccess: (access: AccessForm) => request<{ ok: true }>('PUT', '/settings/access', access),
+  setDeviceHidden: (uuid: string, hidden: boolean) =>
+    request<{ ok: true }>('PUT', `/settings/devices/${encodeURIComponent(uuid)}`, { hidden }),
 
   login: (password: string, remember: boolean) => request<{ ok: true }>('POST', '/auth/login', { password, remember }),
   logout: () => request<void>('POST', '/auth/logout'),

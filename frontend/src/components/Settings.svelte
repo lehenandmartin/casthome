@@ -2,6 +2,7 @@
   // Settings: one section per topic. Add new sections here as cards.
   import { ApiError, api } from '../lib/api';
   import { LANGUAGES, browserLanguage, languageState, setLanguage, t, tCode, type LanguagePref } from '../lib/i18n';
+  import { deviceDetail, deviceIcon } from '../lib/devices';
   import { store } from '../lib/store.svelte';
   import { setTheme, themeState, type ThemePref } from '../lib/theme.svelte';
   import type { AccessMode, NavidromeForm, ServerSettings } from '../lib/types';
@@ -127,6 +128,57 @@
 
   const REPO_URL = 'https://github.com/lehenandmartin/casthome';
 
+  // Cast devices: those on the network (live, from the server's push), then the
+  // hidden ones that are off, under the name last seen, so they can be shown again.
+  const castDevices = $derived([
+    ...store.devices.map((d) => ({ ...d, hidden: Boolean(d.hidden), online: true })),
+    ...(settings?.hidden_devices ?? [])
+      .filter((h) => !store.devices.some((d) => d.uuid === h.uuid))
+      .map((h) => ({ uuid: h.uuid, name: h.name, cast_type: '', model: '', hidden: true, online: false })),
+  ]);
+  let deviceBusy = $state<string | null>(null);
+
+  // Cast devices' addresses (when they are not found by themselves): saved
+  // with the playback options, which keep their saved values.
+  let hostsDraft = $state<string | null>(null);
+  let hostsBusy = $state(false);
+  let hostsError = $state<string | null>(null);
+  const savedHosts = $derived(settings?.playback.known_hosts.join(', ') ?? '');
+  const hostList = (text: string) =>
+    text
+      .split(/[\s,;]+/)
+      .map((h) => h.trim())
+      .filter(Boolean);
+  const hostsDirty = $derived(hostsDraft !== null && hostList(hostsDraft).join(',') !== hostList(savedHosts).join(','));
+
+  async function saveHosts(event: SubmitEvent) {
+    event.preventDefault();
+    if (!settings || hostsDraft === null) return;
+    hostsBusy = true;
+    hostsError = null;
+    try {
+      const { locked: _locked, ...playback } = settings.playback;
+      await api.updatePlayback({ ...playback, known_hosts: hostList(hostsDraft) });
+      store.notify('settings_saved', {}, 'info');
+      hostsDraft = null;
+      await load();
+    } catch (err) {
+      hostsError = describe(err);
+    } finally {
+      hostsBusy = false;
+    }
+  }
+
+  async function toggleDevice(uuid: string, hidden: boolean) {
+    deviceBusy = uuid;
+    await store.run(async () => {
+      await api.setDeviceHidden(uuid, !hidden);
+      // Every browser gets the devices again (live); the ones that are off come with the settings.
+      settings = await api.settings();
+    });
+    deviceBusy = null;
+  }
+
   load();
 </script>
 
@@ -189,6 +241,60 @@
     <section class="block">
       <h3>{t('playback.title')}</h3>
       <PlaybackSettings initial={settings.playback} locked={settings.playback.locked} onsaved={load} />
+    </section>
+  {/if}
+
+  {#if settings}
+    <section class="block">
+      <h3>{t('settings.castDevices')}</h3>
+      <div class="group">
+        {#each castDevices as device (device.uuid)}
+          <div class="item" class:hidden-device={device.hidden}>
+            <!-- Hidden: the icon struck through. -->
+            <span class="device-icon"><Icon name={deviceIcon(device.cast_type)} size={18} /></span>
+            <span class="text">
+              <span class="ellipsis">{device.name}{#if device.hidden}<span class="sr-only">, {t('devices.hidden')}</span>{/if}</span>
+              {#if !device.online}
+                <span class="muted ellipsis detail">{t('devices.offline')}</span>
+              {:else if deviceDetail(device.cast_type, device.model) !== device.name}
+                <!-- The model, unless it is the device's name (e.g. a Freebox Player). -->
+                <span class="muted ellipsis detail">{deviceDetail(device.cast_type, device.model)}</span>
+              {/if}
+            </span>
+            <button onclick={() => toggleDevice(device.uuid, device.hidden)} disabled={deviceBusy === device.uuid}>
+              {device.hidden ? t('devices.show') : t('devices.hide')}
+            </button>
+          </div>
+        {:else}
+          <div class="item"><span class="text muted">{t('settings.castDevicesNone')}</span></div>
+        {/each}
+        <form class="item hosts" onsubmit={saveHosts}>
+          <label>
+            <span>{t('playback.hosts')}</span>
+            <input
+              type="text"
+              value={hostsDraft ?? savedHosts}
+              oninput={(e) => (hostsDraft = e.currentTarget.value)}
+              placeholder="192.168.1.20, 192.168.1.21"
+              autocapitalize="off"
+              spellcheck="false"
+              disabled={settings.playback.locked.includes('known_hosts')}
+            />
+          </label>
+          <small class="muted">
+            {settings.playback.locked.includes('known_hosts') ? t('navidrome.locked') : t('playback.hostsHint')}
+          </small>
+          {#if hostsError}<p class="error" role="alert">{hostsError}</p>{/if}
+          {#if hostsDirty || hostsBusy}
+            <div class="save">
+              <button class="primary" type="submit" disabled={hostsBusy}>
+                {hostsBusy ? t('settings.saving') : t('settings.save')}
+              </button>
+            </div>
+          {/if}
+        </form>
+      </div>
+      <p class="hint muted">{t('settings.castDevicesHint')}</p>
     </section>
   {/if}
 
@@ -317,6 +423,52 @@
   }
   .item > button {
     flex: none;
+  }
+  .item .detail {
+    font-size: var(--text-sm);
+  }
+  /* A hidden device: its name dimmed and its icon struck through, a slash
+     with a gap of the card's colour on each side, like a crossed-out symbol. */
+  .hidden-device .text > :first-child {
+    color: var(--muted);
+  }
+  .device-icon {
+    position: relative;
+    display: grid;
+    flex: none;
+  }
+  .hidden-device .device-icon::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: currentColor;
+    box-shadow: 0 0 0 1.5px var(--surface);
+    transform: rotate(-45deg);
+  }
+  /* The addresses: a field across the card, its Save under it once changed. */
+  .hosts {
+    display: grid;
+    gap: 6px;
+    padding: 12px 16px;
+  }
+  .hosts label {
+    color: var(--text);
+  }
+  .hosts small {
+    font-size: var(--text-xs);
+  }
+  .save {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .hint {
+    margin: 8px 0 0;
+    font-size: var(--text-xs);
   }
   .item select {
     flex: 0 1 220px;

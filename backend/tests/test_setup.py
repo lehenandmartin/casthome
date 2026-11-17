@@ -305,6 +305,43 @@ async def test_playback_options_are_saved_and_applied(app_factory) -> None:  # t
     assert again.state.ctx.coordinator.preload_enabled is False
 
 
+async def test_cast_devices_can_be_hidden_and_shown_again(app_factory) -> None:  # type: ignore[no-untyped-def]
+    from casthome.cast.types import DeviceInfo
+
+    app = await app_factory()
+    ctx = app.state.ctx
+    tv = DeviceInfo(uuid="0f3c-tv", name="Salon", model="Chromecast", cast_type="cast", host="10.0.0.5", port=8009)
+    ctx.cast._devices = {tv.uuid: tv}
+    published: list[str] = []
+    ctx.hub.publish = lambda kind, _snapshot: published.append(kind)  # type: ignore[method-assign]
+    async with Client(app) as http:
+        await finish_setup(http)
+        assert (await http.get("/api/settings")).json()["hidden_devices"] == []
+        assert (await http.get("/api/devices")).json()[0]["hidden"] is False
+
+        published.clear()
+        assert (await http.put("/api/settings/devices/0f3c-tv", json={"hidden": True})).json() == {"ok": True}
+        assert published == ["devices"]  # every open browser updates its picker
+        assert (await http.get("/api/devices")).json()[0]["hidden"] is True
+
+        # Off the network: still listed under its last name, to show it again.
+        ctx.cast._devices = {}
+        assert (await http.get("/api/settings")).json()["hidden_devices"] == [{"uuid": "0f3c-tv", "name": "Salon"}]
+
+        r = await http.put("/api/settings/devices/nope", json={"hidden": True})
+        assert r.status_code == 400 and r.json()["code"] == "unknown_device"
+        assert (await http.put("/api/settings/devices/not%20an%20id", json={"hidden": True})).status_code == 400
+
+    # Saved: a restart keeps it hidden.
+    await ctx.db.close()
+    again = await app_factory()
+    assert again.state.ctx.config.hidden_devices == {"0f3c-tv": "Salon"}
+    async with Client(again) as http:
+        await http.post("/api/auth/login", json={"password": "letmein"})
+        assert (await http.put("/api/settings/devices/0f3c-tv", json={"hidden": False})).json() == {"ok": True}
+        assert (await http.get("/api/settings")).json()["hidden_devices"] == []
+
+
 async def test_playback_options_set_in_the_environment_are_locked(app_factory) -> None:  # type: ignore[no-untyped-def]
     app = await app_factory(stream_format="opus")
     ctx = app.state.ctx

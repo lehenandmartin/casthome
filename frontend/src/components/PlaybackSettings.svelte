@@ -1,5 +1,6 @@
 <script lang="ts">
-  // Settings → Playback: streaming quality, preloading, Cast addresses.
+  // Settings → Playback: streaming quality, preloading, scrobbling, ratings.
+  // (The Cast devices' addresses are with the devices, in Settings.)
   import { ApiError, api } from '../lib/api';
   import { t, tCode } from '../lib/i18n';
   import { setShowRatings } from '../lib/display.svelte';
@@ -26,8 +27,6 @@
   // svelte-ignore state_referenced_locally
   let preload = $state(initial.preload_next);
   // svelte-ignore state_referenced_locally
-  let hosts = $state(initial.known_hosts.join(', '));
-  // svelte-ignore state_referenced_locally
   let scrobble = $state(initial.scrobble);
   // svelte-ignore state_referenced_locally
   let showRatings = $state(initial.show_ratings);
@@ -35,19 +34,12 @@
   let error = $state<string | null>(null);
 
   const isLocked = (field: keyof PlaybackOptions) => locked.includes(field);
-  const hostList = $derived(
-    hosts
-      .split(/[\s,;]+/)
-      .map((h) => h.trim())
-      .filter(Boolean),
-  );
   const dirty = $derived(
     format !== initial.stream_format ||
       bitrate !== initial.max_bitrate ||
       preload !== initial.preload_next ||
       scrobble !== initial.scrobble ||
-      showRatings !== initial.show_ratings ||
-      hostList.join(',') !== initial.known_hosts.join(','),
+      showRatings !== initial.show_ratings,
   );
 
   async function save(event: SubmitEvent) {
@@ -59,11 +51,10 @@
         stream_format: format,
         max_bitrate: bitrate,
         preload_next: preload,
-        known_hosts: hostList,
+        known_hosts: initial.known_hosts, // saved with the devices
         scrobble,
         show_ratings: showRatings,
       });
-      hosts = hostList.join(', ');
       setShowRatings(isLocked('show_ratings') ? initial.show_ratings : showRatings);
       store.notify('settings_saved', {}, 'info');
       onsaved();
@@ -123,19 +114,6 @@
       <span class="name">{t('playback.showRatings')}</span>
       <small class="muted">{isLocked('show_ratings') ? t('navidrome.locked') : t('playback.showRatingsHint')}</small>
     </span>
-  </label>
-
-  <label class="item">
-    <span>{t('playback.hosts')}</span>
-    <input
-      type="text"
-      bind:value={hosts}
-      placeholder="192.168.1.20, 192.168.1.21"
-      autocapitalize="off"
-      spellcheck="false"
-      disabled={isLocked('known_hosts')}
-    />
-    <small class="muted">{isLocked('known_hosts') ? t('navidrome.locked') : t('playback.hostsHint')}</small>
   </label>
 
   {#if error}<p class="item error" role="alert">{error}</p>{/if}
