@@ -130,7 +130,7 @@
   .thumb {
     width: 100%;
     height: 100%;
-    border-radius: var(--radius-w);
+    border-radius: calc(var(--radius-w) - 1px);
     object-fit: cover;
     background: var(--surface-2);
     color: var(--muted);
@@ -232,13 +232,28 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    /* Room for both lips between the cover and the display. */
+    gap: 12px;
     background: none;
     padding: 0;
     border-radius: 8px;
   }
   .mini-main:disabled {
     opacity: 1;
+  }
+  /* Pressed: a screen set into the case does not sink like a button (and
+     scaling it would lift it above its own lip); its glass darkens instead. */
+  .mini-main:active:not(:disabled),
+  .cover:active:not(:disabled),
+  .mini-display:active:not(:disabled) {
+    transform: none;
+  }
+  .mini-main:active:not(:disabled) :global(.recessed)::after,
+  .cover:active:not(:disabled) :global(.recessed)::after,
+  .mini-display:active:not(:disabled)::after {
+    box-shadow:
+      var(--well-shadow),
+      inset 0 0 0 100px rgb(0 0 0 / 0.08);
   }
   /* Mini player keeps play/pause and next only. */
   .mini :global(.controls > button:first-child) {
@@ -267,7 +282,7 @@
     .now {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
       min-width: 0;
     }
     .cover {

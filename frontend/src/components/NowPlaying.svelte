@@ -411,7 +411,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: var(--radius-w);
+    border-radius: calc(var(--radius-w) - 1px);
     background: var(--surface-2);
     color: var(--muted);
   }

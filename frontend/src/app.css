@@ -178,6 +178,12 @@ body {
   --lip-w: 6px;
   position: relative;
 }
+/* A cover set into the case: the same 1px bezel as a screen (.lcd-screen), so
+   the lip and the inner shadow, measured from inside it, line up with a
+   screen's. What fills it takes its radius minus that pixel. */
+.recessed:not(.lcd-screen) {
+  border: 1px solid rgb(0 0 0 / 0.25);
+}
 .recessed::before,
 .recessed::after {
   content: '';
