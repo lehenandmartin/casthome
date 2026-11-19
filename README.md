@@ -7,7 +7,7 @@
   <a href="https://github.com/lehenandmartin/casthome/pkgs/container/casthome"><img src="https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-2496ED?logo=docker&logoColor=white" alt="Docker image for amd64 and arm64"></a>
 </p>
 
-<img alt="Screenshot of CastHome" src="https://github.com/user-attachments/assets/4c1ebe9e-f89a-40c3-88d3-85bc6436afd1" />
+<img width="2532" height="897" alt="Screenshot of CastHome" src="https://github.com/user-attachments/assets/9b366e27-618a-4062-9441-be2f7c098387" />
 
 ---
 
